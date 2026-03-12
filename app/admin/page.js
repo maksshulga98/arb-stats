@@ -36,7 +36,6 @@ export default function AdminPage() {
   }
 
   const filtered = selectedManager === 'all' ? stats : stats.filter(s => s.user_id === selectedManager)
-
   const totalProfit = filtered.reduce((sum, s) => sum + (s.profit || 0), 0)
   const totalSpend = filtered.reduce((sum, s) => sum + (s.ad_spend || 0), 0)
   const totalRevenue = filtered.reduce((sum, s) => sum + (s.revenue || 0), 0)
@@ -53,9 +52,7 @@ export default function AdminPage() {
             <h1 className="text-2xl font-bold">Админ панель</h1>
             <p className="text-gray-400 text-sm mt-1">Статистика всей команды</p>
           </div>
-          <button onClick={handleLogout} className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition">
-            Выйти
-          </button>
+          <button onClick={handleLogout} className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition">Выйти</button>
         </div>
 
         <div className="flex gap-3 mb-6 flex-wrap">
@@ -119,3 +116,14 @@ export default function AdminPage() {
                     <td className="px-4 py-3 text-sm text-green-400">${s.revenue}</td>
                     <td className={`px-4 py-3 text-sm font-semibold ${s.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>${s.profit}</td>
                     <td className="px-4 py-3 text-sm">{s.leads}</td>
+                    <td className="px-4 py-3 text-sm">{s.conversions}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
