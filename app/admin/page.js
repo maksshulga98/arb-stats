@@ -128,7 +128,8 @@ export default function AdminPage() {
   // Fetch Google Sheets ЦД data when daily tab is active
   useEffect(() => {
     if (activeTab !== 'daily' || managers.length === 0) return
-    const namesWithSheets = managers.filter(m => MANAGER_SHEETS[m.name]).map(m => m.name)
+    const allMembers = [...managers, ...teamleads]
+    const namesWithSheets = allMembers.filter(m => MANAGER_SHEETS[m.name]).map(m => m.name)
     if (namesWithSheets.length === 0) { setSheetsData({}); return }
     setSheetsLoading(true)
     fetch(`/api/sheets?names=${encodeURIComponent(namesWithSheets.join(','))}&dateFrom=${dateFrom}&dateTo=${dateTo}`)
