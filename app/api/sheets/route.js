@@ -95,21 +95,28 @@ export async function GET(request) {
         }
 
         if (!dayRow) {
-          results[name] = { total: 0, products: {} }
+          results[name] = { total: 0, ip: 0, debit: 0, products: {} }
           return
         }
 
         // Extract product values
+        // Col 2 (index 0) = Альфа ИП → ip
+        // Cols 3-7 (indices 1-5) = дебетовые карты → debit
         const products = {}
         let total = 0
+        let ip = 0
+        let debit = 0
         for (let col = COL_PRODUCTS_START; col <= COL_PRODUCTS_END; col++) {
           const val = parseInt(dayRow[col]) || 0
-          const productName = PRODUCT_NAMES[col - COL_PRODUCTS_START] || `Продукт ${col - COL_PRODUCTS_START + 1}`
+          const idx = col - COL_PRODUCTS_START
+          const productName = PRODUCT_NAMES[idx] || `Продукт ${idx + 1}`
           products[productName] = val
           total += val
+          if (idx === 0) ip += val
+          else debit += val
         }
 
-        results[name] = { total, products }
+        results[name] = { total, ip, debit, products }
       } catch {
         results[name] = null
       }

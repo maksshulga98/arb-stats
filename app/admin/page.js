@@ -91,21 +91,11 @@ function CloseIcon() {
   )
 }
 
-function CdCell({ data, loading }) {
+function CdValue({ value, loading, color = 'text-emerald-400' }) {
   if (loading) return <span className="text-gray-600">...</span>
-  if (!data || data === null) return <span className="text-gray-600">—</span>
-  if (data.total === 0 && Object.values(data.products).every(v => v === 0)) return <span className="text-gray-600">0</span>
-
-  const tooltip = Object.entries(data.products)
-    .filter(([, v]) => v > 0)
-    .map(([name, v]) => `${name}: ${v}`)
-    .join('\n')
-
-  return (
-    <span className="font-semibold text-emerald-400 cursor-help" title={tooltip || 'Нет ЦД'}>
-      {data.total}
-    </span>
-  )
+  if (value === null || value === undefined) return <span className="text-gray-600">—</span>
+  if (value === 0) return <span className="text-gray-600">0</span>
+  return <span className={`font-semibold ${color}`}>{value}</span>
 }
 
 function TrashIcon() {
@@ -487,9 +477,15 @@ export default function AdminPage() {
                       <p className="text-xl font-bold text-gray-200">{totalPeopleWrote}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs mb-1">ЦД (из таблиц)</p>
+                      <p className="text-gray-500 text-xs mb-1">ЦД ИП</p>
                       <p className="text-xl font-bold text-emerald-400">
-                        {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.total || 0), 0)}
+                        {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.ip || 0), 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs mb-1">Дебетовые</p>
+                      <p className="text-xl font-bold text-purple-400">
+                        {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.debit || 0), 0)}
                       </p>
                     </div>
                   </div>
@@ -539,13 +535,14 @@ export default function AdminPage() {
                             <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
                           )}
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
-                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД</th>
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дебетовые</th>
                         </tr>
                       </thead>
                       <tbody>
                         {rows.length === 0 ? (
                           <tr>
-                            <td colSpan={isNikita ? 4 : 5} className="text-center py-8 text-gray-600 text-sm">
+                            <td colSpan={isNikita ? 5 : 6} className="text-center py-8 text-gray-600 text-sm">
                               Нет участников в команде
                             </td>
                           </tr>
@@ -570,7 +567,10 @@ export default function AdminPage() {
                                   )}
                                   <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
                                   <td className="px-3 sm:px-5 py-3 text-sm">
-                                    <CdCell data={sd} loading={sheetsLoading && sd === undefined} />
+                                    <CdValue value={sd ? sd.ip : null} loading={sheetsLoading && sd === undefined} />
+                                  </td>
+                                  <td className="px-3 sm:px-5 py-3 text-sm">
+                                    <CdValue value={sd ? sd.debit : null} loading={sheetsLoading && sd === undefined} color="text-purple-400" />
                                   </td>
                                 </tr>
                               )
@@ -589,7 +589,10 @@ export default function AdminPage() {
                                 )}
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
-                                  {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.total || 0), 0)}
+                                  {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0)}
+                                </td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-purple-400">
+                                  {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.debit || 0), 0)}
                                 </td>
                               </tr>
                             )}
