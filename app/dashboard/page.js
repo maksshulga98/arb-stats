@@ -134,14 +134,14 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-950 text-white">
 
       {/* ── Header ── */}
-      <header style={{ backgroundColor: '#111118', borderBottom: '1px solid #1f1f2e' }} className="px-6 py-3 sticky top-0 z-40">
+      <header style={{ backgroundColor: '#111118', borderBottom: '1px solid #1f1f2e' }} className="px-4 sm:px-6 py-3 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-3 sm:gap-8">
             <span className="text-base font-bold tracking-tight">Arb Stats</span>
-            <span className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white">Отчёт</span>
+            <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm font-medium bg-blue-600 text-white">Отчёт</span>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-gray-500 text-sm">{profile?.name || user?.email}</span>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="text-gray-500 text-sm hidden sm:inline">{profile?.name || user?.email}</span>
             <button
               onClick={handleLogout}
               className="text-gray-500 hover:text-white text-sm transition"
@@ -153,12 +153,12 @@ export default function DashboardPage() {
       </header>
 
       {/* ── Content ── */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
 
         {/* ─── Report section ─── */}
           <>
             {/* Zone indicator */}
-            <div className={`${zone.bg} border ${zone.border} rounded-2xl p-5 mb-6 flex items-center justify-between`}>
+            <div className={`${zone.bg} border ${zone.border} rounded-2xl p-4 sm:p-5 mb-6 flex items-center justify-between`}>
               <div>
                 <p className="text-gray-400 text-sm mb-1">Результаты за последние 7 дней</p>
                 <p className={`text-3xl font-bold ${zone.text}`}>
@@ -189,7 +189,7 @@ export default function DashboardPage() {
               >
                 <h3 className="text-sm font-semibold text-gray-300 mb-4">Новый отчёт</h3>
                 <form onSubmit={handleSubmit}>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                     <div>
                       <label className="text-gray-400 text-xs mb-1.5 block">Дата</label>
@@ -277,22 +277,22 @@ export default function DashboardPage() {
             {/* Reports table */}
             <div
               style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
-              className="rounded-2xl overflow-hidden"
+              className="rounded-2xl overflow-hidden overflow-x-auto"
             >
-              <table className="w-full">
+              <table className="w-full min-w-[400px]">
                 <thead>
                   <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
-                    <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
+                    <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
                     {!isNikita && (
                       <>
-                        <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Отписанные</th>
-                        <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответившие</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Отписанные</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответившие</th>
                       </>
                     )}
                     {isNikita && (
-                      <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
+                      <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
                     )}
-                    <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                    <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -312,19 +312,19 @@ export default function DashboardPage() {
                         style={{ borderTop: '1px solid #1a1a28' }}
                         className="hover:bg-white/[0.02] transition"
                       >
-                        <td className="px-5 py-3 text-sm text-gray-300">
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">
                           {new Date(r.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         </td>
                         {!isNikita && (
                           <>
-                            <td className="px-5 py-3 text-sm text-gray-300">{r.unsubscribed ?? '—'}</td>
-                            <td className="px-5 py-3 text-sm text-gray-300">{r.replied ?? '—'}</td>
+                            <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.unsubscribed ?? '—'}</td>
+                            <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.replied ?? '—'}</td>
                           </>
                         )}
                         {isNikita && (
-                          <td className="px-5 py-3 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
+                          <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
                         )}
-                        <td className="px-5 py-3 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
                       </tr>
                     ))
                   )}

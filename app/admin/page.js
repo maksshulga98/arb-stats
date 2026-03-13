@@ -183,29 +183,51 @@ export default function AdminPage() {
       {/* ── Header ── */}
       <header
         style={{ backgroundColor: '#111118', borderBottom: '1px solid #1f1f2e' }}
-        className="px-6 py-3 sticky top-0 z-40"
+        className="px-4 sm:px-6 py-3 sticky top-0 z-40"
       >
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-8">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+          <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-8">
             <span className="text-base font-bold tracking-tight">Arb Stats</span>
-            <nav className="flex gap-1">
-              {TABS.map(tab => (
+            <div className="flex items-center gap-2 sm:hidden">
+              {/* Mobile bell + logout */}
+              <div className="relative" ref={bellRef}>
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
+                  onClick={() => setShowBell(v => !v)}
+                  className="relative p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition"
                 >
-                  {tab.label}
+                  <BellIcon />
+                  {redManagers.length > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold leading-none">
+                      {redManagers.length}
+                    </span>
+                  )}
                 </button>
-              ))}
-            </nav>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="text-gray-500 hover:text-white text-sm transition"
+              >
+                Выйти
+              </button>
+            </div>
           </div>
+          <nav className="flex gap-1 overflow-x-auto pb-1 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-3">
             {/* Bell */}
             <div className="relative" ref={bellRef}>
               <button
@@ -228,7 +250,7 @@ export default function AdminPage() {
                   />
                   <div
                     style={{ backgroundColor: '#13131f', border: '1px solid #2a2a3e' }}
-                    className="absolute right-0 top-12 rounded-2xl p-4 w-80 z-50 shadow-2xl"
+                    className="absolute right-0 top-12 rounded-2xl p-4 w-72 sm:w-80 z-50 shadow-2xl"
                   >
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-semibold text-gray-200">Уведомления</h3>
@@ -278,7 +300,7 @@ export default function AdminPage() {
       </header>
 
       {/* ── Content ── */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
 
         {/* ─── Analytics tab ─── */}
         {activeTab === 'analytics' && (
@@ -383,7 +405,7 @@ export default function AdminPage() {
                     <h2 className="text-sm font-semibold text-gray-200">Сводка за день</h2>
                     <span className="text-gray-600 text-xs">{reportedCount} из {totalMembers} сдали отчёт</span>
                   </div>
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Отписанные</p>
                       <p className="text-xl font-bold text-gray-200">{totalUnsubscribed}</p>
@@ -432,21 +454,21 @@ export default function AdminPage() {
                     <span className="text-gray-600 text-sm">{teamMembers.length} чел.</span>
                   </div>
 
-                  <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden">
-                    <table className="w-full">
+                  <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
+                    <table className="w-full min-w-[480px]">
                       <thead>
                         <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
-                          <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Менеджер</th>
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Менеджер</th>
                           {!isNikita && (
                             <>
-                              <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Отписанные</th>
-                              <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответившие</th>
+                              <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Отписанные</th>
+                              <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответившие</th>
                             </>
                           )}
                           {isNikita && (
-                            <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
+                            <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
                           )}
-                          <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -460,35 +482,35 @@ export default function AdminPage() {
                           <>
                             {rows.map(({ member, report }) => (
                               <tr key={member.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
-                                <td className="px-5 py-3 text-sm text-gray-300">
+                                <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">
                                   {member.name || member.email}
                                   {member.role === 'teamlead' && <span className="ml-2 text-xs text-gray-600">(тимлид)</span>}
                                 </td>
                                 {!isNikita && (
                                   <>
-                                    <td className="px-5 py-3 text-sm text-gray-300">{report ? report.unsubscribed : '—'}</td>
-                                    <td className="px-5 py-3 text-sm text-gray-300">{report ? report.replied : '—'}</td>
+                                    <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.unsubscribed : '—'}</td>
+                                    <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.replied : '—'}</td>
                                   </>
                                 )}
                                 {isNikita && (
-                                  <td className="px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
+                                  <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
                                 )}
-                                <td className="px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
                               </tr>
                             ))}
                             {rows.some(r => r.report) && (
                               <tr style={{ borderTop: '2px solid #2a2a3e' }} className="bg-white/[0.02]">
-                                <td className="px-5 py-3 text-sm font-semibold text-gray-200">Итого</td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">Итого</td>
                                 {!isNikita && (
                                   <>
-                                    <td className="px-5 py-3 text-sm font-semibold text-gray-200">{totals.unsubscribed}</td>
-                                    <td className="px-5 py-3 text-sm font-semibold text-gray-200">{totals.replied}</td>
+                                    <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.unsubscribed}</td>
+                                    <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.replied}</td>
                                   </>
                                 )}
                                 {isNikita && (
-                                  <td className="px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
+                                  <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
                                 )}
-                                <td className="px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
                               </tr>
                             )}
                           </>
@@ -530,7 +552,7 @@ export default function AdminPage() {
         >
           <div
             style={{ backgroundColor: '#13131f', border: '1px solid #2a2a3e' }}
-            className="rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
+            className="rounded-2xl w-full max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             {/* Modal header */}
