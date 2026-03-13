@@ -41,7 +41,6 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState(null)
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('analytics')
   const [showForm, setShowForm]   = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState({
@@ -131,12 +130,6 @@ export default function DashboardPage() {
   const weeklyIP  = getIPLast7Days(reports)
   const zone      = getZone(weeklyIP)
 
-  const TABS = [
-    { id: 'analytics', label: 'Аналитика команды' },
-    { id: 'salary',    label: 'Расчёт ЗП' },
-    { id: 'telegram',  label: 'Аккаунты Телеграмм' },
-  ]
-
   return (
     <div className="min-h-screen bg-gray-950 text-white">
 
@@ -145,21 +138,7 @@ export default function DashboardPage() {
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-8">
             <span className="text-base font-bold tracking-tight">Arb Stats</span>
-            <nav className="flex gap-1">
-              {TABS.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
+            <span className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white">Отчёт</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-gray-500 text-sm">{profile?.name || user?.email}</span>
@@ -176,8 +155,7 @@ export default function DashboardPage() {
       {/* ── Content ── */}
       <main className="max-w-6xl mx-auto px-6 py-8">
 
-        {/* ─── Analytics tab ─── */}
-        {activeTab === 'analytics' && (
+        {/* ─── Report section ─── */}
           <>
             {/* Zone indicator */}
             <div className={`${zone.bg} border ${zone.border} rounded-2xl p-5 mb-6 flex items-center justify-between`}>
@@ -354,25 +332,6 @@ export default function DashboardPage() {
               </table>
             </div>
           </>
-        )}
-
-        {/* ─── Salary tab ─── */}
-        {activeTab === 'salary' && (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
-            <div className="text-5xl mb-4">💰</div>
-            <p className="text-gray-300 font-medium text-lg">Расчёт заработной платы</p>
-            <p className="text-gray-600 text-sm mt-2">Раздел в разработке</p>
-          </div>
-        )}
-
-        {/* ─── Telegram tab ─── */}
-        {activeTab === 'telegram' && (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
-            <div className="text-5xl mb-4">✈️</div>
-            <p className="text-gray-300 font-medium text-lg">Аккаунты Телеграмм</p>
-            <p className="text-gray-600 text-sm mt-2">Раздел в разработке</p>
-          </div>
-        )}
 
       </main>
     </div>
