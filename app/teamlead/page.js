@@ -597,6 +597,34 @@ export default function TeamleadPage() {
                 />
               </div>
 
+              {/* Overall summary */}
+              <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm font-semibold text-gray-200">Сводка за день</h2>
+                  <span className="text-gray-600 text-xs">
+                    {rows.filter(r => r.report).length} из {rows.length} сдали отчёт
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">Отписанные</p>
+                    <p className="text-xl font-bold text-gray-200">{totals.unsubscribed}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">Ответившие</p>
+                    <p className="text-xl font-bold text-gray-200">{totals.replied}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">Заказали ИП</p>
+                    <p className="text-xl font-bold text-blue-400">{totals.ordered_ip}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">Написало людей</p>
+                    <p className="text-xl font-bold text-gray-200">{totals.people_wrote}</p>
+                  </div>
+                </div>
+              </div>
+
               <section>
                 <div className="flex items-center gap-3 mb-3">
                   <h2 className="text-base font-semibold text-gray-200">Команда {teamInfo?.name ?? profile?.team}</h2>

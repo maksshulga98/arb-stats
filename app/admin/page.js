@@ -365,6 +365,46 @@ export default function AdminPage() {
               />
             </div>
 
+            {/* Overall summary */}
+            {(() => {
+              const dayReports = reports.filter(r => r.date === dailyDate)
+              const allMembers = [...managers, ...teamleads]
+              const totalUnsubscribed = dayReports.reduce((s, r) => s + (r.unsubscribed || 0), 0)
+              const totalReplied      = dayReports.reduce((s, r) => s + (r.replied || 0), 0)
+              const totalOrdered      = dayReports.reduce((s, r) => s + (r.ordered_ip || 0), 0)
+              const totalPeopleWrote  = dayReports.reduce((s, r) => s + (r.people_wrote || 0), 0)
+              const reported = new Set(dayReports.map(r => r.manager_id))
+              const totalMembers = allMembers.length
+              const reportedCount = allMembers.filter(m => reported.has(m.id)).length
+
+              return (
+                <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-semibold text-gray-200">Сводка за день</h2>
+                    <span className="text-gray-600 text-xs">{reportedCount} из {totalMembers} сдали отчёт</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-gray-500 text-xs mb-1">Отписанные</p>
+                      <p className="text-xl font-bold text-gray-200">{totalUnsubscribed}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs mb-1">Ответившие</p>
+                      <p className="text-xl font-bold text-gray-200">{totalReplied}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs mb-1">Заказали ИП</p>
+                      <p className="text-xl font-bold text-blue-400">{totalOrdered}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs mb-1">Написало людей</p>
+                      <p className="text-xl font-bold text-gray-200">{totalPeopleWrote}</p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+
             {TEAMS.map(team => {
               const isNikita = team.type === 'nikita'
               const teamMembers = [
