@@ -34,7 +34,13 @@ function getZoneKey(ip) {
   return 'green'
 }
 
-function isRedFor14Days(reports) {
+function isRedFor14Days(reports, createdAt) {
+  // Manager must have existed for more than 14 days
+  if (createdAt) {
+    const fourteenDaysAgo = new Date()
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+    if (new Date(createdAt) > fourteenDaysAgo) return false
+  }
   const week1 = getIPForPeriod(reports, 0, 7)
   const week2 = getIPForPeriod(reports, 7, 14)
   return week1 < 10 && week2 < 10
@@ -129,7 +135,7 @@ export default function AdminPage() {
 
   const managerReports = (id) => reports.filter(r => r.manager_id === id)
 
-  const redManagers = managers.filter(m => isRedFor14Days(managerReports(m.id)))
+  const redManagers = managers.filter(m => isRedFor14Days(managerReports(m.id), m.created_at))
 
   if (loading) {
     return (
@@ -283,7 +289,7 @@ export default function AdminPage() {
                         const ip7     = getIPForPeriod(mRep, 0, 7)
                         const zKey    = getZoneKey(ip7)
                         const z       = ZONE[zKey]
-                        const alert14 = isRedFor14Days(mRep)
+                        const alert14 = isRedFor14Days(mRep, manager.created_at)
 
                         return (
                           <button
