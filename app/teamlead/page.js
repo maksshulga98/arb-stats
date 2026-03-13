@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
+import { getMissingReportAlerts } from '../../lib/notifications'
+import { MANAGER_SHEETS } from '../../lib/sheets-config'
 
 // ── Team config ──────────────────────────────────────────────────────────────
 const TEAMS = [
@@ -75,6 +77,23 @@ function CloseIcon({ size = 5 }) {
   )
 }
 
+function CdCell({ data, loading }) {
+  if (loading) return <span className="text-gray-600">...</span>
+  if (!data || data === null) return <span className="text-gray-600">—</span>
+  if (data.total === 0 && Object.values(data.products).every(v => v === 0)) return <span className="text-gray-600">0</span>
+
+  const tooltip = Object.entries(data.products)
+    .filter(([, v]) => v > 0)
+    .map(([name, v]) => `${name}: ${v}`)
+    .join('\n')
+
+  return (
+    <span className="font-semibold text-emerald-400 cursor-help" title={tooltip || 'Нет ЦД'}>
+      {data.total}
+    </span>
+  )
+}
+
 function TrashIcon() {
   return (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -123,9 +142,27 @@ export default function TeamleadPage() {
   const [showBell, setShowBell] = useState(false)
   const bellRef = useRef(null)
 
+  // Sheets ЦД data
+  const [sheetsData, setSheetsData] = useState({})
+  const [sheetsLoading, setSheetsLoading] = useState(false)
+
   const router = useRouter()
 
   useEffect(() => { init() }, [])
+
+  // Fetch Google Sheets ЦД data when daily tab is active
+  useEffect(() => {
+    if (activeTab !== 'daily' || managers.length === 0) return
+    const allMembers = [profile, ...managers].filter(Boolean)
+    const namesWithSheets = allMembers.filter(m => MANAGER_SHEETS[m.name]).map(m => m.name)
+    if (namesWithSheets.length === 0) { setSheetsData({}); return }
+    setSheetsLoading(true)
+    fetch(`/api/sheets?names=${encodeURIComponent(namesWithSheets.join(','))}&date=${dailyDate}`)
+      .then(r => r.json())
+      .then(data => setSheetsData(data))
+      .catch(() => setSheetsData({}))
+      .finally(() => setSheetsLoading(false))
+  }, [activeTab, dailyDate, managers, profile])
   useEffect(() => {
     const fn = (e) => { if (e.key === 'Escape') { setSelectedManager(null); setShowAddModal(false) } }
     window.addEventListener('keydown', fn)
@@ -264,6 +301,10 @@ export default function TeamleadPage() {
   const mgr7Reps  = (id) => teamReports.filter(r => r.manager_id === id)
   const redManagers = managers.filter(m => isRedFor14Days(mgr7Reps(m.id), m.created_at))
 
+  // Missing report notifications
+  const { missing: missingAlerts, streaks: streakAlerts } = getMissingReportAlerts(managers, teamReports)
+  const totalNotifications = redManagers.length + missingAlerts.length + streakAlerts.length
+
   const modalReports  = selectedManager ? teamReports.filter(r => r.manager_id === selectedManager.id) : []
   const modalIsNikita = TEAMS.find(t => t.id === selectedManager?.team)?.type === 'nikita'
 
@@ -290,9 +331,9 @@ export default function TeamleadPage() {
                   className="relative p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition"
                 >
                   <BellIcon />
-                  {redManagers.length > 0 && (
+                  {totalNotifications > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
-                      {redManagers.length}
+                      {totalNotifications}
                     </span>
                   )}
                 </button>
@@ -342,13 +383,33 @@ export default function TeamleadPage() {
                       <h3 className="text-sm font-semibold text-gray-200">Уведомления</h3>
                       <button onClick={() => setShowBell(false)} className="text-gray-500 hover:text-white transition"><CloseIcon /></button>
                     </div>
-                    {redManagers.length === 0 ? (
+                    {totalNotifications === 0 ? (
                       <p className="text-gray-500 text-sm text-center py-4">Нет уведомлений</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-2 max-h-80 overflow-y-auto">
+                        {streakAlerts.map(m => (
+                          <div
+                            key={`streak-${m.id}`}
+                            className="bg-orange-950/40 border border-orange-700 rounded-xl p-3 cursor-pointer hover:bg-orange-950/60 transition"
+                            onClick={() => { setSelectedManager(managers.find(x => x.id === m.id)); setShowBell(false) }}
+                          >
+                            <p className="text-orange-300 text-sm font-semibold">{m.name}</p>
+                            <p className="text-gray-500 text-xs mt-0.5">Не сдавал отчёт {m.days} дн. подряд</p>
+                          </div>
+                        ))}
+                        {missingAlerts.filter(m => !streakAlerts.find(s => s.id === m.id)).map(m => (
+                          <div
+                            key={`missing-${m.id}`}
+                            className="bg-yellow-950/40 border border-yellow-700 rounded-xl p-3 cursor-pointer hover:bg-yellow-950/60 transition"
+                            onClick={() => { setSelectedManager(managers.find(x => x.id === m.id)); setShowBell(false) }}
+                          >
+                            <p className="text-yellow-300 text-sm font-semibold">{m.name}</p>
+                            <p className="text-gray-500 text-xs mt-0.5">Не сдал отчёт за {m.dateFormatted}</p>
+                          </div>
+                        ))}
                         {redManagers.map(m => (
                           <div
-                            key={m.id}
+                            key={`red-${m.id}`}
                             className="bg-red-950/40 border border-red-800 rounded-xl p-3 cursor-pointer hover:bg-red-950/60 transition"
                             onClick={() => { setSelectedManager(m); setShowBell(false) }}
                           >
@@ -634,7 +695,7 @@ export default function TeamleadPage() {
                     {rows.filter(r => r.report).length} из {rows.length} сдали отчёт
                   </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                   <div>
                     <p className="text-gray-500 text-xs mb-1">Отписанные</p>
                     <p className="text-xl font-bold text-gray-200">{totals.unsubscribed}</p>
@@ -650,6 +711,12 @@ export default function TeamleadPage() {
                   <div>
                     <p className="text-gray-500 text-xs mb-1">Написало людей</p>
                     <p className="text-xl font-bold text-gray-200">{totals.people_wrote}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">ЦД (из таблиц)</p>
+                    <p className="text-xl font-bold text-emerald-400">
+                      {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.total || 0), 0)}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -675,28 +742,35 @@ export default function TeamleadPage() {
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
                         )}
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.map(({ member, report }) => (
-                        <tr key={member.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
-                          <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">
-                            {member.name || member.email}
-                            {member.role === 'teamlead' && <span className="ml-2 text-xs text-gray-600">(тимлид)</span>}
-                          </td>
-                          {!isNikita && (
-                            <>
-                              <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.unsubscribed : '—'}</td>
-                              <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.replied : '—'}</td>
-                            </>
-                          )}
-                          {isNikita && (
-                            <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
-                          )}
-                          <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
-                        </tr>
-                      ))}
-                      {rows.some(r => r.report) && (
+                      {rows.map(({ member, report }) => {
+                        const sd = sheetsData[member.name]
+                        return (
+                          <tr key={member.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
+                            <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">
+                              {member.name || member.email}
+                              {member.role === 'teamlead' && <span className="ml-2 text-xs text-gray-600">(тимлид)</span>}
+                            </td>
+                            {!isNikita && (
+                              <>
+                                <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.unsubscribed : '—'}</td>
+                                <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.replied : '—'}</td>
+                              </>
+                            )}
+                            {isNikita && (
+                              <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
+                            )}
+                            <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
+                            <td className="px-3 sm:px-5 py-3 text-sm">
+                              <CdCell data={sd} loading={sheetsLoading && sd === undefined} />
+                            </td>
+                          </tr>
+                        )
+                      })}
+                      {(rows.some(r => r.report) || Object.values(sheetsData).some(v => v?.total)) && (
                         <tr style={{ borderTop: '2px solid #2a2a3e' }} className="bg-white/[0.02]">
                           <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">Итого</td>
                           {!isNikita && (
@@ -709,6 +783,9 @@ export default function TeamleadPage() {
                             <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
                           )}
                           <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
+                          <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
+                            {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.total || 0), 0)}
+                          </td>
                         </tr>
                       )}
                     </tbody>

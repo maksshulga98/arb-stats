@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
+import { getMissingReportAlerts } from '../../lib/notifications'
 
 const TEAMS = {
   anastasia: { name: 'Анастасии', type: 'standard' },
@@ -129,6 +130,10 @@ export default function DashboardPage() {
   const isNikita  = teamType === 'nikita'
   const weeklyIP  = getIPLast7Days(reports)
   const zone      = getZone(weeklyIP)
+  const { missing: myMissing } = getMissingReportAlerts(
+    profile ? [profile] : [],
+    reports
+  )
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -169,6 +174,19 @@ export default function DashboardPage() {
                 {zone.label}
               </span>
             </div>
+
+            {/* Missing report notification */}
+            {myMissing.length > 0 && (
+              <div className="bg-orange-950/40 border border-orange-700 rounded-2xl p-4 sm:p-5 mb-6 flex items-start gap-3">
+                <span className="text-orange-400 text-lg leading-none mt-0.5">!</span>
+                <div>
+                  <p className="text-orange-300 text-sm font-semibold">Вы не сдали отчёт</p>
+                  <p className="text-gray-400 text-xs mt-1">
+                    Нет отчёта за {myMissing[0].dateFormatted}. Добавьте отчёт, чтобы уведомление исчезло.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Header row */}
             <div className="flex justify-between items-center mb-4">
