@@ -65,6 +65,10 @@ export default function DashboardPage() {
       .select('*')
       .eq('id', user.id)
       .single()
+
+    if (profileData?.role === 'teamlead') { router.push('/teamlead'); return }
+    if (profileData?.role === 'admin') { router.push('/admin'); return }
+
     setProfile(profileData)
 
     await loadReports(user.id)
