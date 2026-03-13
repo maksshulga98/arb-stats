@@ -100,9 +100,11 @@ function TrashIcon() {
 
 export default function AdminPage() {
   const [managers, setManagers]           = useState([])
+  const [teamleads, setTeamleads]        = useState([])
   const [reports,  setReports]            = useState([])
   const [loading,  setLoading]            = useState(true)
   const [activeTab, setActiveTab]         = useState('analytics')
+  const [dailyDate, setDailyDate]        = useState(new Date().toISOString().split('T')[0])
   const [selectedManager, setSelectedManager] = useState(null)
   const [deletingReport, setDeletingReport]   = useState(null)
   const [showBell, setShowBell]           = useState(false)
@@ -129,11 +131,13 @@ export default function AdminPage() {
   }
 
   const loadData = async () => {
-    const [{ data: mgrs }, { data: reps }] = await Promise.all([
+    const [{ data: mgrs }, { data: tls }, { data: reps }] = await Promise.all([
       supabase.from('profiles').select('*').eq('role', 'manager'),
+      supabase.from('profiles').select('*').eq('role', 'teamlead'),
       supabase.from('reports').select('*').order('date', { ascending: false }),
     ])
     setManagers(mgrs || [])
+    setTeamleads(tls || [])
     setReports(reps || [])
     setLoading(false)
   }
@@ -168,6 +172,7 @@ export default function AdminPage() {
 
   const TABS = [
     { id: 'analytics', label: 'Аналитика команды' },
+    { id: 'daily',     label: 'Дневной отчёт' },
     { id: 'salary',    label: 'Расчёт ЗП' },
     { id: 'telegram',  label: 'Аккаунты Телеграмм' },
   ]
@@ -341,6 +346,116 @@ export default function AdminPage() {
                       })}
                     </div>
                   )}
+                </section>
+              )
+            })}
+          </div>
+        )}
+
+        {/* ─── Daily report tab ─── */}
+        {activeTab === 'daily' && (
+          <div className="space-y-8">
+            <div className="flex items-center gap-4">
+              <label className="text-gray-400 text-sm">Дата:</label>
+              <input
+                type="date"
+                value={dailyDate}
+                onChange={e => setDailyDate(e.target.value)}
+                className="bg-gray-900 text-white px-4 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+              />
+            </div>
+
+            {TEAMS.map(team => {
+              const isNikita = team.type === 'nikita'
+              const teamMembers = [
+                ...managers.filter(m => m.team === team.id),
+                ...teamleads.filter(t => t.team === team.id),
+              ]
+              const dayReports = reports.filter(r => r.date === dailyDate)
+
+              const rows = teamMembers.map(member => {
+                const report = dayReports.find(r => r.manager_id === member.id)
+                return { member, report }
+              })
+
+              const totals = {
+                unsubscribed: rows.reduce((s, r) => s + (r.report?.unsubscribed || 0), 0),
+                replied:      rows.reduce((s, r) => s + (r.report?.replied || 0), 0),
+                ordered_ip:   rows.reduce((s, r) => s + (r.report?.ordered_ip || 0), 0),
+                people_wrote: rows.reduce((s, r) => s + (r.report?.people_wrote || 0), 0),
+              }
+
+              return (
+                <section key={team.id}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <h2 className="text-base font-semibold text-gray-200">Команда {team.name}</h2>
+                    <span className="text-gray-600 text-sm">{teamMembers.length} чел.</span>
+                  </div>
+
+                  <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden">
+                    <table className="w-full">
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                          <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Менеджер</th>
+                          {!isNikita && (
+                            <>
+                              <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Отписанные</th>
+                              <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответившие</th>
+                            </>
+                          )}
+                          {isNikita && (
+                            <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
+                          )}
+                          <th className="text-left px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.length === 0 ? (
+                          <tr>
+                            <td colSpan={isNikita ? 3 : 4} className="text-center py-8 text-gray-600 text-sm">
+                              Нет участников в команде
+                            </td>
+                          </tr>
+                        ) : (
+                          <>
+                            {rows.map(({ member, report }) => (
+                              <tr key={member.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
+                                <td className="px-5 py-3 text-sm text-gray-300">
+                                  {member.name || member.email}
+                                  {member.role === 'teamlead' && <span className="ml-2 text-xs text-gray-600">(тимлид)</span>}
+                                </td>
+                                {!isNikita && (
+                                  <>
+                                    <td className="px-5 py-3 text-sm text-gray-300">{report ? report.unsubscribed : '—'}</td>
+                                    <td className="px-5 py-3 text-sm text-gray-300">{report ? report.replied : '—'}</td>
+                                  </>
+                                )}
+                                {isNikita && (
+                                  <td className="px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
+                                )}
+                                <td className="px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
+                              </tr>
+                            ))}
+                            {rows.some(r => r.report) && (
+                              <tr style={{ borderTop: '2px solid #2a2a3e' }} className="bg-white/[0.02]">
+                                <td className="px-5 py-3 text-sm font-semibold text-gray-200">Итого</td>
+                                {!isNikita && (
+                                  <>
+                                    <td className="px-5 py-3 text-sm font-semibold text-gray-200">{totals.unsubscribed}</td>
+                                    <td className="px-5 py-3 text-sm font-semibold text-gray-200">{totals.replied}</td>
+                                  </>
+                                )}
+                                {isNikita && (
+                                  <td className="px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
+                                )}
+                                <td className="px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
+                              </tr>
+                            )}
+                          </>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </section>
               )
             })}
