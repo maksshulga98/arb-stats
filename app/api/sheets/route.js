@@ -38,26 +38,70 @@ function parseCSV(text) {
   return rows
 }
 
-// GET /api/sheets?names=Имя1,Имя2&date=2026-03-13
+// Build set of DD.MM dates for the given range
+function buildDateSet(dateFrom, dateTo) {
+  const dates = new Set()
+  const d = new Date(dateFrom + 'T00:00:00')
+  const end = new Date(dateTo + 'T00:00:00')
+  while (d <= end) {
+    const dd = String(d.getDate()).padStart(2, '0')
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    dates.add(`${dd}.${mm}`)
+    d.setDate(d.getDate() + 1)
+  }
+  return dates
+}
+
+// Get unique months (0-based) from a date range
+function getMonths(dateFrom, dateTo) {
+  const months = new Set()
+  const d = new Date(dateFrom + 'T00:00:00')
+  const end = new Date(dateTo + 'T00:00:00')
+  while (d <= end) {
+    months.add(d.getMonth())
+    d.setMonth(d.getMonth() + 1, 1)
+  }
+  // also add the end month
+  months.add(new Date(dateTo + 'T00:00:00').getMonth())
+  return [...months]
+}
+
+function extractRow(dayRow) {
+  const products = {}
+  let total = 0, ip = 0, debit = 0
+  for (let col = COL_PRODUCTS_START; col <= COL_PRODUCTS_END; col++) {
+    const val = parseInt(dayRow[col]) || 0
+    const idx = col - COL_PRODUCTS_START
+    const productName = PRODUCT_NAMES[idx] || `Продукт ${idx + 1}`
+    products[productName] = (products[productName] || 0) + val
+    total += val
+    if (idx === 0) ip += val
+    else debit += val
+  }
+  return { total, ip, debit, products }
+}
+
+// GET /api/sheets?names=Имя1,Имя2&dateFrom=2026-03-01&dateTo=2026-03-13
+// Also supports legacy: &date=2026-03-13 (single day)
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
   const names = searchParams.get('names')?.split(',') || []
-  const dateStr = searchParams.get('date') // YYYY-MM-DD
+  const dateFrom = searchParams.get('dateFrom') || searchParams.get('date')
+  const dateTo = searchParams.get('dateTo') || dateFrom
 
-  if (!dateStr || names.length === 0) {
+  if (!dateFrom || names.length === 0) {
     return NextResponse.json({ error: 'Missing names or date' }, { status: 400 })
   }
 
-  const [year, month] = dateStr.split('-')
-  const monthIndex = parseInt(month) - 1
-  const monthName = MONTHS_RU[monthIndex]
-  if (!monthName) {
-    return NextResponse.json({ error: 'Invalid month' }, { status: 400 })
-  }
+  const targetDates = buildDateSet(dateFrom, dateTo)
+  const months = getMonths(dateFrom, dateTo)
 
-  // Target date in DD.MM format (as used in the sheets)
-  const day = dateStr.split('-')[2]
-  const targetDate = `${day}.${month}`
+  // Validate months
+  for (const m of months) {
+    if (!MONTHS_RU[m]) {
+      return NextResponse.json({ error: 'Invalid month' }, { status: 400 })
+    }
+  }
 
   const results = {}
 
@@ -70,53 +114,35 @@ export async function GET(request) {
       }
 
       try {
-        const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(monthName)}`
-        const res = await fetch(url, { next: { revalidate: 300 } }) // cache 5 min
-        if (!res.ok) {
-          results[name] = null
-          return
-        }
+        const acc = { total: 0, ip: 0, debit: 0, products: {} }
 
-        const text = await res.text()
-        const rows = parseCSV(text)
-        if (rows.length < 2) {
-          results[name] = null
-          return
-        }
+        // Fetch each month's sheet that falls in the range
+        await Promise.all(
+          months.map(async (monthIndex) => {
+            const monthName = MONTHS_RU[monthIndex]
+            const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(monthName)}`
+            const res = await fetch(url, { next: { revalidate: 300 } })
+            if (!res.ok) return
 
-        // Find the row matching the target date
-        let dayRow = null
-        for (let i = 1; i < rows.length; i++) {
-          const cellDate = rows[i][COL_DATE]
-          if (cellDate === targetDate) {
-            dayRow = rows[i]
-            break
-          }
-        }
+            const text = await res.text()
+            const rows = parseCSV(text)
 
-        if (!dayRow) {
-          results[name] = { total: 0, ip: 0, debit: 0, products: {} }
-          return
-        }
+            for (let i = 1; i < rows.length; i++) {
+              const cellDate = rows[i][COL_DATE]
+              if (targetDates.has(cellDate)) {
+                const row = extractRow(rows[i])
+                acc.total += row.total
+                acc.ip += row.ip
+                acc.debit += row.debit
+                for (const [k, v] of Object.entries(row.products)) {
+                  acc.products[k] = (acc.products[k] || 0) + v
+                }
+              }
+            }
+          })
+        )
 
-        // Extract product values
-        // Col 2 (index 0) = Альфа ИП → ip
-        // Cols 3-7 (indices 1-5) = дебетовые карты → debit
-        const products = {}
-        let total = 0
-        let ip = 0
-        let debit = 0
-        for (let col = COL_PRODUCTS_START; col <= COL_PRODUCTS_END; col++) {
-          const val = parseInt(dayRow[col]) || 0
-          const idx = col - COL_PRODUCTS_START
-          const productName = PRODUCT_NAMES[idx] || `Продукт ${idx + 1}`
-          products[productName] = val
-          total += val
-          if (idx === 0) ip += val
-          else debit += val
-        }
-
-        results[name] = { total, ip, debit, products }
+        results[name] = acc
       } catch {
         results[name] = null
       }

@@ -104,7 +104,8 @@ export default function TeamleadPage() {
   const [teamReports, setTeamReports] = useState([])
   const [loading, setLoading]   = useState(true)
   const [activeTab, setActiveTab] = useState('analytics')
-  const [dailyDate, setDailyDate] = useState(new Date().toISOString().split('T')[0])
+  const [dateFrom, setDateFrom] = useState(new Date().toISOString().split('T')[0])
+  const [dateTo, setDateTo]     = useState(new Date().toISOString().split('T')[0])
 
   // Personal report form
   const [showReportForm, setShowReportForm] = useState(false)
@@ -147,12 +148,12 @@ export default function TeamleadPage() {
     const namesWithSheets = allMembers.filter(m => MANAGER_SHEETS[m.name]).map(m => m.name)
     if (namesWithSheets.length === 0) { setSheetsData({}); return }
     setSheetsLoading(true)
-    fetch(`/api/sheets?names=${encodeURIComponent(namesWithSheets.join(','))}&date=${dailyDate}`)
+    fetch(`/api/sheets?names=${encodeURIComponent(namesWithSheets.join(','))}&dateFrom=${dateFrom}&dateTo=${dateTo}`)
       .then(r => r.json())
       .then(data => setSheetsData(data))
       .catch(() => setSheetsData({}))
       .finally(() => setSheetsLoading(false))
-  }, [activeTab, dailyDate, managers, profile])
+  }, [activeTab, dateFrom, dateTo, managers, profile])
   useEffect(() => {
     const fn = (e) => { if (e.key === 'Escape') { setSelectedManager(null); setShowAddModal(false) } }
     window.addEventListener('keydown', fn)
@@ -651,10 +652,16 @@ export default function TeamleadPage() {
         {activeTab === 'daily' && (() => {
           const teamMembers = [profile, ...managers]
           const allReports = [...myReports, ...teamReports]
-          const dayReports = allReports.filter(r => r.date === dailyDate)
+          const dayReports = allReports.filter(r => r.date >= dateFrom && r.date <= dateTo)
 
           const rows = teamMembers.map(member => {
-            const report = dayReports.find(r => r.manager_id === member.id)
+            const memberReports = dayReports.filter(r => r.manager_id === member.id)
+            const report = memberReports.length > 0 ? {
+              unsubscribed: memberReports.reduce((s, r) => s + (r.unsubscribed || 0), 0),
+              replied:      memberReports.reduce((s, r) => s + (r.replied || 0), 0),
+              ordered_ip:   memberReports.reduce((s, r) => s + (r.ordered_ip || 0), 0),
+              people_wrote: memberReports.reduce((s, r) => s + (r.people_wrote || 0), 0),
+            } : null
             return { member, report }
           })
 
@@ -667,12 +674,19 @@ export default function TeamleadPage() {
 
           return (
             <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <label className="text-gray-400 text-sm">Дата:</label>
+              <div className="flex items-center gap-4 flex-wrap">
+                <label className="text-gray-400 text-sm">С:</label>
                 <input
                   type="date"
-                  value={dailyDate}
-                  onChange={e => setDailyDate(e.target.value)}
+                  value={dateFrom}
+                  onChange={e => { setDateFrom(e.target.value); if (e.target.value > dateTo) setDateTo(e.target.value) }}
+                  className="bg-gray-900 text-white px-4 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                />
+                <label className="text-gray-400 text-sm">По:</label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={e => { setDateTo(e.target.value); if (e.target.value < dateFrom) setDateFrom(e.target.value) }}
                   className="bg-gray-900 text-white px-4 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
                 />
               </div>
@@ -680,7 +694,7 @@ export default function TeamleadPage() {
               {/* Overall summary */}
               <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-semibold text-gray-200">Сводка за день</h2>
+                  <h2 className="text-sm font-semibold text-gray-200">Сводка за период</h2>
                   <span className="text-gray-600 text-xs">
                     {rows.filter(r => r.report).length} из {rows.length} сдали отчёт
                   </span>
