@@ -89,12 +89,22 @@ function CloseIcon() {
   )
 }
 
+function TrashIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  )
+}
+
 export default function AdminPage() {
   const [managers, setManagers]           = useState([])
   const [reports,  setReports]            = useState([])
   const [loading,  setLoading]            = useState(true)
   const [activeTab, setActiveTab]         = useState('analytics')
   const [selectedManager, setSelectedManager] = useState(null)
+  const [deletingReport, setDeletingReport]   = useState(null)
   const [showBell, setShowBell]           = useState(false)
   const bellRef = useRef(null)
   const router  = useRouter()
@@ -134,6 +144,13 @@ export default function AdminPage() {
   }
 
   const managerReports = (id) => reports.filter(r => r.manager_id === id)
+
+  const handleDeleteReport = async (reportId) => {
+    setDeletingReport(reportId)
+    await supabase.from('reports').delete().eq('id', reportId)
+    setReports(prev => prev.filter(r => r.id !== reportId))
+    setDeletingReport(null)
+  }
 
   const redManagers = managers.filter(m => isRedFor14Days(managerReports(m.id), m.created_at))
 
@@ -420,13 +437,14 @@ export default function AdminPage() {
                       <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
                     )}
                     <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                    <th className="w-8" />
                   </tr>
                 </thead>
                 <tbody>
                   {modalReports.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={modalIsNikita ? 3 : 4}
+                        colSpan={modalIsNikita ? 4 : 5}
                         className="text-center py-12 text-gray-600 text-sm"
                       >
                         Нет отчётов
@@ -437,7 +455,7 @@ export default function AdminPage() {
                       <tr
                         key={r.id}
                         style={{ borderTop: '1px solid #1a1a28' }}
-                        className="hover:bg-white/[0.02] transition"
+                        className="hover:bg-white/[0.02] transition group"
                       >
                         <td className="py-2.5 text-sm text-gray-300">
                           {new Date(r.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })}
@@ -452,6 +470,16 @@ export default function AdminPage() {
                           <td className="py-2.5 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
                         )}
                         <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                        <td className="py-2.5 pr-1 text-right">
+                          <button
+                            onClick={() => handleDeleteReport(r.id)}
+                            disabled={deletingReport === r.id}
+                            className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition disabled:opacity-30"
+                            title="Удалить отчёт"
+                          >
+                            <TrashIcon />
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}

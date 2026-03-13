@@ -34,6 +34,8 @@ export default function LoginPage() {
 
     if (profile?.role === 'admin') {
       router.push('/admin')
+    } else if (profile?.role === 'teamlead') {
+      router.push('/teamlead')
     } else {
       router.push('/dashboard')
     }

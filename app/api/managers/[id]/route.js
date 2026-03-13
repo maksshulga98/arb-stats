@@ -1,0 +1,62 @@
+import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from 'next/server'
+
+export async function DELETE(request, { params }) {
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  )
+  const supabaseAnon = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )
+  try {
+    const { id } = await params
+
+    const token = request.headers.get('Authorization')?.replace('Bearer ', '')
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token)
+    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { data: callerProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('role, team')
+      .eq('id', user.id)
+      .single()
+
+    if (!['teamlead', 'admin'].includes(callerProfile?.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const { data: targetProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('role, team')
+      .eq('id', id)
+      .single()
+
+    if (!targetProfile) {
+      return NextResponse.json({ error: 'Менеджер не найден' }, { status: 404 })
+    }
+
+    // Teamlead can only delete managers from their own team
+    if (callerProfile.role === 'teamlead') {
+      if (targetProfile.team !== callerProfile.team || targetProfile.role !== 'manager') {
+        return NextResponse.json({ error: 'Нет доступа к этому менеджеру' }, { status: 403 })
+      }
+    }
+
+    // Soft-delete: clear team and mark as deleted so FK references in reports stay intact
+    await supabaseAdmin
+      .from('profiles')
+      .update({ team: null, role: 'deleted' })
+      .eq('id', id)
+
+    // Also revoke login by deleting the auth user
+    await supabaseAdmin.auth.admin.deleteUser(id)
+
+    return NextResponse.json({ success: true })
+  } catch {
+    return NextResponse.json({ error: 'Внутренняя ошибка' }, { status: 500 })
+  }
+}
