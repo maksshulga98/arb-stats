@@ -10,28 +10,31 @@ import {
 
 function parseCSV(text) {
   const rows = []
-  let current = ''
   let inQuotes = false
-  const lines = text.split('\n')
+  let cell = ''
+  let cells = []
 
-  for (const line of lines) {
-    if (!line.trim()) continue
-    const cells = []
-    let cell = ''
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i]
-      if (ch === '"') {
-        inQuotes = !inQuotes
-      } else if (ch === ',' && !inQuotes) {
-        cells.push(cell.trim())
-        cell = ''
-      } else {
-        cell += ch
-      }
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (ch === '"') {
+      inQuotes = !inQuotes
+    } else if (ch === ',' && !inQuotes) {
+      cells.push(cell.trim())
+      cell = ''
+    } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      if (ch === '\r' && text[i + 1] === '\n') i++ // skip \r\n
+      cells.push(cell.trim())
+      if (cells.some(c => c !== '')) rows.push(cells)
+      cells = []
+      cell = ''
+    } else {
+      cell += ch
     }
-    cells.push(cell.trim())
-    rows.push(cells)
   }
+  // last row
+  cells.push(cell.trim())
+  if (cells.some(c => c !== '')) rows.push(cells)
+
   return rows
 }
 
