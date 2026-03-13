@@ -119,13 +119,16 @@ export default function AdminPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const ADMIN_EMAILS = ['nikita.tatarintsev@arbteam.ru']
+
   const checkAdmin = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
 
     const { data: profile } = await supabase
-      .from('profiles').select('role').eq('id', user.id).single()
-    if (profile?.role !== 'admin') { router.push('/dashboard'); return }
+      .from('profiles').select('*').eq('id', user.id).single()
+    const isAdmin = profile?.role === 'admin' || ADMIN_EMAILS.includes(user.email)
+    if (!isAdmin) { router.push('/dashboard'); return }
 
     await loadData()
   }

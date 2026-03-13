@@ -84,6 +84,8 @@ function TrashIcon() {
   )
 }
 
+const ADMIN_EMAILS = ['nikita.tatarintsev@arbteam.ru']
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function TeamleadPage() {
   const [user, setUser]         = useState(null)
@@ -295,6 +297,9 @@ export default function TeamleadPage() {
                   )}
                 </button>
               </div>
+              {user && ADMIN_EMAILS.includes(user.email) && (
+                <button onClick={() => router.push('/admin')} className="text-gray-400 hover:text-white text-xs transition">Админ</button>
+              )}
               <button onClick={handleLogout} className="text-gray-500 hover:text-white text-sm transition">Выйти</button>
             </div>
           </div>
@@ -358,6 +363,14 @@ export default function TeamleadPage() {
               )}
             </div>
 
+            {user && ADMIN_EMAILS.includes(user.email) && (
+              <button
+                onClick={() => router.push('/admin')}
+                className="text-gray-400 hover:text-white text-sm transition px-3 py-1.5 rounded-lg hover:bg-white/5"
+              >
+                Админ
+              </button>
+            )}
             <span className="w-px h-5 bg-gray-800" />
             <span className="text-gray-500 text-sm">{profile?.name}</span>
             <button onClick={handleLogout} className="text-gray-500 hover:text-white text-sm transition">Выйти</button>
