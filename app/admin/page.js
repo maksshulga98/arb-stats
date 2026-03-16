@@ -376,6 +376,8 @@ export default function AdminPage() {
           <div className="space-y-10">
             {TEAMS.map(team => {
               const teamManagers = managers.filter(m => m.team === team.id)
+              const teamTLs = team.id !== 'nikita' ? teamleads.filter(t => t.team === team.id) : []
+              const teamAll = [...teamTLs, ...teamManagers]
 
               return (
                 <section key={team.id}>
@@ -384,11 +386,11 @@ export default function AdminPage() {
                       Команда {team.name}
                     </h2>
                     <span className="text-gray-600 text-sm">
-                      {teamManagers.length} {teamManagers.length === 1 ? 'менеджер' : 'менеджеров'}
+                      {teamAll.length} {teamAll.length === 1 ? 'менеджер' : 'менеджеров'}
                     </span>
                   </div>
 
-                  {teamManagers.length === 0 ? (
+                  {teamAll.length === 0 ? (
                     <div
                       style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
                       className="rounded-xl p-6 text-gray-600 text-sm"
@@ -397,7 +399,7 @@ export default function AdminPage() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                      {teamManagers.map(manager => {
+                      {teamAll.map(manager => {
                         const mRep    = managerReports(manager.id)
                         const ip7     = getIPForPeriod(mRep, 0, 7)
                         const zKey    = getZoneKey(ip7)
@@ -413,6 +415,7 @@ export default function AdminPage() {
                             <div className="flex justify-between items-start mb-3">
                               <span className="font-medium text-white text-sm leading-tight">
                                 {manager.name || manager.email}
+                                {manager.role === 'teamlead' && <span className="text-xs text-blue-400 ml-1">(ТЛ)</span>}
                               </span>
                               {alert14 && (
                                 <span
