@@ -54,8 +54,8 @@ export async function GET(request) {
 export async function PUT(request) {
   try {
     const caller = await authenticate(request)
-    if (!caller || caller.role !== 'admin') {
-      return NextResponse.json({ error: 'Только админ' }, { status: 403 })
+    if (!caller || !['admin', 'teamlead'].includes(caller.role)) {
+      return NextResponse.json({ error: 'Нет доступа' }, { status: 403 })
     }
 
     const { rowIndex, assignedTo } = await request.json()

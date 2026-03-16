@@ -156,6 +156,8 @@ export default function TeamleadPage() {
   const [tgLoading, setTgLoading]         = useState(false)
   const [tgCodeLoading, setTgCodeLoading] = useState({})
   const [tgCode, setTgCode]               = useState(null)
+  const [tgAssigning, setTgAssigning]     = useState({})
+  const [tgAssignSelect, setTgAssignSelect] = useState({})
 
   // Bell
   const [showBell, setShowBell] = useState(false)
@@ -909,9 +911,9 @@ export default function TeamleadPage() {
                 headers: { Authorization: `Bearer ${session.access_token}` },
               })
               const data = await res.json()
-              // Filter: only accounts assigned to team members
+              // Filter: team accounts + unassigned (free) accounts
               const teamNames = new Set(managers.map(m => m.name).concat(profile?.name ? [profile.name] : []))
-              const myAccounts = (data.accounts || []).filter(a => teamNames.has(a.assignedTo))
+              const myAccounts = (data.accounts || []).filter(a => !a.assignedTo || teamNames.has(a.assignedTo))
               setTgAccounts(myAccounts)
             } catch { setTgAccounts([]) }
             finally { setTgLoading(false) }
@@ -938,6 +940,24 @@ export default function TeamleadPage() {
               setTgCodeLoading(prev => ({ ...prev, [acc.rowIndex]: false }))
             }
           }
+
+          const assignAccount = async (rowIndex, name) => {
+            setTgAssigning(prev => ({ ...prev, [rowIndex]: true }))
+            try {
+              const { data: { session } } = await supabase.auth.getSession()
+              await fetch('/api/telegram-accounts', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({ rowIndex, assignedTo: name }),
+              })
+              setTgAccounts(prev => prev.map(a => a.rowIndex === rowIndex ? { ...a, assignedTo: name } : a))
+              setTgAssignSelect(prev => { const n = { ...prev }; delete n[rowIndex]; return n })
+            } catch {} finally {
+              setTgAssigning(prev => ({ ...prev, [rowIndex]: false }))
+            }
+          }
+
+          const teamPeople = [profile, ...managers].filter(Boolean).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 
           if (tgAccounts.length === 0 && !tgLoading) {
             loadTgAccounts()
@@ -983,10 +1003,10 @@ export default function TeamleadPage() {
               {tgLoading && tgAccounts.length === 0 ? (
                 <div className="text-center py-16 text-gray-600">Загрузка...</div>
               ) : tgAccounts.length === 0 ? (
-                <div className="text-center py-16 text-gray-600">Нет аккаунтов, привязанных к команде</div>
+                <div className="text-center py-16 text-gray-600">Нет аккаунтов</div>
               ) : (
                 <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
-                  <table className="w-full min-w-[600px]">
+                  <table className="w-full min-w-[650px]">
                     <thead>
                       <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                         <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Телефон</th>
@@ -1000,15 +1020,50 @@ export default function TeamleadPage() {
                         <tr key={acc.rowIndex} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
                           <td className="px-3 sm:px-4 py-3 text-sm text-gray-300 font-mono">{acc.phone}</td>
                           <td className="px-3 sm:px-4 py-3 text-sm text-blue-400">{acc.tgLink}</td>
-                          <td className="px-3 sm:px-4 py-3 text-sm text-gray-300">{acc.assignedTo}</td>
                           <td className="px-3 sm:px-4 py-3 text-sm">
-                            <button
-                              onClick={() => fetchCode(acc)}
-                              disabled={tgCodeLoading[acc.rowIndex]}
-                              className="bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 disabled:opacity-50 px-2.5 py-1 rounded-lg text-xs font-medium transition"
-                            >
-                              {tgCodeLoading[acc.rowIndex] ? '...' : 'Получить код'}
-                            </button>
+                            {tgAssignSelect[acc.rowIndex] !== undefined ? (
+                              <div className="flex items-center gap-1">
+                                <select
+                                  value={tgAssignSelect[acc.rowIndex]}
+                                  onChange={e => setTgAssignSelect(prev => ({ ...prev, [acc.rowIndex]: e.target.value }))}
+                                  className="bg-black/30 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500"
+                                >
+                                  <option value="">— Свободен —</option>
+                                  {teamPeople.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                                </select>
+                                <button onClick={() => assignAccount(acc.rowIndex, tgAssignSelect[acc.rowIndex])}
+                                  disabled={tgAssigning[acc.rowIndex]}
+                                  className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-2 py-1 rounded text-xs transition">
+                                  {tgAssigning[acc.rowIndex] ? '...' : 'OK'}
+                                </button>
+                                <button onClick={() => setTgAssignSelect(prev => { const n = { ...prev }; delete n[acc.rowIndex]; return n })}
+                                  className="text-gray-600 hover:text-gray-400 text-xs transition">Отмена</button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${acc.assignedTo ? 'bg-green-500' : 'bg-gray-600'}`} />
+                                <span className={acc.assignedTo ? 'text-gray-200' : 'text-gray-600'}>{acc.assignedTo || 'Свободен'}</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 sm:px-4 py-3 text-sm">
+                            <div className="flex gap-2">
+                              {acc.assignedTo && (
+                                <button onClick={() => fetchCode(acc)} disabled={tgCodeLoading[acc.rowIndex]}
+                                  className="bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 disabled:opacity-50 px-2.5 py-1 rounded-lg text-xs font-medium transition">
+                                  {tgCodeLoading[acc.rowIndex] ? '...' : 'Код'}
+                                </button>
+                              )}
+                              <button onClick={() => setTgAssignSelect(prev => ({ ...prev, [acc.rowIndex]: acc.assignedTo || '' }))}
+                                className="bg-gray-800 hover:bg-gray-700 px-2.5 py-1 rounded-lg text-xs transition">
+                                {acc.assignedTo ? 'Изменить' : 'Назначить'}
+                              </button>
+                              {acc.assignedTo && (
+                                <button onClick={() => assignAccount(acc.rowIndex, '')}
+                                  disabled={tgAssigning[acc.rowIndex]}
+                                  className="text-red-400/70 hover:text-red-400 text-xs transition">Освободить</button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1017,7 +1072,9 @@ export default function TeamleadPage() {
                 </div>
               )}
 
-              <p className="text-gray-700 text-xs">{tgAccounts.length} аккаунтов команды</p>
+              <div className="text-gray-700 text-xs">
+                Всего: {tgAccounts.length} · Выдано: {tgAccounts.filter(a => a.assignedTo).length} · Свободно: {tgAccounts.filter(a => !a.assignedTo).length}
+              </div>
             </div>
           )
         })()}
