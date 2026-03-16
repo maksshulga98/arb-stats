@@ -4,14 +4,20 @@ import { TEAM_CONTACT_COLUMN, CONTACTS_PER_ACCOUNT, COOLDOWN_HOURS } from '../..
 import { readColumnContacts, filterAvailableContacts, colorRowsGreen } from '../../../lib/google-sheets-api'
 
 function getSupabaseClients() {
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  )
-  const supabaseAnon = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!url || !serviceKey || !anonKey) {
+    const missing = []
+    if (!url) missing.push('NEXT_PUBLIC_SUPABASE_URL')
+    if (!serviceKey) missing.push('SUPABASE_SERVICE_ROLE_KEY')
+    if (!anonKey) missing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+    throw new Error(`Missing env vars: ${missing.join(', ')}`)
+  }
+
+  const supabaseAdmin = createClient(url, serviceKey)
+  const supabaseAnon = createClient(url, anonKey)
   return { supabaseAdmin, supabaseAnon }
 }
 
