@@ -137,7 +137,7 @@ export default function TeamleadPage() {
 
   // Add manager modal
   const [showAddModal, setShowAddModal] = useState(false)
-  const [addForm, setAddForm]   = useState({ firstName: '', lastName: '', email: '', password: '', emailManual: false })
+  const [addForm, setAddForm]   = useState({ firstName: '', lastName: '', email: '', password: 'Arb2024!', emailManual: false })
   const [addLoading, setAddLoading] = useState(false)
   const [addError, setAddError] = useState('')
 
@@ -265,7 +265,7 @@ export default function TeamleadPage() {
     const data = await res.json()
     if (data.success) {
       setShowAddModal(false)
-      setAddForm({ firstName: '', lastName: '', email: '', password: '', emailManual: false })
+      setAddForm({ firstName: '', lastName: '', email: '', password: 'Arb2024!', emailManual: false })
       await loadTeamData(profile.team)
     } else {
       setAddError(data.error || 'Ошибка создания')
