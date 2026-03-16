@@ -168,10 +168,7 @@ export async function POST(request) {
     })
   } catch (err) {
     console.error('POST /api/contacts error:', err?.message || err, err?.stack)
-    return NextResponse.json({
-      error: 'Ошибка сервера',
-      debug: err?.message || String(err),
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 })
   }
 }
 

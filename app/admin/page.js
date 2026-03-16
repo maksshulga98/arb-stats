@@ -120,6 +120,8 @@ export default function AdminPage() {
   const [showBell, setShowBell]           = useState(false)
   const [sheetsData, setSheetsData]       = useState({})
   const [sheetsLoading, setSheetsLoading] = useState(false)
+  const [contactStats, setContactStats]   = useState({ total: 0, byManager: [] })
+  const [contactsLoading, setContactsLoading] = useState(false)
   const bellRef = useRef(null)
   const router  = useRouter()
 
@@ -138,6 +140,17 @@ export default function AdminPage() {
       .catch(() => setSheetsData({}))
       .finally(() => setSheetsLoading(false))
   }, [activeTab, dateFrom, dateTo, managers])
+
+  // Fetch contact distribution stats when daily tab is active
+  useEffect(() => {
+    if (activeTab !== 'daily') return
+    setContactsLoading(true)
+    fetch(`/api/contacts/stats?dateFrom=${dateFrom}&dateTo=${dateTo}`)
+      .then(r => r.json())
+      .then(data => setContactStats(data))
+      .catch(() => setContactStats({ total: 0, byManager: [] }))
+      .finally(() => setContactsLoading(false))
+  }, [activeTab, dateFrom, dateTo])
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') setSelectedManager(null) }
@@ -495,6 +508,12 @@ export default function AdminPage() {
                       <p className="text-gray-500 text-xs mb-1">Дебетовые</p>
                       <p className="text-xl font-bold text-purple-400">
                         {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.debit || 0), 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs mb-1">Выдано номеров</p>
+                      <p className="text-xl font-bold text-orange-400">
+                        {contactsLoading ? '...' : contactStats.total}
                       </p>
                     </div>
                   </div>
