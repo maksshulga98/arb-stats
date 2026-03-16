@@ -161,8 +161,13 @@ export async function POST(request) {
       distributedAt: new Date().toISOString(),
     })
   } catch (err) {
-    console.error('POST /api/contacts error:', err)
-    return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 })
+    console.error('POST /api/contacts error:', err?.message || err)
+    const message = err?.message?.includes('private_key')
+      ? 'Ошибка конфигурации Google API. Проверьте GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.'
+      : err?.message?.includes('not found')
+        ? 'Таблица контактов не найдена или нет доступа.'
+        : 'Внутренняя ошибка сервера'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
