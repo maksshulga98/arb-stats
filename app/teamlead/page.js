@@ -910,6 +910,36 @@ export default function TeamleadPage() {
               <button onClick={() => setSelectedManager(null)} className="text-gray-500 hover:text-white p-1 rounded-lg hover:bg-white/5 transition"><CloseIcon /></button>
             </div>
 
+            {/* Credentials */}
+            <div className="px-6 pt-4 pb-2">
+              <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="text-gray-500 text-xs">Логин</p>
+                    <p className="text-gray-300 text-sm truncate">{selectedManager.email}</p>
+                  </div>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(selectedManager.email); }}
+                    className="text-gray-600 hover:text-white text-xs px-2.5 py-1 rounded-lg hover:bg-white/5 transition flex-shrink-0 ml-2"
+                  >
+                    Копировать
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-xs">Пароль</p>
+                    <p className="text-gray-300 text-sm">Arb2024!</p>
+                  </div>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText('Arb2024!'); }}
+                    className="text-gray-600 hover:text-white text-xs px-2.5 py-1 rounded-lg hover:bg-white/5 transition flex-shrink-0 ml-2"
+                  >
+                    Копировать
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Zone summary */}
             {(() => {
               const ip7  = getIPForPeriod(modalReports, 0, 7)
