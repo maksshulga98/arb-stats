@@ -328,6 +328,53 @@ export default function TeamleadPage() {
                     </span>
                   )}
                 </button>
+
+                {showBell && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowBell(false)} />
+                    <div style={{ backgroundColor: '#13131f', border: '1px solid #2a2a3e' }}
+                      className="absolute right-0 top-12 rounded-2xl p-4 w-64 z-50 shadow-2xl"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-gray-200">Уведомления</h3>
+                        <button onClick={() => setShowBell(false)} className="text-gray-500 hover:text-white transition"><CloseIcon /></button>
+                      </div>
+                      {totalNotifications === 0 ? (
+                        <p className="text-gray-500 text-sm text-center py-4">Нет уведомлений</p>
+                      ) : (
+                        <div className="space-y-2 max-h-80 overflow-y-auto">
+                          {streakAlerts.map(m => (
+                            <div key={`streak-${m.id}`}
+                              className="bg-orange-950/40 border border-orange-700 rounded-xl p-3 cursor-pointer hover:bg-orange-950/60 transition"
+                              onClick={() => { setSelectedManager(managers.find(x => x.id === m.id)); setShowBell(false) }}
+                            >
+                              <p className="text-orange-300 text-sm font-semibold">{m.name}</p>
+                              <p className="text-gray-500 text-xs mt-0.5">Не сдавал отчёт {m.days} дн. подряд</p>
+                            </div>
+                          ))}
+                          {missingAlerts.filter(m => !streakAlerts.find(s => s.id === m.id)).map(m => (
+                            <div key={`missing-${m.id}`}
+                              className="bg-yellow-950/40 border border-yellow-700 rounded-xl p-3 cursor-pointer hover:bg-yellow-950/60 transition"
+                              onClick={() => { setSelectedManager(managers.find(x => x.id === m.id)); setShowBell(false) }}
+                            >
+                              <p className="text-yellow-300 text-sm font-semibold">{m.name}</p>
+                              <p className="text-gray-500 text-xs mt-0.5">Не сдал отчёт за {m.dateFormatted}</p>
+                            </div>
+                          ))}
+                          {redManagers.map(m => (
+                            <div key={`red-${m.id}`}
+                              className="bg-red-950/40 border border-red-800 rounded-xl p-3 cursor-pointer hover:bg-red-950/60 transition"
+                              onClick={() => { setSelectedManager(m); setShowBell(false) }}
+                            >
+                              <p className="text-red-300 text-sm font-semibold">{m.name}</p>
+                              <p className="text-gray-500 text-xs mt-0.5">14 дней в красной зоне</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
               {user && ADMIN_EMAILS.includes(user.email) && (
                 <button onClick={() => router.push('/admin')} className="text-gray-400 hover:text-white text-xs transition">Админ</button>
