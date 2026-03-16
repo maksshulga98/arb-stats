@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { getSheetsClient } from '../../../../lib/google-sheets-api'
+import { TG_ACCOUNTS_SPREADSHEET_ID } from '../../../../lib/sheets-config'
 
 export async function DELETE(request, { params }) {
   const supabaseAdmin = createClient(
@@ -31,7 +33,7 @@ export async function DELETE(request, { params }) {
 
     const { data: targetProfile } = await supabaseAdmin
       .from('profiles')
-      .select('role, team')
+      .select('role, team, name')
       .eq('id', id)
       .single()
 
@@ -54,6 +56,30 @@ export async function DELETE(request, { params }) {
 
     // Also revoke login by deleting the auth user
     await supabaseAdmin.auth.admin.deleteUser(id)
+
+    // Clear TG account assignments for this manager in Google Sheets
+    if (targetProfile.name) {
+      try {
+        const sheets = getSheetsClient()
+        const res = await sheets.spreadsheets.values.get({
+          spreadsheetId: TG_ACCOUNTS_SPREADSHEET_ID,
+          range: 'E2:E',
+        })
+        const rows = res.data.values || []
+        const updates = []
+        for (let i = 0; i < rows.length; i++) {
+          if ((rows[i]?.[0] || '').trim() === targetProfile.name) {
+            updates.push({ range: `E${i + 2}`, values: [['']] })
+          }
+        }
+        if (updates.length > 0) {
+          await sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: TG_ACCOUNTS_SPREADSHEET_ID,
+            requestBody: { valueInputOption: 'RAW', data: updates },
+          })
+        }
+      } catch { /* TG cleanup is non-critical, don't block deletion */ }
+    }
 
     return NextResponse.json({ success: true })
   } catch {

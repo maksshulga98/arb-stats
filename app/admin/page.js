@@ -133,6 +133,13 @@ export default function AdminPage() {
   const [salaryCalculated, setSalaryCalculated] = useState(false)
   const [paymentEditing, setPaymentEditing] = useState({})
   const [paymentSaving, setPaymentSaving]   = useState({})
+  // Telegram tab state
+  const [tgAccounts, setTgAccounts]         = useState([])
+  const [tgLoading, setTgLoading]           = useState(false)
+  const [tgCodeLoading, setTgCodeLoading]   = useState({})
+  const [tgCode, setTgCode]                 = useState(null) // { code, receivedAt, phone }
+  const [tgAssigning, setTgAssigning]       = useState({}) // { rowIndex: true }
+  const [tgAssignSelect, setTgAssignSelect] = useState({}) // { rowIndex: name }
   const bellRef = useRef(null)
   const router  = useRouter()
 
@@ -918,13 +925,197 @@ export default function AdminPage() {
         })()}
 
         {/* ─── Telegram tab ─── */}
-        {activeTab === 'telegram' && (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
-            <div className="text-5xl mb-4">✈️</div>
-            <p className="text-gray-300 font-medium text-lg">Аккаунты Телеграмм</p>
-            <p className="text-gray-600 text-sm mt-2">Раздел в разработке</p>
-          </div>
-        )}
+        {activeTab === 'telegram' && (() => {
+          const loadTgAccounts = async () => {
+            setTgLoading(true)
+            try {
+              const { data: { session } } = await supabase.auth.getSession()
+              const res = await fetch('/api/telegram-accounts', {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+              })
+              const data = await res.json()
+              setTgAccounts(data.accounts || [])
+            } catch { setTgAccounts([]) }
+            finally { setTgLoading(false) }
+          }
+
+          const fetchCode = async (acc) => {
+            setTgCodeLoading(prev => ({ ...prev, [acc.rowIndex]: true }))
+            try {
+              const { data: { session } } = await supabase.auth.getSession()
+              const res = await fetch('/api/telegram-accounts/code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({ email: acc.email, password: acc.emailPassword }),
+              })
+              const data = await res.json()
+              if (res.ok) {
+                setTgCode({ code: data.code, receivedAt: data.receivedAt, phone: acc.phone, tgLink: acc.tgLink })
+              } else {
+                setTgCode({ error: data.error, phone: acc.phone })
+              }
+            } catch (e) {
+              setTgCode({ error: e.message, phone: acc.phone })
+            } finally {
+              setTgCodeLoading(prev => ({ ...prev, [acc.rowIndex]: false }))
+            }
+          }
+
+          const assignAccount = async (rowIndex, name) => {
+            setTgAssigning(prev => ({ ...prev, [rowIndex]: true }))
+            try {
+              const { data: { session } } = await supabase.auth.getSession()
+              await fetch('/api/telegram-accounts', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({ rowIndex, assignedTo: name }),
+              })
+              setTgAccounts(prev => prev.map(a => a.rowIndex === rowIndex ? { ...a, assignedTo: name } : a))
+              setTgAssignSelect(prev => { const n = { ...prev }; delete n[rowIndex]; return n })
+            } catch {} finally {
+              setTgAssigning(prev => ({ ...prev, [rowIndex]: false }))
+            }
+          }
+
+          const allPeople = [...teamleads, ...managers].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+
+          // Auto-load on first render
+          if (tgAccounts.length === 0 && !tgLoading) {
+            loadTgAccounts()
+          }
+
+          return (
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold text-gray-200">Аккаунты Телеграмм</h2>
+                <button onClick={loadTgAccounts} disabled={tgLoading}
+                  className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm transition">
+                  {tgLoading ? 'Загрузка...' : 'Обновить'}
+                </button>
+              </div>
+
+              {/* Code modal */}
+              {tgCode && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setTgCode(null)}>
+                  <div onClick={e => e.stopPropagation()} style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
+                    className="rounded-2xl p-6 max-w-sm w-full text-center">
+                    {tgCode.error ? (
+                      <>
+                        <p className="text-red-400 text-lg font-semibold mb-2">Ошибка</p>
+                        <p className="text-gray-400 text-sm">{tgCode.error}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-400 text-sm mb-1">Код для {tgCode.phone}</p>
+                        <p className="text-4xl font-bold text-white tracking-widest my-4">{tgCode.code}</p>
+                        {tgCode.receivedAt && (
+                          <p className="text-gray-600 text-xs">Получено: {new Date(tgCode.receivedAt).toLocaleString('ru-RU')}</p>
+                        )}
+                      </>
+                    )}
+                    <button onClick={() => setTgCode(null)}
+                      className="mt-4 bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">
+                      Закрыть
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Table */}
+              {tgLoading && tgAccounts.length === 0 ? (
+                <div className="text-center py-16 text-gray-600">Загрузка аккаунтов...</div>
+              ) : tgAccounts.length === 0 ? (
+                <div className="text-center py-16 text-gray-600">Нет аккаунтов в таблице</div>
+              ) : (
+                <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
+                  <table className="w-full min-w-[800px]">
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                        <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Телефон</th>
+                        <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ТГ</th>
+                        <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Почта</th>
+                        <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Кому выдан</th>
+                        <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tgAccounts.map(acc => (
+                        <tr key={acc.rowIndex} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
+                          <td className="px-3 sm:px-4 py-3 text-sm text-gray-300 font-mono">{acc.phone}</td>
+                          <td className="px-3 sm:px-4 py-3 text-sm text-blue-400">{acc.tgLink}</td>
+                          <td className="px-3 sm:px-4 py-3 text-sm text-gray-400 text-xs">{acc.email}</td>
+                          <td className="px-3 sm:px-4 py-3 text-sm">
+                            {tgAssignSelect[acc.rowIndex] !== undefined ? (
+                              <div className="flex items-center gap-1">
+                                <select
+                                  value={tgAssignSelect[acc.rowIndex]}
+                                  onChange={e => setTgAssignSelect(prev => ({ ...prev, [acc.rowIndex]: e.target.value }))}
+                                  className="bg-black/30 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500"
+                                >
+                                  <option value="">— Свободен —</option>
+                                  {allPeople.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                                </select>
+                                <button
+                                  onClick={() => assignAccount(acc.rowIndex, tgAssignSelect[acc.rowIndex])}
+                                  disabled={tgAssigning[acc.rowIndex]}
+                                  className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-2 py-1 rounded text-xs transition"
+                                >
+                                  {tgAssigning[acc.rowIndex] ? '...' : 'OK'}
+                                </button>
+                                <button
+                                  onClick={() => setTgAssignSelect(prev => { const n = { ...prev }; delete n[acc.rowIndex]; return n })}
+                                  className="text-gray-600 hover:text-gray-400 text-xs transition"
+                                >
+                                  Отмена
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${acc.assignedTo ? 'bg-green-500' : 'bg-gray-600'}`} />
+                                <span className={acc.assignedTo ? 'text-gray-200' : 'text-gray-600'}>{acc.assignedTo || 'Свободен'}</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 sm:px-4 py-3 text-sm">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => fetchCode(acc)}
+                                disabled={tgCodeLoading[acc.rowIndex]}
+                                className="bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 disabled:opacity-50 px-2.5 py-1 rounded-lg text-xs font-medium transition"
+                              >
+                                {tgCodeLoading[acc.rowIndex] ? '...' : 'Код'}
+                              </button>
+                              <button
+                                onClick={() => setTgAssignSelect(prev => ({ ...prev, [acc.rowIndex]: acc.assignedTo || '' }))}
+                                className="bg-gray-800 hover:bg-gray-700 px-2.5 py-1 rounded-lg text-xs transition"
+                              >
+                                {acc.assignedTo ? 'Изменить' : 'Назначить'}
+                              </button>
+                              {acc.assignedTo && (
+                                <button
+                                  onClick={() => assignAccount(acc.rowIndex, '')}
+                                  disabled={tgAssigning[acc.rowIndex]}
+                                  className="text-red-400/70 hover:text-red-400 text-xs transition"
+                                >
+                                  Освободить
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="text-gray-700 text-xs">
+                Всего: {tgAccounts.length} аккаунтов · Выдано: {tgAccounts.filter(a => a.assignedTo).length} · Свободно: {tgAccounts.filter(a => !a.assignedTo).length}
+              </div>
+            </div>
+          )
+        })()}
 
       </main>
 

@@ -16,6 +16,8 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.99.1",
     "googleapis": "^171.4.0",
+    "imapflow": "^1.2.15",
+    "mailparser": "^3.9.4",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"

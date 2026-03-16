@@ -151,6 +151,12 @@ export default function TeamleadPage() {
   const [sheetSaving, setSheetSaving] = useState(false)
   useEffect(() => { setSheetEditing(false); setSheetUrlInput('') }, [selectedManager?.id])
 
+  // Telegram tab state
+  const [tgAccounts, setTgAccounts]       = useState([])
+  const [tgLoading, setTgLoading]         = useState(false)
+  const [tgCodeLoading, setTgCodeLoading] = useState({})
+  const [tgCode, setTgCode]               = useState(null)
+
   // Bell
   const [showBell, setShowBell] = useState(false)
   const bellRef = useRef(null)
@@ -894,13 +900,127 @@ export default function TeamleadPage() {
           </div>
         )}
 
-        {activeTab === 'telegram' && (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
-            <div className="text-5xl mb-4">✈️</div>
-            <p className="text-gray-300 font-medium text-lg">Аккаунты Телеграмм</p>
-            <p className="text-gray-600 text-sm mt-2">Раздел в разработке</p>
-          </div>
-        )}
+        {activeTab === 'telegram' && (() => {
+          const loadTgAccounts = async () => {
+            setTgLoading(true)
+            try {
+              const { data: { session } } = await supabase.auth.getSession()
+              const res = await fetch('/api/telegram-accounts', {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+              })
+              const data = await res.json()
+              // Filter: only accounts assigned to team members
+              const teamNames = new Set(managers.map(m => m.name).concat(profile?.name ? [profile.name] : []))
+              const myAccounts = (data.accounts || []).filter(a => teamNames.has(a.assignedTo))
+              setTgAccounts(myAccounts)
+            } catch { setTgAccounts([]) }
+            finally { setTgLoading(false) }
+          }
+
+          const fetchCode = async (acc) => {
+            setTgCodeLoading(prev => ({ ...prev, [acc.rowIndex]: true }))
+            try {
+              const { data: { session } } = await supabase.auth.getSession()
+              const res = await fetch('/api/telegram-accounts/code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({ email: acc.email, password: acc.emailPassword }),
+              })
+              const data = await res.json()
+              if (res.ok) {
+                setTgCode({ code: data.code, receivedAt: data.receivedAt, phone: acc.phone, tgLink: acc.tgLink })
+              } else {
+                setTgCode({ error: data.error, phone: acc.phone })
+              }
+            } catch (e) {
+              setTgCode({ error: e.message, phone: acc.phone })
+            } finally {
+              setTgCodeLoading(prev => ({ ...prev, [acc.rowIndex]: false }))
+            }
+          }
+
+          if (tgAccounts.length === 0 && !tgLoading) {
+            loadTgAccounts()
+          }
+
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold text-gray-200">Аккаунты команды</h2>
+                <button onClick={loadTgAccounts} disabled={tgLoading}
+                  className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm transition">
+                  {tgLoading ? 'Загрузка...' : 'Обновить'}
+                </button>
+              </div>
+
+              {/* Code modal */}
+              {tgCode && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setTgCode(null)}>
+                  <div onClick={e => e.stopPropagation()} style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
+                    className="rounded-2xl p-6 max-w-sm w-full text-center">
+                    {tgCode.error ? (
+                      <>
+                        <p className="text-red-400 text-lg font-semibold mb-2">Ошибка</p>
+                        <p className="text-gray-400 text-sm">{tgCode.error}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-400 text-sm mb-1">Код для {tgCode.phone}</p>
+                        <p className="text-4xl font-bold text-white tracking-widest my-4">{tgCode.code}</p>
+                        {tgCode.receivedAt && (
+                          <p className="text-gray-600 text-xs">Получено: {new Date(tgCode.receivedAt).toLocaleString('ru-RU')}</p>
+                        )}
+                      </>
+                    )}
+                    <button onClick={() => setTgCode(null)}
+                      className="mt-4 bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">
+                      Закрыть
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {tgLoading && tgAccounts.length === 0 ? (
+                <div className="text-center py-16 text-gray-600">Загрузка...</div>
+              ) : tgAccounts.length === 0 ? (
+                <div className="text-center py-16 text-gray-600">Нет аккаунтов, привязанных к команде</div>
+              ) : (
+                <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
+                  <table className="w-full min-w-[600px]">
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                        <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Телефон</th>
+                        <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ТГ</th>
+                        <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Кому выдан</th>
+                        <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tgAccounts.map(acc => (
+                        <tr key={acc.rowIndex} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
+                          <td className="px-3 sm:px-4 py-3 text-sm text-gray-300 font-mono">{acc.phone}</td>
+                          <td className="px-3 sm:px-4 py-3 text-sm text-blue-400">{acc.tgLink}</td>
+                          <td className="px-3 sm:px-4 py-3 text-sm text-gray-300">{acc.assignedTo}</td>
+                          <td className="px-3 sm:px-4 py-3 text-sm">
+                            <button
+                              onClick={() => fetchCode(acc)}
+                              disabled={tgCodeLoading[acc.rowIndex]}
+                              className="bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 disabled:opacity-50 px-2.5 py-1 rounded-lg text-xs font-medium transition"
+                            >
+                              {tgCodeLoading[acc.rowIndex] ? '...' : 'Получить код'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <p className="text-gray-700 text-xs">{tgAccounts.length} аккаунтов команды</p>
+            </div>
+          )
+        })()}
 
       </main>
 
