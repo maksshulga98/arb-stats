@@ -57,15 +57,16 @@ export async function POST(request) {
       return NextResponse.json({ error: createError.message }, { status: 400 })
     }
 
+    // upsert — триггер Supabase может уже создать профиль при createUser
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .insert([{
+      .upsert([{
         id: newUser.user.id,
         name: `${firstName} ${lastName}`,
         email,
         role: 'manager',
         team: tlProfile.team,
-      }])
+      }], { onConflict: 'id' })
 
     if (profileError) {
       await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
