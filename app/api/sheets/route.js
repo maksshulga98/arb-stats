@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import {
   MANAGER_SHEETS,
   MONTHS_RU,
@@ -103,11 +104,31 @@ export async function GET(request) {
     }
   }
 
+  // Look up sheet_id from DB, fallback to hardcoded config
+  const dbSheetMap = {}
+  try {
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+    const { data: profiles } = await supabaseAdmin
+      .from('profiles')
+      .select('name, sheet_id')
+      .in('name', names)
+    if (profiles) {
+      for (const p of profiles) {
+        if (p.sheet_id) dbSheetMap[p.name] = p.sheet_id
+      }
+    }
+  } catch {
+    // fallback to hardcoded if DB fails
+  }
+
   const results = {}
 
   await Promise.all(
     names.map(async (name) => {
-      const spreadsheetId = MANAGER_SHEETS[name]
+      const spreadsheetId = dbSheetMap[name] || MANAGER_SHEETS[name]
       if (!spreadsheetId) {
         results[name] = null
         return
