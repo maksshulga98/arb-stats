@@ -106,25 +106,42 @@ export async function PUT(request, { params }) {
       }
     }
 
-    const { sheetUrl } = await request.json()
+    const body = await request.json()
+    const { sheetUrl, paymentInfo } = body
+    const updateFields = {}
 
-    // Extract spreadsheet ID from URL or accept raw ID
-    let sheetId = null
-    if (sheetUrl && sheetUrl.trim()) {
-      const urlMatch = sheetUrl.match(/\/d\/([a-zA-Z0-9_-]+)/)
-      sheetId = urlMatch ? urlMatch[1] : sheetUrl.trim()
+    // Sheet URL handling
+    if ('sheetUrl' in body) {
+      let sheetId = null
+      if (sheetUrl && sheetUrl.trim()) {
+        const urlMatch = sheetUrl.match(/\/d\/([a-zA-Z0-9_-]+)/)
+        sheetId = urlMatch ? urlMatch[1] : sheetUrl.trim()
+      }
+      updateFields.sheet_id = sheetId
+    }
+
+    // Payment info handling (admin only)
+    if ('paymentInfo' in body) {
+      if (callerProfile.role !== 'admin') {
+        return NextResponse.json({ error: 'Только админ может менять реквизиты' }, { status: 403 })
+      }
+      updateFields.payment_info = paymentInfo || null
+    }
+
+    if (Object.keys(updateFields).length === 0) {
+      return NextResponse.json({ error: 'Нет данных для обновления' }, { status: 400 })
     }
 
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
-      .update({ sheet_id: sheetId })
+      .update(updateFields)
       .eq('id', id)
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 400 })
     }
 
-    return NextResponse.json({ success: true, sheetId })
+    return NextResponse.json({ success: true, sheetId: updateFields.sheet_id, paymentInfo: updateFields.payment_info })
   } catch {
     return NextResponse.json({ error: 'Внутренняя ошибка' }, { status: 500 })
   }

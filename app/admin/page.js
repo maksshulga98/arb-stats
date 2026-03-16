@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getMissingReportAlerts } from '../../lib/notifications'
-import { MANAGER_SHEETS } from '../../lib/sheets-config'
+import { MANAGER_SHEETS, MONTHS_RU } from '../../lib/sheets-config'
 
 const TEAMS = [
   { id: 'anastasia', name: 'Анастасии', type: 'standard' },
@@ -122,6 +122,17 @@ export default function AdminPage() {
   const [sheetsLoading, setSheetsLoading] = useState(false)
   const [contactStats, setContactStats]   = useState({ total: 0, byManager: [] })
   const [contactsLoading, setContactsLoading] = useState(false)
+  const [deletedMembers, setDeletedMembers] = useState([])
+  // Salary tab state
+  const now = new Date()
+  const [salaryMonth, setSalaryMonth]     = useState(now.getMonth())
+  const [salaryYear, setSalaryYear]       = useState(now.getFullYear())
+  const [salaryHalf, setSalaryHalf]       = useState(now.getDate() <= 15 ? 1 : 2)
+  const [salarySheetsData, setSalarySheetsData] = useState({})
+  const [salaryLoading, setSalaryLoading] = useState(false)
+  const [salaryCalculated, setSalaryCalculated] = useState(false)
+  const [paymentEditing, setPaymentEditing] = useState({})
+  const [paymentSaving, setPaymentSaving]   = useState({})
   const bellRef = useRef(null)
   const router  = useRouter()
 
@@ -173,14 +184,16 @@ export default function AdminPage() {
   }
 
   const loadData = async () => {
-    const [{ data: mgrs }, { data: tls }, { data: reps }] = await Promise.all([
+    const [{ data: mgrs }, { data: tls }, { data: reps }, { data: deleted }] = await Promise.all([
       supabase.from('profiles').select('*').eq('role', 'manager'),
       supabase.from('profiles').select('*').eq('role', 'teamlead'),
       supabase.from('reports').select('*').order('date', { ascending: false }),
+      supabase.from('profiles').select('*').eq('role', 'deleted'),
     ])
     setManagers(mgrs || [])
     setTeamleads(tls || [])
     setReports(reps || [])
+    setDeletedMembers(deleted || [])
     setLoading(false)
   }
 
@@ -658,13 +671,251 @@ export default function AdminPage() {
         )}
 
         {/* ─── Salary tab ─── */}
-        {activeTab === 'salary' && (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
-            <div className="text-5xl mb-4">💰</div>
-            <p className="text-gray-300 font-medium text-lg">Расчёт заработной платы</p>
-            <p className="text-gray-600 text-sm mt-2">Раздел в разработке</p>
-          </div>
-        )}
+        {activeTab === 'salary' && (() => {
+          const RATES = { MANAGER_IP: 1000, MANAGER_DEBIT: 300, TL_BONUS_IP: 150, TL_BONUS_DEBIT: 50 }
+          const lastDay = new Date(salaryYear, salaryMonth + 1, 0).getDate()
+          const dateFrom = `${salaryYear}-${String(salaryMonth + 1).padStart(2, '0')}-${salaryHalf === 1 ? '01' : '16'}`
+          const dateTo   = `${salaryYear}-${String(salaryMonth + 1).padStart(2, '0')}-${salaryHalf === 1 ? '15' : String(lastDay).padStart(2, '0')}`
+
+          const fetchSalaryData = async () => {
+            setSalaryLoading(true)
+            setSalaryCalculated(false)
+            try {
+              const allPeople = [...managers, ...teamleads, ...deletedMembers]
+              const namesWithSheets = allPeople.filter(m => m.sheet_id || MANAGER_SHEETS[m.name]).map(m => m.name)
+              if (namesWithSheets.length === 0) { setSalarySheetsData({}); setSalaryCalculated(true); return }
+              const res = await fetch(`/api/sheets?names=${encodeURIComponent(namesWithSheets.join(','))}&dateFrom=${dateFrom}&dateTo=${dateTo}`)
+              const data = await res.json()
+              setSalarySheetsData(data)
+              setSalaryCalculated(true)
+            } catch { setSalarySheetsData({}); setSalaryCalculated(true) }
+            finally { setSalaryLoading(false) }
+          }
+
+          const fmt = (n) => n.toLocaleString('ru-RU') + ' \u20bd'
+
+          // Build salary data per team
+          const salaryTeams = TEAMS.map(team => {
+            const teamMgrs = managers.filter(m => m.team === team.id)
+            const teamTLs  = team.id !== 'nikita' ? teamleads.filter(t => t.team === team.id) : []
+            const teamDeleted = deletedMembers.filter(m => MANAGER_SHEETS[m.name] || m.sheet_id) // show deleted who had sheets
+            // Filter deleted that were in this team - we check by MANAGER_SHEETS grouping or fallback
+            const allMembers = [...teamTLs, ...teamMgrs]
+
+            const memberRows = allMembers.map(member => {
+              const sd = salarySheetsData[member.name] || {}
+              const ip = sd.ip || 0
+              const debit = sd.debit || 0
+              const ownSalary = ip * RATES.MANAGER_IP + debit * RATES.MANAGER_DEBIT
+
+              let teamBonus = 0
+              if (member.role === 'teamlead') {
+                teamBonus = teamMgrs.reduce((sum, mgr) => {
+                  const msd = salarySheetsData[mgr.name] || {}
+                  return sum + (msd.ip || 0) * RATES.TL_BONUS_IP + (msd.debit || 0) * RATES.TL_BONUS_DEBIT
+                }, 0)
+              }
+
+              return {
+                id: member.id,
+                name: member.name || member.email,
+                role: member.role,
+                ip, debit,
+                ownSalary,
+                teamBonus,
+                total: ownSalary + teamBonus,
+                paymentInfo: member.payment_info || '',
+                deleted: false,
+              }
+            })
+
+            const subtotal = memberRows.reduce((s, r) => s + r.total, 0)
+            const subtotalIp = memberRows.reduce((s, r) => s + r.ip, 0)
+            const subtotalDebit = memberRows.reduce((s, r) => s + r.debit, 0)
+
+            return { team, memberRows, subtotal, subtotalIp, subtotalDebit }
+          })
+
+          const grandTotal = salaryTeams.reduce((s, t) => s + t.subtotal, 0)
+          const grandIp = salaryTeams.reduce((s, t) => s + t.subtotalIp, 0)
+          const grandDebit = salaryTeams.reduce((s, t) => s + t.subtotalDebit, 0)
+
+          const savePaymentInfo = async (profileId, value) => {
+            setPaymentSaving(prev => ({ ...prev, [profileId]: true }))
+            try {
+              const { data: { session } } = await supabase.auth.getSession()
+              const res = await fetch(`/api/managers/${profileId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({ paymentInfo: value }),
+              })
+              if (res.ok) {
+                setManagers(prev => prev.map(m => m.id === profileId ? { ...m, payment_info: value } : m))
+                setTeamleads(prev => prev.map(t => t.id === profileId ? { ...t, payment_info: value } : t))
+              }
+            } catch {} finally {
+              setPaymentSaving(prev => ({ ...prev, [profileId]: false }))
+              setPaymentEditing(prev => { const n = { ...prev }; delete n[profileId]; return n })
+            }
+          }
+
+          return (
+            <div className="space-y-6">
+              {/* Period selector */}
+              <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl p-5">
+                <div className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="text-gray-500 text-xs mb-1.5 block">Месяц</label>
+                    <select value={salaryMonth} onChange={e => { setSalaryMonth(+e.target.value); setSalaryCalculated(false) }}
+                      className="bg-gray-900 text-white px-3 py-2 rounded-lg border border-gray-700 text-sm focus:outline-none focus:border-blue-500">
+                      {MONTHS_RU.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-gray-500 text-xs mb-1.5 block">Год</label>
+                    <select value={salaryYear} onChange={e => { setSalaryYear(+e.target.value); setSalaryCalculated(false) }}
+                      className="bg-gray-900 text-white px-3 py-2 rounded-lg border border-gray-700 text-sm focus:outline-none focus:border-blue-500">
+                      {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-gray-500 text-xs mb-1.5 block">Период</label>
+                    <div className="flex rounded-lg overflow-hidden border border-gray-700">
+                      <button onClick={() => { setSalaryHalf(1); setSalaryCalculated(false) }}
+                        className={`px-4 py-2 text-sm font-medium transition ${salaryHalf === 1 ? 'bg-blue-600 text-white' : 'bg-gray-900 text-gray-400 hover:text-white'}`}>
+                        1 – 15
+                      </button>
+                      <button onClick={() => { setSalaryHalf(2); setSalaryCalculated(false) }}
+                        className={`px-4 py-2 text-sm font-medium transition ${salaryHalf === 2 ? 'bg-blue-600 text-white' : 'bg-gray-900 text-gray-400 hover:text-white'}`}>
+                        16 – {lastDay}
+                      </button>
+                    </div>
+                  </div>
+                  <button onClick={fetchSalaryData} disabled={salaryLoading}
+                    className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-6 py-2 rounded-lg text-sm font-semibold transition">
+                    {salaryLoading ? 'Загрузка...' : 'Рассчитать'}
+                  </button>
+                </div>
+                {salaryCalculated && (
+                  <p className="text-gray-600 text-xs mt-3">Период: {dateFrom} — {dateTo}</p>
+                )}
+              </div>
+
+              {/* Grand total card */}
+              {salaryCalculated && (
+                <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl p-5">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-gray-500 text-xs mb-1">Всего ЦД ИП</p>
+                      <p className="text-xl font-bold text-emerald-400">{grandIp}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs mb-1">Всего ЦД Карт</p>
+                      <p className="text-xl font-bold text-purple-400">{grandDebit}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-gray-500 text-xs mb-1">Итого к выплате</p>
+                      <p className="text-2xl font-bold text-white">{fmt(grandTotal)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Per-team tables */}
+              {salaryCalculated && salaryTeams.map(({ team, memberRows, subtotal, subtotalIp, subtotalDebit }) => {
+                if (memberRows.length === 0) return null
+                // Skip teams with no ЦД data at all
+                const hasData = memberRows.some(r => r.ip > 0 || r.debit > 0 || r.paymentInfo)
+                return (
+                  <section key={team.id}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <h2 className="text-base font-semibold text-gray-200">Команда {team.name}</h2>
+                      <span className="text-gray-600 text-sm">{fmt(subtotal)}</span>
+                    </div>
+
+                    <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
+                      <table className="w-full min-w-[700px]">
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                            <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Имя</th>
+                            <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
+                            <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД Карта</th>
+                            <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЗП за ИП</th>
+                            <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЗП за карты</th>
+                            <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Бонус команды</th>
+                            <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Итого</th>
+                            <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Реквизиты</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {memberRows.map(row => (
+                            <tr key={row.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
+                              <td className="px-3 sm:px-4 py-3 text-sm text-gray-300">
+                                {row.name}
+                                {row.role === 'teamlead' && <span className="text-xs text-blue-400 ml-1">(ТЛ)</span>}
+                                {row.deleted && <span className="text-xs text-gray-600 ml-1">(удалён)</span>}
+                              </td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-emerald-400 font-medium">{row.ip}</td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-purple-400 font-medium">{row.debit}</td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-gray-300">{fmt(row.ip * RATES.MANAGER_IP)}</td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-gray-300">{fmt(row.debit * RATES.MANAGER_DEBIT)}</td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-right">
+                                {row.role === 'teamlead' ? (
+                                  <span className="text-yellow-400 font-medium">{fmt(row.teamBonus)}</span>
+                                ) : (
+                                  <span className="text-gray-700">—</span>
+                                )}
+                              </td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-right font-bold text-white">{fmt(row.total)}</td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-left min-w-[160px]">
+                                {paymentEditing[row.id] !== undefined ? (
+                                  <input
+                                    autoFocus
+                                    value={paymentEditing[row.id]}
+                                    onChange={e => setPaymentEditing(prev => ({ ...prev, [row.id]: e.target.value }))}
+                                    onBlur={() => savePaymentInfo(row.id, paymentEditing[row.id])}
+                                    onKeyDown={e => { if (e.key === 'Enter') savePaymentInfo(row.id, paymentEditing[row.id]); if (e.key === 'Escape') setPaymentEditing(prev => { const n = { ...prev }; delete n[row.id]; return n }) }}
+                                    disabled={paymentSaving[row.id]}
+                                    className="w-full bg-black/30 border border-blue-500 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none"
+                                    placeholder="Номер карты / телефон..."
+                                  />
+                                ) : (
+                                  <button
+                                    onClick={() => setPaymentEditing(prev => ({ ...prev, [row.id]: row.paymentInfo }))}
+                                    className="text-left text-xs text-gray-500 hover:text-gray-300 transition w-full truncate"
+                                    title={row.paymentInfo || 'Нажмите чтобы добавить реквизиты'}
+                                  >
+                                    {paymentSaving[row.id] ? '...' : (row.paymentInfo || '+ реквизиты')}
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                          {/* Subtotal row */}
+                          <tr style={{ borderTop: '2px solid #2a2a3e' }} className="bg-white/[0.02]">
+                            <td className="px-3 sm:px-4 py-3 text-sm font-semibold text-gray-200">Итого</td>
+                            <td className="px-3 sm:px-4 py-3 text-sm text-right font-semibold text-emerald-400">{subtotalIp}</td>
+                            <td className="px-3 sm:px-4 py-3 text-sm text-right font-semibold text-purple-400">{subtotalDebit}</td>
+                            <td colSpan="3" />
+                            <td className="px-3 sm:px-4 py-3 text-sm text-right font-bold text-white">{fmt(subtotal)}</td>
+                            <td />
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                )
+              })}
+
+              {salaryCalculated && grandTotal === 0 && (
+                <div className="text-center py-16 text-gray-600">
+                  <p className="text-lg mb-1">Нет данных за выбранный период</p>
+                  <p className="text-sm">Проверьте, что у менеджеров привязаны Google Таблицы</p>
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* ─── Telegram tab ─── */}
         {activeTab === 'telegram' && (
