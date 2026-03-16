@@ -90,9 +90,17 @@ export async function GET(request) {
       byManagerMap[dist.manager_id].distributions += 1
     }
 
-    const byManager = Object.values(byManagerMap).sort((a, b) => b.totalContacts - a.totalContacts)
+    const byManager = Object.entries(byManagerMap)
+      .map(([id, data]) => ({ id, ...data }))
+      .sort((a, b) => b.totalContacts - a.totalContacts)
 
-    return NextResponse.json({ total, byManager })
+    // Маппинг по manager_id для быстрого доступа на фронте
+    const byManagerId = {}
+    for (const entry of byManager) {
+      byManagerId[entry.id] = entry.totalContacts
+    }
+
+    return NextResponse.json({ total, byManager, byManagerId })
   } catch (err) {
     console.error('GET /api/contacts/stats error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

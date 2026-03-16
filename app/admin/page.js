@@ -147,8 +147,8 @@ export default function AdminPage() {
     setContactsLoading(true)
     fetch(`/api/contacts/stats?dateFrom=${dateFrom}&dateTo=${dateTo}`)
       .then(r => r.json())
-      .then(data => setContactStats(data))
-      .catch(() => setContactStats({ total: 0, byManager: [] }))
+      .then(data => setContactStats(data || { total: 0, byManager: [], byManagerId: {} }))
+      .catch(() => setContactStats({ total: 0, byManager: [], byManagerId: {} }))
       .finally(() => setContactsLoading(false))
   }, [activeTab, dateFrom, dateTo])
 
@@ -571,12 +571,15 @@ export default function AdminPage() {
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дебетовые</th>
+                          {!isNikita && (
+                            <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Взято номеров</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody>
                         {rows.length === 0 ? (
                           <tr>
-                            <td colSpan={isNikita ? 5 : 6} className="text-center py-8 text-gray-600 text-sm">
+                            <td colSpan={isNikita ? 5 : 7} className="text-center py-8 text-gray-600 text-sm">
                               Нет участников в команде
                             </td>
                           </tr>
@@ -606,6 +609,11 @@ export default function AdminPage() {
                                   <td className="px-3 sm:px-5 py-3 text-sm">
                                     <CdValue value={sd ? sd.debit : null} loading={sheetsLoading && sd === undefined} color="text-purple-400" />
                                   </td>
+                                  {!isNikita && (
+                                    <td className="px-3 sm:px-5 py-3 text-sm">
+                                      <CdValue value={contactStats.byManagerId?.[member.id] ?? null} loading={contactsLoading} color="text-orange-400" />
+                                    </td>
+                                  )}
                                 </tr>
                               )
                             })}
@@ -628,6 +636,11 @@ export default function AdminPage() {
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-purple-400">
                                   {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.debit || 0), 0)}
                                 </td>
+                                {!isNikita && (
+                                  <td className="px-3 sm:px-5 py-3 text-sm font-bold text-orange-400">
+                                    {rows.reduce((s, { member }) => s + (contactStats.byManagerId?.[member.id] || 0), 0)}
+                                  </td>
+                                )}
                               </tr>
                             )}
                           </>
