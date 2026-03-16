@@ -32,6 +32,17 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Заполните все поля' }, { status: 400 })
     }
 
+    // Проверяем, не существует ли уже профиль с таким email
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .single()
+
+    if (existingProfile) {
+      return NextResponse.json({ error: 'Пользователь с таким email уже существует' }, { status: 400 })
+    }
+
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -39,6 +50,10 @@ export async function POST(request) {
     })
 
     if (createError) {
+      // Supabase может вернуть ошибку если email уже зарегистрирован в Auth
+      if (createError.message?.includes('already been registered') || createError.message?.includes('already exists')) {
+        return NextResponse.json({ error: 'Пользователь с таким email уже существует' }, { status: 400 })
+      }
       return NextResponse.json({ error: createError.message }, { status: 400 })
     }
 
