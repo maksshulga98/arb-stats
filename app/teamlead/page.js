@@ -975,6 +975,35 @@ export default function TeamleadPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Delete manager button */}
+            <div style={{ borderTop: '1px solid #1f1f2e' }} className="px-6 py-4 flex justify-end">
+              {deleteConfirm === selectedManager.id ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-gray-400 text-sm">Удалить менеджера?</span>
+                  <button
+                    onClick={() => handleDeleteManager(selectedManager.id)}
+                    disabled={deleting}
+                    className="bg-red-600 hover:bg-red-500 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-semibold transition"
+                  >
+                    {deleting ? '...' : 'Да, удалить'}
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirm(null)}
+                    className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setDeleteConfirm(selectedManager.id)}
+                  className="text-gray-600 hover:text-red-400 text-sm flex items-center gap-1.5 transition"
+                >
+                  <TrashIcon /> Удалить менеджера
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
