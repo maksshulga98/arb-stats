@@ -59,6 +59,22 @@ function getPersonalZone(ip) {
   return map[key]
 }
 
+// ── Transliteration for email generation ──────────────────────────────────────
+const TRANSLIT = {
+  а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'y',
+  к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',
+  х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'shch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya',
+}
+function transliterate(str) {
+  return str.toLowerCase().split('').map(c => TRANSLIT[c] ?? c).join('')
+}
+function generateEmail(firstName, lastName) {
+  const f = transliterate(firstName.trim())
+  const l = transliterate(lastName.trim())
+  if (!f || !l) return ''
+  return `${f}.${l}@arbteam.ru`
+}
+
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function BellIcon() {
   return (
@@ -121,7 +137,7 @@ export default function TeamleadPage() {
 
   // Add manager modal
   const [showAddModal, setShowAddModal] = useState(false)
-  const [addForm, setAddForm]   = useState({ firstName: '', lastName: '', email: '', password: '' })
+  const [addForm, setAddForm]   = useState({ firstName: '', lastName: '', email: '', password: '', emailManual: false })
   const [addLoading, setAddLoading] = useState(false)
   const [addError, setAddError] = useState('')
 
@@ -249,7 +265,7 @@ export default function TeamleadPage() {
     const data = await res.json()
     if (data.success) {
       setShowAddModal(false)
-      setAddForm({ firstName: '', lastName: '', email: '', password: '' })
+      setAddForm({ firstName: '', lastName: '', email: '', password: '', emailManual: false })
       await loadTeamData(profile.team)
     } else {
       setAddError(data.error || 'Ошибка создания')
@@ -989,7 +1005,12 @@ export default function TeamleadPage() {
                   <label className="text-gray-400 text-xs mb-1.5 block">Имя</label>
                   <input
                     type="text" value={addForm.firstName} required
-                    onChange={e => setAddForm({ ...addForm, firstName: e.target.value })}
+                    onChange={e => {
+                      const firstName = e.target.value
+                      const upd = { ...addForm, firstName }
+                      if (!addForm.emailManual) upd.email = generateEmail(firstName, addForm.lastName)
+                      setAddForm(upd)
+                    }}
                     placeholder="Иван"
                     className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
                   />
@@ -998,7 +1019,12 @@ export default function TeamleadPage() {
                   <label className="text-gray-400 text-xs mb-1.5 block">Фамилия</label>
                   <input
                     type="text" value={addForm.lastName} required
-                    onChange={e => setAddForm({ ...addForm, lastName: e.target.value })}
+                    onChange={e => {
+                      const lastName = e.target.value
+                      const upd = { ...addForm, lastName }
+                      if (!addForm.emailManual) upd.email = generateEmail(addForm.firstName, lastName)
+                      setAddForm(upd)
+                    }}
                     placeholder="Петров"
                     className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
                   />
@@ -1006,12 +1032,19 @@ export default function TeamleadPage() {
               </div>
 
               <div>
-                <label className="text-gray-400 text-xs mb-1.5 block">Email</label>
+                <label className="text-gray-400 text-xs mb-1.5 block">
+                  Email
+                  {!addForm.emailManual && addForm.email && (
+                    <span className="text-gray-600 ml-2">· сгенерирован автоматически</span>
+                  )}
+                </label>
                 <input
                   type="email" value={addForm.email} required
-                  onChange={e => setAddForm({ ...addForm, email: e.target.value })}
-                  placeholder="ivan@example.com"
-                  className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                  onChange={e => setAddForm({ ...addForm, email: e.target.value, emailManual: true })}
+                  placeholder="ivan.petrov@arbteam.ru"
+                  className={`w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border focus:outline-none focus:border-blue-500 text-sm ${
+                    !addForm.emailManual && addForm.email ? 'border-blue-800/50' : 'border-gray-700'
+                  }`}
                 />
               </div>
 
