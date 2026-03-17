@@ -26,11 +26,11 @@ function getIPLast7Days(reports) {
 }
 
 function getZone(ip) {
-  if (ip < 10) return {
+  if (ip < 15) return {
     bg: 'bg-red-950/40', border: 'border-red-700',
     text: 'text-red-400', badge: 'bg-red-900/60 text-red-300 border border-red-700', label: 'Красная зона'
   }
-  if (ip <= 15) return {
+  if (ip <= 30) return {
     bg: 'bg-yellow-950/40', border: 'border-yellow-600',
     text: 'text-yellow-400', badge: 'bg-yellow-900/60 text-yellow-300 border border-yellow-600', label: 'Жёлтая зона'
   }
