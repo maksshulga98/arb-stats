@@ -133,6 +133,10 @@ export default function AdminPage() {
   const [salaryCalculated, setSalaryCalculated] = useState(false)
   const [paymentEditing, setPaymentEditing] = useState({})
   const [paymentSaving, setPaymentSaving]   = useState({})
+  // Sheet binding state
+  const [sheetEditing, setSheetEditing] = useState(false)
+  const [sheetUrlInput, setSheetUrlInput] = useState('')
+  const [sheetSaving, setSheetSaving] = useState(false)
   // Telegram tab state
   const [tgAccounts, setTgAccounts]         = useState([])
   const [tgLoading, setTgLoading]           = useState(false)
@@ -144,6 +148,7 @@ export default function AdminPage() {
   const router  = useRouter()
 
   useEffect(() => { checkAdmin() }, [])
+  useEffect(() => { setSheetEditing(false); setSheetUrlInput('') }, [selectedManager?.id])
 
   // Fetch Google Sheets ЦД data when daily tab is active
   useEffect(() => {
@@ -1196,6 +1201,104 @@ export default function AdminPage() {
                 </div>
               )
             })()}
+
+            {/* Sheet binding */}
+            <div className="px-6 pt-2 pb-2">
+              {sheetEditing ? (
+                <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 space-y-2">
+                  <p className="text-gray-400 text-xs font-medium">Ссылка на Google Таблицу</p>
+                  <input
+                    type="text"
+                    value={sheetUrlInput}
+                    onChange={e => setSheetUrlInput(e.target.value)}
+                    placeholder="https://docs.google.com/spreadsheets/d/..."
+                    className="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        setSheetSaving(true)
+                        try {
+                          const { data: { session } } = await supabase.auth.getSession()
+                          const res = await fetch(`/api/managers/${selectedManager.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                            body: JSON.stringify({ sheetUrl: sheetUrlInput }),
+                          })
+                          const result = await res.json()
+                          if (res.ok) {
+                            setManagers(prev => prev.map(m => m.id === selectedManager.id ? { ...m, sheet_id: result.sheetId } : m))
+                            setSelectedManager(prev => ({ ...prev, sheet_id: result.sheetId }))
+                            setSheetEditing(false)
+                          }
+                        } catch {} finally { setSheetSaving(false) }
+                      }}
+                      disabled={sheetSaving}
+                      className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                    >
+                      {sheetSaving ? '...' : 'Сохранить'}
+                    </button>
+                    <button
+                      onClick={() => { setSheetEditing(false); setSheetUrlInput('') }}
+                      className="bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg text-xs transition"
+                    >
+                      Отмена
+                    </button>
+                    {selectedManager.sheet_id && (
+                      <button
+                        onClick={async () => {
+                          setSheetSaving(true)
+                          try {
+                            const { data: { session } } = await supabase.auth.getSession()
+                            const res = await fetch(`/api/managers/${selectedManager.id}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                              body: JSON.stringify({ sheetUrl: '' }),
+                            })
+                            if (res.ok) {
+                              setManagers(prev => prev.map(m => m.id === selectedManager.id ? { ...m, sheet_id: null } : m))
+                              setSelectedManager(prev => ({ ...prev, sheet_id: null }))
+                              setSheetEditing(false)
+                              setSheetUrlInput('')
+                            }
+                          } catch {} finally { setSheetSaving(false) }
+                        }}
+                        disabled={sheetSaving}
+                        className="text-red-400 hover:text-red-300 text-xs transition ml-auto"
+                      >
+                        Отвязать
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  {(selectedManager.sheet_id || MANAGER_SHEETS[selectedManager.name]) ? (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                      <span className="text-green-400 text-sm">Таблица привязана</span>
+                      <button
+                        onClick={() => { setSheetEditing(true); setSheetUrlInput(selectedManager.sheet_id ? `https://docs.google.com/spreadsheets/d/${selectedManager.sheet_id}/edit` : '') }}
+                        className="text-gray-500 hover:text-white text-xs ml-auto transition"
+                      >
+                        Изменить
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-gray-600 flex-shrink-0" />
+                      <span className="text-gray-500 text-sm">Таблица не привязана</span>
+                      <button
+                        onClick={() => setSheetEditing(true)}
+                        className="text-blue-400 hover:text-blue-300 text-xs ml-auto transition"
+                      >
+                        Привязать
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Reports table */}
             <div className="flex-1 overflow-auto px-6 pb-6 mt-2">
