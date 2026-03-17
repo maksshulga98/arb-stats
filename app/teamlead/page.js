@@ -37,8 +37,8 @@ function isRedFor14Days(reports, createdAt) {
 }
 
 function getZoneKey(ip) {
-  if (ip < 10) return 'red'
-  if (ip <= 15) return 'yellow'
+  if (ip < 15) return 'red'
+  if (ip <= 30) return 'yellow'
   return 'green'
 }
 
@@ -696,7 +696,7 @@ export default function TeamleadPage() {
                           <>
                             <div className="mb-3">
                               <span className={`text-2xl font-bold ${z.text}`}>{ip7}</span>
-                              <span className="text-gray-500 text-xs ml-1">ИП / 7 дн</span>
+                              <span className="text-gray-500 text-xs ml-1">карт / 7 дн</span>
                             </div>
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>{z.label}</span>
                           </>
@@ -1236,7 +1236,7 @@ export default function TeamleadPage() {
                     return (
                       <div key={label} className={`flex-1 border rounded-xl px-4 py-3 ${z.card}`}>
                         <p className="text-gray-500 text-xs mb-1">{label}</p>
-                        <p className={`text-xl font-bold ${z.text}`}>{ip} ИП</p>
+                        <p className={`text-xl font-bold ${z.text}`}>{ip} карт</p>
                         <span className={`text-xs ${z.badge} inline-block px-2 py-0.5 rounded-md mt-1`}>{z.label}</span>
                       </div>
                     )
