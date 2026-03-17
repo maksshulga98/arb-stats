@@ -226,8 +226,19 @@ export default function TeamleadPage() {
     }
     setProfile(p)
 
-    await Promise.all([loadMyReports(user.id), loadTeamData(p.team)])
+    await Promise.all([loadMyReports(user.id), loadTeamData(p.team), loadTgAccountsInit()])
     setLoading(false)
+  }
+
+  const loadTgAccountsInit = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/telegram-accounts', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const data = await res.json()
+      setTgAccounts(data.accounts || [])
+    } catch { /* ignore */ }
   }
 
   const loadMyReports = async (userId) => {
@@ -807,6 +818,18 @@ export default function TeamleadPage() {
                               <span className="text-gray-500 text-xs ml-1">карт / 7 дн</span>
                             </div>
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>{z.label}</span>
+                            {(() => {
+                              const accs = tgAccounts.filter(a => a.assignedTo === manager.name)
+                              if (accs.length === 0) return null
+                              return (
+                                <div className="mt-2 pt-2 border-t border-white/5">
+                                  <p className="text-gray-500 text-xs mb-1">TG аккаунтов: <span className="text-gray-300 font-medium">{accs.length}</span></p>
+                                  {accs.map((a, i) => (
+                                    <p key={i} className="text-gray-500 text-xs truncate">{a.phone}{a.tgLink ? ` · ${a.tgLink}` : ''}</p>
+                                  ))}
+                                </div>
+                              )
+                            })()}
                           </>
                         ) : (
                           <div onClick={e => e.stopPropagation()}>
