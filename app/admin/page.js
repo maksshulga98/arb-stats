@@ -31,8 +31,8 @@ function getIPForPeriod(reports, daysStart, daysEnd) {
 }
 
 function getZoneKey(ip) {
-  if (ip < 15) return 'red'
-  if (ip <= 30) return 'yellow'
+  if (ip < 10) return 'red'
+  if (ip <= 15) return 'yellow'
   return 'green'
 }
 
@@ -470,7 +470,7 @@ export default function AdminPage() {
 
                             <div className="mb-3">
                               <span className={`text-3xl font-bold ${z.text}`}>{ip7}</span>
-                              <span className="text-gray-500 text-xs ml-1">карт / 7 дн</span>
+                              <span className="text-gray-500 text-xs ml-1">ИП / 7 дн</span>
                             </div>
 
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>
@@ -547,7 +547,7 @@ export default function AdminPage() {
                       <p className="text-xl font-bold text-gray-200">{totalReplied}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs mb-1">Заказано карт</p>
+                      <p className="text-gray-500 text-xs mb-1">Заказали ИП</p>
                       <p className="text-xl font-bold text-blue-400">{totalOrdered}</p>
                     </div>
                     <div>
@@ -624,7 +624,7 @@ export default function AdminPage() {
                           {isNikita && (
                             <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
                           )}
-                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дебетовые</th>
                           {!isNikita && (
@@ -1194,12 +1194,12 @@ export default function AdminPage() {
                 <div className="px-6 pt-4 pb-2 flex gap-4">
                   <div className={`flex-1 border rounded-xl px-4 py-3 ${z.card}`}>
                     <p className="text-gray-500 text-xs mb-1">Последние 7 дней</p>
-                    <p className={`text-xl font-bold ${z.text}`}>{ip7} карт</p>
+                    <p className={`text-xl font-bold ${z.text}`}>{ip7} ИП</p>
                     <span className={`text-xs ${z.badge} inline-block px-2 py-0.5 rounded-md mt-1`}>{z.label}</span>
                   </div>
                   <div className={`flex-1 border rounded-xl px-4 py-3 ${ZONE[getZoneKey(ip14)].card}`}>
                     <p className="text-gray-500 text-xs mb-1">Предыдущие 7 дней</p>
-                    <p className={`text-xl font-bold ${ZONE[getZoneKey(ip14)].text}`}>{ip14} карт</p>
+                    <p className={`text-xl font-bold ${ZONE[getZoneKey(ip14)].text}`}>{ip14} ИП</p>
                     <span className={`text-xs ${ZONE[getZoneKey(ip14)].badge} inline-block px-2 py-0.5 rounded-md mt-1`}>{ZONE[getZoneKey(ip14)].label}</span>
                   </div>
                 </div>
@@ -1319,7 +1319,7 @@ export default function AdminPage() {
                     {modalIsNikita && (
                       <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
                     )}
-                    <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
+                    <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
                     <th className="w-8" />
                   </tr>
                 </thead>

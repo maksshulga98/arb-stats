@@ -48,8 +48,8 @@ function isRedFor14Days(reports, createdAt) {
 }
 
 function getZoneKey(ip) {
-  if (ip < 15) return 'red'
-  if (ip <= 30) return 'yellow'
+  if (ip < 10) return 'red'
+  if (ip <= 15) return 'yellow'
   return 'green'
 }
 
@@ -689,7 +689,7 @@ export default function TeamleadPage() {
                         </div>
                       )}
                       <div>
-                        <label className="text-gray-400 text-xs mb-1.5 block">Заказано карт</label>
+                        <label className="text-gray-400 text-xs mb-1.5 block">Заказали ИП</label>
                         <input type="number" min="0" value={reportForm.ordered_ip} onChange={e => setReportForm({ ...reportForm, ordered_ip: e.target.value })}
                           placeholder="0" required className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
                       </div>
@@ -719,7 +719,7 @@ export default function TeamleadPage() {
                         </>
                       )}
                       {isNikita && <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>}
-                      <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
+                      <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
                       <th className="w-10" />
                     </tr>
                   </thead>
@@ -815,7 +815,7 @@ export default function TeamleadPage() {
                           <>
                             <div className="mb-3">
                               <span className={`text-2xl font-bold ${z.text}`}>{ip7}</span>
-                              <span className="text-gray-500 text-xs ml-1">карт / 7 дн</span>
+                              <span className="text-gray-500 text-xs ml-1">ИП / 7 дн</span>
                             </div>
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>{z.label}</span>
                             {(() => {
@@ -921,7 +921,7 @@ export default function TeamleadPage() {
                     <p className="text-xl font-bold text-gray-200">{totals.replied}</p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs mb-1">Заказано карт</p>
+                    <p className="text-gray-500 text-xs mb-1">Заказали ИП</p>
                     <p className="text-xl font-bold text-blue-400">{totals.ordered_ip}</p>
                   </div>
                   <div>
@@ -963,7 +963,7 @@ export default function TeamleadPage() {
                         {isNikita && (
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
                         )}
-                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дебетовые</th>
                       </tr>
@@ -1549,7 +1549,7 @@ export default function TeamleadPage() {
                     return (
                       <div key={label} className={`flex-1 border rounded-xl px-4 py-3 ${z.card}`}>
                         <p className="text-gray-500 text-xs mb-1">{label}</p>
-                        <p className={`text-xl font-bold ${z.text}`}>{ip} карт</p>
+                        <p className={`text-xl font-bold ${z.text}`}>{ip} ИП</p>
                         <span className={`text-xs ${z.badge} inline-block px-2 py-0.5 rounded-md mt-1`}>{z.label}</span>
                       </div>
                     )
@@ -1570,7 +1570,7 @@ export default function TeamleadPage() {
                       </>
                     )}
                     {modalIsNikita && <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>}
-                    <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
+                    <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
                     <th className="w-8" />
                   </tr>
                 </thead>
