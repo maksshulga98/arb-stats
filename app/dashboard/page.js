@@ -410,7 +410,7 @@ export default function DashboardPage() {
                     )}
 
                     <div>
-                      <label className="text-gray-400 text-xs mb-1.5 block">Заказали ИП</label>
+                      <label className="text-gray-400 text-xs mb-1.5 block">Заказано карт</label>
                       <input
                         type="number" min="0"
                         value={form.ordered_ip}
@@ -461,7 +461,7 @@ export default function DashboardPage() {
                     {isNikita && (
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
                     )}
-                    <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                    <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
                   </tr>
                 </thead>
                 <tbody>
