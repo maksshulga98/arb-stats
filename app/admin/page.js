@@ -450,10 +450,14 @@ export default function AdminPage() {
                             className={`border rounded-2xl p-4 text-left transition-all hover:scale-[1.02] hover:shadow-lg cursor-pointer ${z.card}`}
                           >
                             <div className="flex justify-between items-start mb-3">
-                              <span className="font-medium text-white text-sm leading-tight">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${(manager.sheet_id || MANAGER_SHEETS[manager.name]) ? 'bg-green-500' : 'bg-gray-600'}`}
+                                  title={(manager.sheet_id || MANAGER_SHEETS[manager.name]) ? 'Таблица привязана' : 'Таблица не привязана'} />
+                              <span className="font-medium text-white text-sm leading-tight truncate">
                                 {manager.name || manager.email}
                                 {manager.role === 'teamlead' && <span className="text-xs text-blue-400 ml-1">(ТЛ)</span>}
                               </span>
+                              </div>
                               {alert14 && (
                                 <span
                                   title="14 дней в красной зоне"
