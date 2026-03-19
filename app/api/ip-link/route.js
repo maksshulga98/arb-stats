@@ -182,9 +182,10 @@ async function createRkoApplication(auth, { fullName, inn, phone, email, city })
   const orderData = await orderRes.json()
   console.log('RKO order response:', JSON.stringify(orderData).slice(0, 1000))
 
-  // Response wraps in { data: { id: ... } } — extract order from data wrapper
-  const order = orderData.data || orderData
-  const orderId = order.id || order.order_id || order.orderId
+  // Response wraps in { data: [...] } (array) or { data: {...} } (object)
+  const rawData = orderData.data || orderData
+  const order = Array.isArray(rawData) ? rawData[0] : rawData
+  const orderId = order?.id || order?.order_id || order?.orderId
 
   if (!orderId) {
     throw new Error(`Не удалось получить ID заказа из ответа RKO: ${JSON.stringify(orderData).slice(0, 500)}`)
