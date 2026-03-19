@@ -67,6 +67,16 @@ export default function DashboardPage() {
   // ── Вкладки ──
   const [activeTab, setActiveTab] = useState('report')
 
+  // ── Состояние ссылки ИП ──
+  const [showIpModal, setShowIpModal] = useState(false)
+  const [ipForm, setIpForm] = useState({ fullName: '', inn: '', phone: '', email: '', city: '' })
+  const [ipSubmitting, setIpSubmitting] = useState(false)
+  const [ipError, setIpError] = useState(null)
+  const [ipResult, setIpResult] = useState(null)
+  const [ipHistory, setIpHistory] = useState([])
+  const [ipHistoryLoading, setIpHistoryLoading] = useState(false)
+  const [copiedIpLink, setCopiedIpLink] = useState(null)
+
   // ── Состояние выдачи контактов ──
   const [accountsCount, setAccountsCount] = useState(1)
   const [distributedContacts, setDistributedContacts] = useState(null)
@@ -136,6 +146,70 @@ export default function DashboardPage() {
       loadContactHistory()
     }
   }, [activeTab, user, loadContactHistory])
+
+  // ── Загрузка истории ИП ──
+  const loadIpHistory = useCallback(async () => {
+    if (!user) return
+    setIpHistoryLoading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/ip-link', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const data = await res.json()
+      if (res.ok) setIpHistory(data.applications || [])
+    } catch (err) {
+      console.error('Ошибка загрузки истории ИП:', err)
+    }
+    setIpHistoryLoading(false)
+  }, [user])
+
+  useEffect(() => {
+    if (activeTab === 'ip-link' && user) loadIpHistory()
+  }, [activeTab, user, loadIpHistory])
+
+  // ── Валидация ИНН ──
+  const validateINN12 = (inn) => {
+    if (!/^\d{12}$/.test(inn)) return false
+    const d = inn.split('').map(Number)
+    const w1 = [7, 2, 4, 10, 3, 5, 9, 4, 6, 8]
+    const w2 = [3, 7, 2, 4, 10, 3, 5, 9, 4, 6, 8]
+    const check1 = w1.reduce((s, w, i) => s + w * d[i], 0) % 11 % 10
+    const check2 = w2.reduce((s, w, i) => s + w * d[i], 0) % 11 % 10
+    return d[10] === check1 && d[11] === check2
+  }
+
+  // ── Создание заявки ИП ──
+  const handleCreateIpLink = async (e) => {
+    e.preventDefault()
+    if (!validateINN12(ipForm.inn)) { setIpError('Некорректный ИНН'); return }
+    setIpSubmitting(true); setIpError(null); setIpResult(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/ip-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify(ipForm),
+      })
+      const data = await res.json()
+      if (!res.ok) { setIpError(data.error || 'Ошибка') }
+      else { setIpResult(data); await loadIpHistory() }
+    } catch { setIpError('Ошибка сети') }
+    setIpSubmitting(false)
+  }
+
+  // ── Копирование ссылки ИП ──
+  const handleCopyIpLink = async (link, id) => {
+    try {
+      await navigator.clipboard.writeText(link)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = link; document.body.appendChild(ta); ta.select()
+      document.execCommand('copy'); document.body.removeChild(ta)
+    }
+    setCopiedIpLink(id)
+    setTimeout(() => setCopiedIpLink(null), 2000)
+  }
 
   // ── Таймер кулдауна ──
   useEffect(() => {
@@ -269,6 +343,7 @@ export default function DashboardPage() {
   const TABS = [
     { id: 'report', label: 'Отчёт' },
     ...(hasContactsAccess ? [{ id: 'contacts', label: 'Выдача номеров' }] : []),
+    { id: 'ip-link', label: 'Ссылка ИП' },
   ]
 
   return (
@@ -697,7 +772,173 @@ export default function DashboardPage() {
           </>
         )}
 
+        {/* ─── IP Link tab ─── */}
+        {activeTab === 'ip-link' && (
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-base font-semibold text-gray-200">Ссылка ИП</h2>
+              <button
+                onClick={() => { setShowIpModal(true); setIpResult(null); setIpError(null); setIpForm({ fullName: '', inn: '', phone: '', email: '', city: '' }) }}
+                className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold transition"
+              >
+                + Создать заявку
+              </button>
+            </div>
+
+            <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
+              {ipHistoryLoading ? (
+                <div className="text-center py-12 text-gray-600 text-sm">Загрузка...</div>
+              ) : ipHistory.length === 0 ? (
+                <div className="text-center py-12 text-gray-600 text-sm">Нет заявок — создайте первую</div>
+              ) : (
+                <table className="w-full min-w-[600px]">
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                      <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
+                      <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ФИО</th>
+                      <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ИНН</th>
+                      <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Город</th>
+                      <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ссылка</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ipHistory.map(app => (
+                      <tr key={app.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">
+                          {new Date(app.created_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{app.full_name}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-400 font-mono">{app.inn}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{app.city}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm">
+                          {app.status === 'error' ? (
+                            <span className="text-red-400 text-xs">Ошибка</span>
+                          ) : app.referral_link ? (
+                            <button
+                              onClick={() => handleCopyIpLink(app.referral_link, app.id)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                                copiedIpLink === app.id
+                                  ? 'bg-green-900/60 text-green-300 border border-green-700'
+                                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                              }`}
+                            >
+                              {copiedIpLink === app.id ? 'Скопировано!' : 'Копировать'}
+                            </button>
+                          ) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
+        )}
+
       </main>
+
+      {/* ── Модалка создания заявки ИП ── */}
+      {showIpModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowIpModal(false)}>
+          <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Создать заявку ИП</h3>
+              <button onClick={() => setShowIpModal(false)} className="text-gray-500 hover:text-white text-lg">✕</button>
+            </div>
+
+            {ipResult ? (
+              <div>
+                <div className="bg-green-950/40 border border-green-700 rounded-lg p-4 mb-4">
+                  <p className="text-green-300 text-sm font-semibold mb-2">Ссылка создана!</p>
+                  <div className="flex items-center gap-2">
+                    <input readOnly value={ipResult.referralLink} className="flex-1 bg-gray-900 text-sm text-gray-300 px-3 py-2 rounded-lg border border-gray-700 truncate" />
+                    <button
+                      onClick={() => handleCopyIpLink(ipResult.referralLink, 'modal')}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium transition shrink-0 ${
+                        copiedIpLink === 'modal' ? 'bg-green-900/60 text-green-300' : 'bg-blue-600 hover:bg-blue-500 text-white'
+                      }`}
+                    >
+                      {copiedIpLink === 'modal' ? 'Скопировано!' : 'Копировать'}
+                    </button>
+                  </div>
+                </div>
+                <button onClick={() => { setShowIpModal(false); setIpResult(null) }} className="w-full bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-lg text-sm transition">
+                  Закрыть
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleCreateIpLink}>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-gray-400 text-xs mb-1.5 block">ФИО</label>
+                    <input
+                      type="text" required
+                      value={ipForm.fullName}
+                      onChange={e => setIpForm({ ...ipForm, fullName: e.target.value })}
+                      placeholder="Иванов Иван Иванович"
+                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-xs mb-1.5 block">ИНН</label>
+                    <input
+                      type="text" required maxLength={12}
+                      value={ipForm.inn}
+                      onChange={e => setIpForm({ ...ipForm, inn: e.target.value.replace(/\D/g, '') })}
+                      placeholder="123456789012"
+                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-xs mb-1.5 block">Телефон</label>
+                    <input
+                      type="tel" required
+                      value={ipForm.phone}
+                      onChange={e => setIpForm({ ...ipForm, phone: e.target.value })}
+                      placeholder="+7 999 123 45 67"
+                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-xs mb-1.5 block">Email</label>
+                    <input
+                      type="email" required
+                      value={ipForm.email}
+                      onChange={e => setIpForm({ ...ipForm, email: e.target.value })}
+                      placeholder="client@example.com"
+                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-xs mb-1.5 block">Город</label>
+                    <select
+                      required
+                      value={ipForm.city}
+                      onChange={e => setIpForm({ ...ipForm, city: e.target.value })}
+                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                    >
+                      <option value="">Выберите город</option>
+                      {['Москва','Санкт-Петербург','Новосибирск','Екатеринбург','Казань','Нижний Новгород','Челябинск','Самара','Омск','Ростов-на-Дону','Уфа','Красноярск','Воронеж','Пермь','Волгоград','Краснодар','Тюмень','Саратов','Тольятти','Ижевск','Барнаул','Иркутск','Хабаровск','Ярославль','Владивосток','Махачкала','Томск','Оренбург','Кемерово','Новокузнецк','Рязань','Астрахань','Набережные Челны','Пенза','Липецк','Калининград','Тула','Киров','Чебоксары','Курск'].map(city => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {ipError && <p className="text-red-400 text-sm mt-3">{ipError}</p>}
+
+                <button
+                  type="submit"
+                  disabled={ipSubmitting}
+                  className="w-full mt-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-6 py-2.5 rounded-lg text-sm font-semibold transition"
+                >
+                  {ipSubmitting ? 'Создаём заявку...' : 'Получить ссылку'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
