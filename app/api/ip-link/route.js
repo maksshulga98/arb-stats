@@ -49,6 +49,26 @@ function validateINN12(inn) {
   return d[10] === check1 && d[11] === check2
 }
 
+function extractCookies(response) {
+  const setCookies = response.headers.getSetCookie?.() || []
+  // getSetCookie may not be available in all runtimes, fallback
+  if (setCookies.length === 0) {
+    const raw = response.headers.get('set-cookie')
+    if (raw) return raw.split(/,(?=\s*\w+=)/).map(c => c.split(';')[0].trim())
+    return []
+  }
+  return setCookies.map(c => c.split(';')[0].trim())
+}
+
+function mergeCookies(existing, newCookies) {
+  const map = {}
+  for (const c of [...existing, ...newCookies]) {
+    const [name] = c.split('=')
+    map[name.trim()] = c
+  }
+  return Object.values(map)
+}
+
 async function loginToRkoPartner() {
   const email = process.env.RKO_PARTNER_EMAIL
   const password = process.env.RKO_PARTNER_PASSWORD
@@ -57,36 +77,69 @@ async function loginToRkoPartner() {
     throw new Error('RKO_PARTNER_EMAIL or RKO_PARTNER_PASSWORD not set')
   }
 
-  const res = await fetch(`${RKO_BASE}/api/app/auth/login`, {
+  // Step 1: GET the login page to obtain CSRF token and session cookie
+  const pageRes = await fetch(`${RKO_BASE}/login`, {
+    headers: { Accept: 'text/html' },
+    redirect: 'manual',
+  })
+  let cookies = extractCookies(pageRes)
+  const pageHtml = await pageRes.text()
+
+  // Extract CSRF token from meta tag or XSRF-TOKEN cookie
+  let csrfToken = ''
+  const metaMatch = pageHtml.match(/name="csrf-token"\s+content="([^"]+)"/)
+  if (metaMatch) {
+    csrfToken = metaMatch[1]
+  }
+
+  // Also try XSRF-TOKEN cookie (URL-decoded)
+  const xsrfCookie = cookies.find(c => c.startsWith('XSRF-TOKEN='))
+  const xsrfToken = xsrfCookie ? decodeURIComponent(xsrfCookie.split('=').slice(1).join('=')) : ''
+
+  // Step 2: POST /login with CSRF token
+  const loginRes = await fetch(`${RKO_BASE}/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'X-XSRF-TOKEN': xsrfToken,
+      'X-CSRF-TOKEN': csrfToken,
+      Cookie: cookies.join('; '),
+    },
     body: JSON.stringify({ email, password }),
+    redirect: 'manual',
   })
 
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`RKO login failed (${res.status}): ${text}`)
+  const loginCookies = extractCookies(loginRes)
+  cookies = mergeCookies(cookies, loginCookies)
+
+  // Login may return 200, 302, or 422 (validation error)
+  if (loginRes.status === 422) {
+    const err = await loginRes.text()
+    throw new Error(`RKO login validation error: ${err}`)
   }
 
-  const data = await res.json()
-  // Try common token locations
-  const token = data.token || data.access_token || data.data?.token || data.data?.access_token
-  if (!token) {
-    // If no token in JSON, check for Set-Cookie header
-    const cookies = res.headers.get('set-cookie')
-    if (cookies) return { type: 'cookie', value: cookies }
-    throw new Error('No token in RKO login response: ' + JSON.stringify(data))
-  }
+  // After login, we need fresh XSRF token for API calls
+  // Make a simple GET to refresh cookies
+  const refreshRes = await fetch(`${RKO_BASE}/app/orders`, {
+    headers: { Accept: 'text/html', Cookie: cookies.join('; ') },
+    redirect: 'manual',
+  })
+  const refreshCookies = extractCookies(refreshRes)
+  cookies = mergeCookies(cookies, refreshCookies)
 
-  return { type: 'bearer', value: token }
+  return { type: 'cookie', cookies }
 }
 
 function rkoHeaders(auth) {
   const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-  if (auth.type === 'bearer') {
-    headers['Authorization'] = `Bearer ${auth.value}`
-  } else if (auth.type === 'cookie') {
-    headers['Cookie'] = auth.value
+  const cookieStr = auth.cookies.join('; ')
+  headers['Cookie'] = cookieStr
+
+  // Extract XSRF-TOKEN for X-XSRF-TOKEN header (Laravel requires this)
+  const xsrf = auth.cookies.find(c => c.startsWith('XSRF-TOKEN='))
+  if (xsrf) {
+    headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrf.split('=').slice(1).join('='))
   }
   return headers
 }
