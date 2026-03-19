@@ -180,8 +180,10 @@ async function createRkoApplication(auth, { fullName, inn, phone, email, city })
   }
 
   const orderData = await orderRes.json()
-  const orderId = orderData.id || orderData.data?.id
-  const referralLink = orderData.link || orderData.data?.link ||
+  console.log('RKO order response:', JSON.stringify(orderData).slice(0, 1000))
+  const order = orderData.data || orderData
+  const orderId = order.id || order.order_id || order.orderId
+  const referralLink = order.link || order.referral_link || order.public_link ||
     `${RKO_BASE}/click/${orderId}?user_id=2290`
 
   return { orderId, referralLink }
