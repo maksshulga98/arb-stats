@@ -158,6 +158,9 @@ async function createRkoApplication(auth, { fullName, inn, phone, email, city })
   const productsData = await productsRes.json()
   const products = productsData.data || productsData
 
+  console.log('RKO products count:', Array.isArray(products) ? products.length : 'not array')
+  console.log('RKO products:', JSON.stringify(products?.map?.(p => ({ id: p.id, name: p.name || p.title })) || products).slice(0, 1000))
+
   // Find the target product (Регистрация бизнеса ИП + РКО | Реферальная ссылка [РЕФ])
   let targetProduct = null
   if (Array.isArray(products)) {
@@ -176,6 +179,7 @@ async function createRkoApplication(auth, { fullName, inn, phone, email, city })
   }
 
   const productId = targetProduct.id || targetProduct.product_id
+  console.log('RKO selected product:', productId, targetProduct.name || targetProduct.title)
 
   // Step 2: Create application with client data
   const [lastName, firstName, middleName] = fullName.split(' ')
@@ -183,7 +187,7 @@ async function createRkoApplication(auth, { fullName, inn, phone, email, city })
     method: 'POST',
     headers: rkoHeaders(auth),
     body: JSON.stringify({
-      product_id: productId,
+      products: [productId],
       last_name: lastName || '',
       first_name: firstName || '',
       middle_name: middleName || '',
@@ -197,7 +201,18 @@ async function createRkoApplication(auth, { fullName, inn, phone, email, city })
 
   if (!appRes.ok) {
     const text = await appRes.text()
-    throw new Error(`RKO application creation failed (${appRes.status}): ${text}`)
+    // Try to parse JSON and extract readable error message
+    try {
+      const errJson = JSON.parse(text)
+      const msg = errJson.message || ''
+      const fieldErrors = errJson.errors
+        ? Object.entries(errJson.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('; ')
+        : ''
+      throw new Error(`Ошибка создания заявки (${appRes.status}): ${msg}${fieldErrors ? ' — ' + fieldErrors : ''}`)
+    } catch (parseErr) {
+      if (parseErr.message.startsWith('Ошибка создания')) throw parseErr
+      throw new Error(`RKO application creation failed (${appRes.status}): ${text}`)
+    }
   }
 
   const appData = await appRes.json()
