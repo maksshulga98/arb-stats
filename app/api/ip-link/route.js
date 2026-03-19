@@ -247,6 +247,10 @@ export async function POST(request) {
 
     if (insertError) {
       console.error('Supabase insert error:', insertError)
+      return NextResponse.json({
+        referralLink: rkoResult.referralLink,
+        warning: 'Заявка создана, но не сохранена в историю: ' + insertError.message,
+      })
     }
 
     return NextResponse.json({ referralLink: rkoResult.referralLink })
