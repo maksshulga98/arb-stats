@@ -144,69 +144,18 @@ function rkoHeaders(auth) {
   return headers
 }
 
-async function getProductId(auth) {
-  // Fetch the create order page HTML to extract product list from Inertia page data
-  const pageRes = await fetch(
-    `${RKO_BASE}/app/orders/create?filter[category_id]=11`,
-    { headers: { ...rkoHeaders(auth), Accept: 'text/html' } }
-  )
-
-  if (!pageRes.ok) {
-    throw new Error(`RKO create page request failed (${pageRes.status})`)
-  }
-
-  const html = await pageRes.text()
-
-  // Extract product IDs from the page — look for product data in Inertia page props or inline JS
-  // The page renders checkboxes for products; look for product ID patterns
-  // Match patterns like "id":520 near "Реферальная ссылка" and "ИП"
-  const productIdMatch = html.match(/"id"\s*:\s*(\d+)[^}]*?Реферальная ссылка[^}]*?ИП/s)
-    || html.match(/ИП[^}]*?Реферальная ссылка[^}]*?"id"\s*:\s*(\d+)/s)
-
-  if (productIdMatch) {
-    return parseInt(productIdMatch[1])
-  }
-
-  // Fallback: try the applications API to look for product_id field
-  const productsRes = await fetch(
-    `${RKO_BASE}/api/app/applications?filter[category_id]=11&page=1`,
-    { headers: rkoHeaders(auth) }
-  )
-
-  if (productsRes.ok) {
-    const productsData = await productsRes.json()
-    const products = productsData.data || productsData
-    console.log('RKO applications response:', JSON.stringify(products?.[0] || {}).slice(0, 500))
-
-    if (Array.isArray(products)) {
-      const target = products.find(p =>
-        (p.name || p.title || '').includes('Реферальная ссылка') &&
-        (p.name || p.title || '').includes('ИП')
-      )
-      if (target) {
-        // Use product_id if available, otherwise try nested products array
-        const pid = target.product_id || target.products?.[0]?.id || target.id
-        console.log('RKO found product via API:', pid, target.name || target.title)
-        return pid
-      }
-    }
-  }
-
-  throw new Error('Не удалось найти продукт ИП + РКО | Реферальная ссылка')
-}
+// Product ID for "Регистрация бизнеса ИП + РКО | Реферальная ссылка [РЕФ]" (Альфа-Банк)
+// Obtained by intercepting the real request on rko-partner.com
+const RKO_PRODUCT_ID = 520
 
 async function createRkoApplication(auth, { fullName, inn, phone, email, city }) {
-  // Step 1: Get the correct product ID
-  const productId = await getProductId(auth)
-  console.log('RKO using product ID:', productId)
-
-  // Step 2: Create order directly via POST /api/app/orders
+  // Create order directly via POST /api/app/orders
   // Field names must be transliterated Russian as expected by the API
   const orderRes = await fetch(`${RKO_BASE}/api/app/orders`, {
     method: 'POST',
     headers: rkoHeaders(auth),
     body: JSON.stringify({
-      products: [productId],
+      products: [RKO_PRODUCT_ID],
       fio_rukovoditelia: fullName,
       inn,
       elektronnaia_pocta: email,
