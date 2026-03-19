@@ -181,12 +181,18 @@ async function createRkoApplication(auth, { fullName, inn, phone, email, city })
 
   const orderData = await orderRes.json()
   console.log('RKO order response:', JSON.stringify(orderData).slice(0, 1000))
+
+  // Response wraps in { data: { id: ... } } — extract order from data wrapper
   const order = orderData.data || orderData
   const orderId = order.id || order.order_id || order.orderId
-  const referralLink = order.link || order.referral_link || order.public_link ||
-    `${RKO_BASE}/click/${orderId}?user_id=2290`
 
-  return { orderId, referralLink, _debug: orderData }
+  if (!orderId) {
+    throw new Error(`Не удалось получить ID заказа из ответа RKO: ${JSON.stringify(orderData).slice(0, 500)}`)
+  }
+
+  const referralLink = `${RKO_BASE}/click/${orderId}?user_id=2290`
+
+  return { orderId, referralLink }
 }
 
 /**
@@ -255,7 +261,7 @@ export async function POST(request) {
       })
     }
 
-    return NextResponse.json({ referralLink: rkoResult.referralLink, _debug: rkoResult._debug })
+    return NextResponse.json({ referralLink: rkoResult.referralLink })
   } catch (err) {
     console.error('POST /api/ip-link error:', err)
     return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 })
