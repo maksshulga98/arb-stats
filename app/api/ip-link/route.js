@@ -186,7 +186,7 @@ async function createRkoApplication(auth, { fullName, inn, phone, email, city })
   const referralLink = order.link || order.referral_link || order.public_link ||
     `${RKO_BASE}/click/${orderId}?user_id=2290`
 
-  return { orderId, referralLink }
+  return { orderId, referralLink, _debug: orderData }
 }
 
 /**
@@ -255,7 +255,7 @@ export async function POST(request) {
       })
     }
 
-    return NextResponse.json({ referralLink: rkoResult.referralLink })
+    return NextResponse.json({ referralLink: rkoResult.referralLink, _debug: rkoResult._debug })
   } catch (err) {
     console.error('POST /api/ip-link error:', err)
     return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 })

@@ -862,6 +862,9 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 </div>
+                {ipResult._debug && (
+                  <pre className="text-xs text-gray-500 bg-gray-900 p-2 rounded mt-2 overflow-auto max-h-40">{JSON.stringify(ipResult._debug, null, 2)}</pre>
+                )}
                 <button onClick={() => { setShowIpModal(false); setIpResult(null) }} className="w-full bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-lg text-sm transition">
                   Закрыть
                 </button>
