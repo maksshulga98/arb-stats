@@ -1334,13 +1334,8 @@ export default function AdminPage() {
                   </div>
                   <div>
                     <label className="text-gray-400 text-xs mb-1.5 block">Город</label>
-                    <select required value={ipForm.city} onChange={e => setIpForm({ ...ipForm, city: e.target.value })}
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm">
-                      <option value="">Выберите город</option>
-                      {['Москва','Санкт-Петербург','Новосибирск','Екатеринбург','Казань','Нижний Новгород','Челябинск','Самара','Омск','Ростов-на-Дону','Уфа','Красноярск','Воронеж','Пермь','Волгоград','Краснодар','Тюмень','Саратов','Тольятти','Ижевск','Барнаул','Иркутск','Хабаровск','Ярославль','Владивосток','Махачкала','Томск','Оренбург','Кемерово','Новокузнецк','Рязань','Астрахань','Набережные Челны','Пенза','Липецк','Калининград','Тула','Киров','Чебоксары','Курск'].map(city => (
-                        <option key={city} value={city}>{city}</option>
-                      ))}
-                    </select>
+                    <input type="text" required value={ipForm.city} onChange={e => setIpForm({ ...ipForm, city: e.target.value })} placeholder="Введите город"
+                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
                   </div>
                 </div>
                 {ipError && <p className="text-red-400 text-sm mt-3">{ipError}</p>}
