@@ -144,92 +144,90 @@ function rkoHeaders(auth) {
   return headers
 }
 
-async function createRkoApplication(auth, { fullName, inn, phone, email, city }) {
-  // Step 1: Get products
+async function getProductId(auth) {
+  // Fetch the create order page HTML to extract product list from Inertia page data
+  const pageRes = await fetch(
+    `${RKO_BASE}/app/orders/create?filter[category_id]=11`,
+    { headers: { ...rkoHeaders(auth), Accept: 'text/html' } }
+  )
+
+  if (!pageRes.ok) {
+    throw new Error(`RKO create page request failed (${pageRes.status})`)
+  }
+
+  const html = await pageRes.text()
+
+  // Extract product IDs from the page — look for product data in Inertia page props or inline JS
+  // The page renders checkboxes for products; look for product ID patterns
+  // Match patterns like "id":520 near "Реферальная ссылка" and "ИП"
+  const productIdMatch = html.match(/"id"\s*:\s*(\d+)[^}]*?Реферальная ссылка[^}]*?ИП/s)
+    || html.match(/ИП[^}]*?Реферальная ссылка[^}]*?"id"\s*:\s*(\d+)/s)
+
+  if (productIdMatch) {
+    return parseInt(productIdMatch[1])
+  }
+
+  // Fallback: try the applications API to look for product_id field
   const productsRes = await fetch(
-    `${RKO_BASE}/api/app/applications?filter[category_id]=11`,
+    `${RKO_BASE}/api/app/applications?filter[category_id]=11&page=1`,
     { headers: rkoHeaders(auth) }
   )
 
-  if (!productsRes.ok) {
-    throw new Error(`RKO products request failed (${productsRes.status})`)
-  }
+  if (productsRes.ok) {
+    const productsData = await productsRes.json()
+    const products = productsData.data || productsData
+    console.log('RKO applications response:', JSON.stringify(products?.[0] || {}).slice(0, 500))
 
-  const productsData = await productsRes.json()
-  const products = productsData.data || productsData
-
-  console.log('RKO products count:', Array.isArray(products) ? products.length : 'not array')
-  console.log('RKO products:', JSON.stringify(products?.map?.(p => ({ id: p.id, name: p.name || p.title })) || products).slice(0, 1000))
-
-  // Find the target product (Регистрация бизнеса ИП + РКО | Реферальная ссылка [РЕФ])
-  let targetProduct = null
-  if (Array.isArray(products)) {
-    targetProduct = products.find(p =>
-      (p.name || p.title || '').includes('Реферальная ссылка') &&
-      (p.name || p.title || '').includes('ИП')
-    )
-    // Fallback: 3rd item (index 2) as described
-    if (!targetProduct && products.length >= 3) {
-      targetProduct = products[2]
+    if (Array.isArray(products)) {
+      const target = products.find(p =>
+        (p.name || p.title || '').includes('Реферальная ссылка') &&
+        (p.name || p.title || '').includes('ИП')
+      )
+      if (target) {
+        // Use product_id if available, otherwise try nested products array
+        const pid = target.product_id || target.products?.[0]?.id || target.id
+        console.log('RKO found product via API:', pid, target.name || target.title)
+        return pid
+      }
     }
   }
 
-  if (!targetProduct) {
-    throw new Error('Target product not found in RKO products list')
-  }
+  throw new Error('Не удалось найти продукт ИП + РКО | Реферальная ссылка')
+}
 
-  const productId = targetProduct.id || targetProduct.product_id
-  console.log('RKO selected product:', productId, targetProduct.name || targetProduct.title)
+async function createRkoApplication(auth, { fullName, inn, phone, email, city }) {
+  // Step 1: Get the correct product ID
+  const productId = await getProductId(auth)
+  console.log('RKO using product ID:', productId)
 
-  // Step 2: Create application with client data
-  const [lastName, firstName, middleName] = fullName.split(' ')
-  const appRes = await fetch(`${RKO_BASE}/api/app/applications`, {
+  // Step 2: Create order directly via POST /api/app/orders
+  // Field names must be transliterated Russian as expected by the API
+  const orderRes = await fetch(`${RKO_BASE}/api/app/orders`, {
     method: 'POST',
     headers: rkoHeaders(auth),
     body: JSON.stringify({
       products: [productId],
-      last_name: lastName || '',
-      first_name: firstName || '',
-      middle_name: middleName || '',
-      full_name: fullName,
+      fio_rukovoditelia: fullName,
       inn,
-      phone,
-      email,
-      city,
+      elektronnaia_pocta: email,
+      telefon: phone,
+      gorod_obsluzivaniia: city,
     }),
   })
 
-  if (!appRes.ok) {
-    const text = await appRes.text()
-    // Try to parse JSON and extract readable error message
+  if (!orderRes.ok) {
+    const text = await orderRes.text()
     try {
       const errJson = JSON.parse(text)
       const msg = errJson.message || ''
       const fieldErrors = errJson.errors
         ? Object.entries(errJson.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('; ')
         : ''
-      throw new Error(`Ошибка создания заявки (${appRes.status}): ${msg}${fieldErrors ? ' — ' + fieldErrors : ''}`)
+      throw new Error(`Ошибка создания заявки (${orderRes.status}): ${msg}${fieldErrors ? ' — ' + fieldErrors : ''}`)
     } catch (parseErr) {
       if (parseErr.message.startsWith('Ошибка создания')) throw parseErr
-      throw new Error(`RKO application creation failed (${appRes.status}): ${text}`)
+      throw new Error(`RKO order creation failed (${orderRes.status}): ${text}`)
     }
-  }
-
-  const appData = await appRes.json()
-  const applicationId = appData.id || appData.data?.id
-
-  // Step 3: Create order (finalize)
-  const orderRes = await fetch(`${RKO_BASE}/api/app/orders`, {
-    method: 'POST',
-    headers: rkoHeaders(auth),
-    body: JSON.stringify({
-      application_id: applicationId,
-    }),
-  })
-
-  if (!orderRes.ok) {
-    const text = await orderRes.text()
-    throw new Error(`RKO order creation failed (${orderRes.status}): ${text}`)
   }
 
   const orderData = await orderRes.json()
@@ -237,7 +235,7 @@ async function createRkoApplication(auth, { fullName, inn, phone, email, city })
   const referralLink = orderData.link || orderData.data?.link ||
     `${RKO_BASE}/click/${orderId}?user_id=2290`
 
-  return { applicationId, orderId, referralLink }
+  return { orderId, referralLink }
 }
 
 /**
@@ -294,7 +292,7 @@ export async function POST(request) {
       inn, phone, email, city,
       referral_link: rkoResult.referralLink,
       rko_order_id: String(rkoResult.orderId || ''),
-      rko_application_id: String(rkoResult.applicationId || ''),
+      rko_application_id: '',
       status: 'success',
     }])
 
