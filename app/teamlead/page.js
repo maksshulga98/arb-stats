@@ -941,7 +941,8 @@ export default function TeamleadPage() {
                             </div>
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>{z.label}</span>
                             {(() => {
-                              const accs = tgAccounts.filter(a => a.assignedTo === manager.name)
+                              const mName = (manager.name || '').trim().replace(/\s+/g, ' ').toLowerCase()
+                              const accs = tgAccounts.filter(a => a.assignedTo.trim().replace(/\s+/g, ' ').toLowerCase() === mName)
                               if (accs.length === 0) return null
                               return (
                                 <div className="mt-2 pt-2 border-t border-white/5">
@@ -1193,8 +1194,8 @@ export default function TeamleadPage() {
               })
               const data = await res.json()
               // Filter: team accounts + unassigned (free) accounts
-              const teamNames = new Set(managers.map(m => m.name).concat(profile?.name ? [profile.name] : []))
-              const myAccounts = (data.accounts || []).filter(a => !a.assignedTo || teamNames.has(a.assignedTo))
+              const teamNames = new Set(managers.map(m => (m.name || '').trim().replace(/\s+/g, ' ').toLowerCase()).concat(profile?.name ? [profile.name.trim().replace(/\s+/g, ' ').toLowerCase()] : []))
+              const myAccounts = (data.accounts || []).filter(a => !a.assignedTo || teamNames.has(a.assignedTo.trim().replace(/\s+/g, ' ').toLowerCase()))
               setTgAccounts(myAccounts)
             } catch { setTgAccounts([]) }
             finally { setTgLoading(false) }

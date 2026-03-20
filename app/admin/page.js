@@ -558,7 +558,8 @@ export default function AdminPage() {
                               {z.label}
                             </span>
                             {(() => {
-                              const accs = tgAccounts.filter(a => a.assignedTo === (manager.name || manager.email))
+                              const mName = (manager.name || manager.email || '').trim().replace(/\s+/g, ' ').toLowerCase()
+                              const accs = tgAccounts.filter(a => a.assignedTo.trim().replace(/\s+/g, ' ').toLowerCase() === mName)
                               if (accs.length === 0) return null
                               return (
                                 <div className="mt-2 pt-2 border-t border-white/5">
