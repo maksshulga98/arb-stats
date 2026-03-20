@@ -4,6 +4,10 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getMissingReportAlerts } from '../../lib/notifications'
+
+// Normalize latin lookalikes to cyrillic for name comparison
+const CYR_MAP = { a:'а',b:'в',c:'с',e:'е',h:'н',k:'к',m:'м',o:'о',p:'р',t:'т',x:'х',y:'у' }
+const normName = s => (s||'').trim().replace(/\s+/g,' ').toLowerCase().replace(/[a-z]/g, c => CYR_MAP[c] || c)
 import { MANAGER_SHEETS } from '../../lib/sheets-config'
 
 // ── Team config ──────────────────────────────────────────────────────────────
@@ -941,8 +945,8 @@ export default function TeamleadPage() {
                             </div>
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>{z.label}</span>
                             {(() => {
-                              const mName = (manager.name || '').trim().replace(/\s+/g, ' ').toLowerCase()
-                              const accs = tgAccounts.filter(a => a.assignedTo.trim().replace(/\s+/g, ' ').toLowerCase() === mName)
+                              const mName = normName(manager.name)
+                              const accs = tgAccounts.filter(a => normName(a.assignedTo) === mName)
                               if (accs.length === 0) return null
                               return (
                                 <div className="mt-2 pt-2 border-t border-white/5">
@@ -1193,8 +1197,8 @@ export default function TeamleadPage() {
               })
               const data = await res.json()
               // Filter: team accounts + unassigned (free) accounts
-              const teamNames = new Set(managers.map(m => (m.name || '').trim().replace(/\s+/g, ' ').toLowerCase()).concat(profile?.name ? [profile.name.trim().replace(/\s+/g, ' ').toLowerCase()] : []))
-              const myAccounts = (data.accounts || []).filter(a => !a.assignedTo || teamNames.has(a.assignedTo.trim().replace(/\s+/g, ' ').toLowerCase()))
+              const teamNames = new Set(managers.map(m => normName(m.name)).concat(profile?.name ? [normName(profile.name)] : []))
+              const myAccounts = (data.accounts || []).filter(a => !a.assignedTo || teamNames.has(normName(a.assignedTo)))
               setTgAccounts(myAccounts)
             } catch { setTgAccounts([]) }
             finally { setTgLoading(false) }
