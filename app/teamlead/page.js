@@ -1039,12 +1039,13 @@ export default function TeamleadPage() {
                     <p className="text-xl font-bold text-gray-200">{totals.replied}</p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs mb-1">{isKarina ? 'Заказано карт' : 'Заказали ИП'}</p>
-                    <p className={`text-xl font-bold ${isKarina ? 'text-purple-400' : 'text-blue-400'}`}>{isKarina ? totals.ordered_cards : totals.ordered_ip}</p>
-                  </div>
-                  <div>
+
                     <p className="text-gray-500 text-xs mb-1">Написало людей</p>
                     <p className="text-xl font-bold text-gray-200">{totals.people_wrote}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">{isKarina ? 'Заказано карт' : 'Заказали ИП'}</p>
+                    <p className={`text-xl font-bold ${isKarina ? 'text-purple-400' : 'text-blue-400'}`}>{isKarina ? totals.ordered_cards : totals.ordered_ip}</p>
                   </div>
                   <div>
                     <p className="text-gray-500 text-xs mb-1">ЦД ИП</p>
@@ -1053,7 +1054,7 @@ export default function TeamleadPage() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs mb-1">Дебетовые</p>
+                    <p className="text-gray-500 text-xs mb-1">ЦД дебетовые</p>
                     <p className="text-xl font-bold text-purple-400">
                       {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.debit || 0), 0)}
                     </p>
@@ -1087,7 +1088,7 @@ export default function TeamleadPage() {
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
                         )}
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
-                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дебетовые</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД дебетовые</th>
                       </tr>
                     </thead>
                     <tbody>

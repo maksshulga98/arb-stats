@@ -629,16 +629,17 @@ export default function AdminPage() {
                       <p className="text-xl font-bold text-gray-200">{totalReplied}</p>
                     </div>
                     <div>
+                      <p className="text-gray-500 text-xs mb-1">Написало людей</p>
+                      <p className="text-xl font-bold text-gray-200">{totalPeopleWrote}</p>
+                    </div>
+                    <div>
                       <p className="text-gray-500 text-xs mb-1">Заказали ИП</p>
                       <p className="text-xl font-bold text-blue-400">{totalOrdered}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Заказано дебетовых карт</p>
                       <p className="text-xl font-bold text-purple-400">{totalOrderedCards}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-xs mb-1">Написало людей</p>
-                      <p className="text-xl font-bold text-gray-200">{totalPeopleWrote}</p>
+
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs mb-1">ЦД ИП</p>
@@ -647,7 +648,7 @@ export default function AdminPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs mb-1">Дебетовые</p>
+                      <p className="text-gray-500 text-xs mb-1">ЦД дебетовые</p>
                       <p className="text-xl font-bold text-purple-400">
                         {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.debit || 0), 0)}
                       </p>
@@ -719,7 +720,7 @@ export default function AdminPage() {
                             <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
                           )}
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
-                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дебетовые</th>
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД дебетовые</th>
                           {!isNikita && (
                             <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Взято номеров</th>
                           )}
