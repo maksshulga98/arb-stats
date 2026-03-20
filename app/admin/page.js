@@ -9,7 +9,7 @@ const TEAMS = [
   { id: 'anastasia', name: 'Анастасии', type: 'standard' },
   { id: 'yasmin',    name: 'Ясмин',     type: 'standard' },
   { id: 'olya',      name: 'Оли',       type: 'standard' },
-  { id: 'karina',    name: 'Карины',    type: 'standard' },
+  { id: 'karina',    name: 'Карины',    type: 'karina'   },
   { id: 'nikita',    name: 'Никиты',    type: 'nikita'   },
 ]
 
@@ -30,9 +30,14 @@ function getIPForPeriod(reports, daysStart, daysEnd) {
     .reduce((sum, r) => sum + (r.ordered_ip || 0), 0)
 }
 
-function getZoneKey(ip) {
-  if (ip < 10) return 'red'
-  if (ip <= 15) return 'yellow'
+function getZoneKey(value, teamType) {
+  if (teamType === 'karina') {
+    if (value < 15) return 'red'
+    if (value <= 30) return 'yellow'
+    return 'green'
+  }
+  if (value < 10) return 'red'
+  if (value <= 15) return 'yellow'
   return 'green'
 }
 
@@ -323,6 +328,7 @@ export default function AdminPage() {
   const modalReports  = selectedManager ? managerReports(selectedManager.id) : []
   const modalTeam     = selectedManager ? TEAMS.find(t => t.id === selectedManager.team) : null
   const modalIsNikita = modalTeam?.type === 'nikita'
+  const modalIsKarina = modalTeam?.type === 'karina'
 
   const TABS = [
     { id: 'analytics', label: 'Аналитика команды' },
@@ -510,10 +516,13 @@ export default function AdminPage() {
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                       {teamAll.map(manager => {
                         const mRep    = managerReports(manager.id)
-                        const ip7     = getIPForPeriod(mRep, 0, 7)
-                        const zKey    = getZoneKey(ip7)
+                        const isKarinaTeam = team.type === 'karina'
+                        const value7  = isKarinaTeam
+                          ? mRep.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const start = new Date(now); start.setDate(start.getDate()-7); start.setHours(0,0,0,0); return d >= start && d <= now }).reduce((s, r) => s + (r.ordered_cards || 0), 0)
+                          : getIPForPeriod(mRep, 0, 7)
+                        const zKey    = getZoneKey(value7, team.type)
                         const z       = ZONE[zKey]
-                        const alert14 = isRedFor14Days(mRep, manager.created_at)
+                        const alert14 = !isKarinaTeam && isRedFor14Days(mRep, manager.created_at)
 
                         return (
                           <button
@@ -541,8 +550,8 @@ export default function AdminPage() {
                             </div>
 
                             <div className="mb-3">
-                              <span className={`text-3xl font-bold ${z.text}`}>{ip7}</span>
-                              <span className="text-gray-500 text-xs ml-1">ИП / 7 дн</span>
+                              <span className={`text-3xl font-bold ${z.text}`}>{value7}</span>
+                              <span className="text-gray-500 text-xs ml-1">{isKarinaTeam ? 'карт' : 'ИП'} / 7 дн</span>
                             </div>
 
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>
@@ -598,6 +607,7 @@ export default function AdminPage() {
               const totalUnsubscribed = dayReports.reduce((s, r) => s + (r.unsubscribed || 0), 0)
               const totalReplied      = dayReports.reduce((s, r) => s + (r.replied || 0), 0)
               const totalOrdered      = dayReports.reduce((s, r) => s + (r.ordered_ip || 0), 0)
+              const totalOrderedCards = dayReports.reduce((s, r) => s + (r.ordered_cards || 0), 0)
               const totalPeopleWrote  = dayReports.reduce((s, r) => s + (r.people_wrote || 0), 0)
               const reported = new Set(dayReports.map(r => r.manager_id))
               const totalMembers = allMembers.length
@@ -621,6 +631,10 @@ export default function AdminPage() {
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Заказали ИП</p>
                       <p className="text-xl font-bold text-blue-400">{totalOrdered}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs mb-1">Заказано дебетовых карт</p>
+                      <p className="text-xl font-bold text-purple-400">{totalOrderedCards}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Написало людей</p>
@@ -651,6 +665,7 @@ export default function AdminPage() {
 
             {TEAMS.map(team => {
               const isNikita = team.type === 'nikita'
+              const isKarina = team.type === 'karina'
               const teamMembers = [
                 ...managers.filter(m => m.team === team.id),
                 ...teamleads.filter(t => t.team === team.id),
@@ -660,19 +675,21 @@ export default function AdminPage() {
               const rows = teamMembers.map(member => {
                 const memberReports = dayReports.filter(r => r.manager_id === member.id)
                 const report = memberReports.length > 0 ? {
-                  unsubscribed: memberReports.reduce((s, r) => s + (r.unsubscribed || 0), 0),
-                  replied:      memberReports.reduce((s, r) => s + (r.replied || 0), 0),
-                  ordered_ip:   memberReports.reduce((s, r) => s + (r.ordered_ip || 0), 0),
-                  people_wrote: memberReports.reduce((s, r) => s + (r.people_wrote || 0), 0),
+                  unsubscribed:  memberReports.reduce((s, r) => s + (r.unsubscribed || 0), 0),
+                  replied:       memberReports.reduce((s, r) => s + (r.replied || 0), 0),
+                  ordered_ip:    memberReports.reduce((s, r) => s + (r.ordered_ip || 0), 0),
+                  ordered_cards: memberReports.reduce((s, r) => s + (r.ordered_cards || 0), 0),
+                  people_wrote:  memberReports.reduce((s, r) => s + (r.people_wrote || 0), 0),
                 } : null
                 return { member, report }
               })
 
               const totals = {
-                unsubscribed: rows.reduce((s, r) => s + (r.report?.unsubscribed || 0), 0),
-                replied:      rows.reduce((s, r) => s + (r.report?.replied || 0), 0),
-                ordered_ip:   rows.reduce((s, r) => s + (r.report?.ordered_ip || 0), 0),
-                people_wrote: rows.reduce((s, r) => s + (r.report?.people_wrote || 0), 0),
+                unsubscribed:  rows.reduce((s, r) => s + (r.report?.unsubscribed || 0), 0),
+                replied:       rows.reduce((s, r) => s + (r.report?.replied || 0), 0),
+                ordered_ip:    rows.reduce((s, r) => s + (r.report?.ordered_ip || 0), 0),
+                ordered_cards: rows.reduce((s, r) => s + (r.report?.ordered_cards || 0), 0),
+                people_wrote:  rows.reduce((s, r) => s + (r.report?.people_wrote || 0), 0),
               }
 
               return (
@@ -696,7 +713,11 @@ export default function AdminPage() {
                           {isNikita && (
                             <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
                           )}
-                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                          {isKarina ? (
+                            <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
+                          ) : (
+                            <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                          )}
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дебетовые</th>
                           {!isNikita && (
@@ -730,7 +751,11 @@ export default function AdminPage() {
                                   {isNikita && (
                                     <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
                                   )}
-                                  <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
+                                  {isKarina ? (
+                                    <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-purple-400">{report ? report.ordered_cards : '—'}</td>
+                                  ) : (
+                                    <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
+                                  )}
                                   <td className="px-3 sm:px-5 py-3 text-sm">
                                     <CdValue value={sd ? sd.ip : null} loading={sheetsLoading && sd === undefined} />
                                   </td>
@@ -757,7 +782,11 @@ export default function AdminPage() {
                                 {isNikita && (
                                   <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
                                 )}
-                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
+                                {isKarina ? (
+                                  <td className="px-3 sm:px-5 py-3 text-sm font-bold text-purple-400">{totals.ordered_cards}</td>
+                                ) : (
+                                  <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
+                                )}
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
                                   {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0)}
                                 </td>
@@ -1383,21 +1412,28 @@ export default function AdminPage() {
 
             {/* Zone summary strip */}
             {(() => {
-              const ip7  = getIPForPeriod(modalReports, 0, 7)
-              const ip14 = getIPForPeriod(modalReports, 7, 14)
-              const zKey = getZoneKey(ip7)
+              const isModalKarina = modalTeam?.type === 'karina'
+              const field = isModalKarina ? 'ordered_cards' : 'ordered_ip'
+              const unitLabel = isModalKarina ? 'карт' : 'ИП'
+              const val7  = isModalKarina
+                ? modalReports.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const start = new Date(now); start.setDate(start.getDate()-7); start.setHours(0,0,0,0); return d >= start && d <= now }).reduce((s, r) => s + (r[field] || 0), 0)
+                : getIPForPeriod(modalReports, 0, 7)
+              const val14 = isModalKarina
+                ? modalReports.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const end = new Date(now); end.setDate(end.getDate()-7); const start = new Date(now); start.setDate(start.getDate()-14); start.setHours(0,0,0,0); return d >= start && d <= end }).reduce((s, r) => s + (r[field] || 0), 0)
+                : getIPForPeriod(modalReports, 7, 14)
+              const zKey = getZoneKey(val7, modalTeam?.type)
               const z    = ZONE[zKey]
               return (
                 <div className="px-6 pt-4 pb-2 flex gap-4">
                   <div className={`flex-1 border rounded-xl px-4 py-3 ${z.card}`}>
                     <p className="text-gray-500 text-xs mb-1">Последние 7 дней</p>
-                    <p className={`text-xl font-bold ${z.text}`}>{ip7} ИП</p>
+                    <p className={`text-xl font-bold ${z.text}`}>{val7} {unitLabel}</p>
                     <span className={`text-xs ${z.badge} inline-block px-2 py-0.5 rounded-md mt-1`}>{z.label}</span>
                   </div>
-                  <div className={`flex-1 border rounded-xl px-4 py-3 ${ZONE[getZoneKey(ip14)].card}`}>
+                  <div className={`flex-1 border rounded-xl px-4 py-3 ${ZONE[getZoneKey(val14, modalTeam?.type)].card}`}>
                     <p className="text-gray-500 text-xs mb-1">Предыдущие 7 дней</p>
-                    <p className={`text-xl font-bold ${ZONE[getZoneKey(ip14)].text}`}>{ip14} ИП</p>
-                    <span className={`text-xs ${ZONE[getZoneKey(ip14)].badge} inline-block px-2 py-0.5 rounded-md mt-1`}>{ZONE[getZoneKey(ip14)].label}</span>
+                    <p className={`text-xl font-bold ${ZONE[getZoneKey(val14, modalTeam?.type)].text}`}>{val14} {unitLabel}</p>
+                    <span className={`text-xs ${ZONE[getZoneKey(val14, modalTeam?.type)].badge} inline-block px-2 py-0.5 rounded-md mt-1`}>{ZONE[getZoneKey(val14, modalTeam?.type)].label}</span>
                   </div>
                 </div>
               )
@@ -1516,7 +1552,11 @@ export default function AdminPage() {
                     {modalIsNikita && (
                       <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
                     )}
-                    <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                    {modalIsKarina ? (
+                      <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
+                    ) : (
+                      <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                    )}
                     <th className="w-8" />
                   </tr>
                 </thead>
@@ -1549,7 +1589,11 @@ export default function AdminPage() {
                         {modalIsNikita && (
                           <td className="py-2.5 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
                         )}
-                        <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                        {modalIsKarina ? (
+                          <td className="py-2.5 text-sm font-semibold text-purple-400">{r.ordered_cards ?? '—'}</td>
+                        ) : (
+                          <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                        )}
                         <td className="py-2.5 pr-1 text-right">
                           <button
                             onClick={() => handleDeleteReport(r.id)}
