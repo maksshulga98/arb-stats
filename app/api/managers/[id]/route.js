@@ -48,10 +48,10 @@ export async function DELETE(request, { params }) {
       }
     }
 
-    // Soft-delete: clear team and mark as deleted so FK references in reports stay intact
+    // Soft-delete: keep team so stats remain in team analytics, only change role
     await supabaseAdmin
       .from('profiles')
-      .update({ team: null, role: 'deleted' })
+      .update({ role: 'deleted' })
       .eq('id', id)
 
     // Also revoke login by deleting the auth user
