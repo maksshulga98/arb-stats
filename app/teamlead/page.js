@@ -133,6 +133,7 @@ export default function TeamleadPage() {
   const [profile, setProfile]   = useState(null)
   const [myReports, setMyReports]     = useState([])
   const [managers, setManagers]       = useState([])
+  const [deletedMembers, setDeletedMembers] = useState([])
   const [teamReports, setTeamReports] = useState([])
   const [loading, setLoading]   = useState(true)
   const [activeTab, setActiveTab] = useState('analytics')
@@ -212,7 +213,7 @@ export default function TeamleadPage() {
   // Fetch Google Sheets ЦД data when daily tab is active
   useEffect(() => {
     if (activeTab !== 'daily' || managers.length === 0) return
-    const allMembers = [profile, ...managers].filter(Boolean)
+    const allMembers = [profile, ...managers, ...deletedMembers].filter(Boolean)
     const namesWithSheets = allMembers.filter(m => m.sheet_id || MANAGER_SHEETS[m.name]).map(m => m.name)
     if (namesWithSheets.length === 0) { setSheetsData({}); return }
     setSheetsLoading(true)
@@ -221,7 +222,7 @@ export default function TeamleadPage() {
       .then(data => setSheetsData(data))
       .catch(() => setSheetsData({}))
       .finally(() => setSheetsLoading(false))
-  }, [activeTab, dateFrom, dateTo, managers, profile])
+  }, [activeTab, dateFrom, dateTo, managers, deletedMembers, profile])
   useEffect(() => {
     const fn = (e) => { if (e.key === 'Escape') { setSelectedManager(null); setShowAddModal(false) } }
     window.addEventListener('keydown', fn)
@@ -262,13 +263,18 @@ export default function TeamleadPage() {
   }
 
   const loadTeamData = async (team) => {
-    const { data: mgrs } = await supabase.from('profiles').select('*').eq('role', 'manager').eq('team', team)
+    const [{ data: mgrs }, { data: deleted }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('role', 'manager').eq('team', team),
+      supabase.from('profiles').select('*').eq('role', 'deleted').eq('team', team),
+    ])
     const list = mgrs || []
+    const deletedList = deleted || []
     setManagers(list)
+    setDeletedMembers(deletedList)
 
-    if (list.length > 0) {
-      const ids = list.map(m => m.id)
-      const { data: reps } = await supabase.from('reports').select('*').in('manager_id', ids).order('date', { ascending: false })
+    const allIds = [...list, ...deletedList].map(m => m.id)
+    if (allIds.length > 0) {
+      const { data: reps } = await supabase.from('reports').select('*').in('manager_id', allIds).order('date', { ascending: false })
       setTeamReports(reps || [])
     } else {
       setTeamReports([])
@@ -994,12 +1000,25 @@ export default function TeamleadPage() {
             return { member, report }
           })
 
+          // Include deleted members' reports in totals
+          const deletedTotals = deletedMembers.reduce((acc, member) => {
+            const memberReports = dayReports.filter(r => r.manager_id === member.id)
+            memberReports.forEach(r => {
+              acc.unsubscribed += r.unsubscribed || 0
+              acc.replied += r.replied || 0
+              acc.ordered_ip += r.ordered_ip || 0
+              acc.ordered_cards += r.ordered_cards || 0
+              acc.people_wrote += r.people_wrote || 0
+            })
+            return acc
+          }, { unsubscribed: 0, replied: 0, ordered_ip: 0, ordered_cards: 0, people_wrote: 0 })
+
           const totals = {
-            unsubscribed:  rows.reduce((s, r) => s + (r.report?.unsubscribed || 0), 0),
-            replied:       rows.reduce((s, r) => s + (r.report?.replied || 0), 0),
-            ordered_ip:    rows.reduce((s, r) => s + (r.report?.ordered_ip || 0), 0),
-            ordered_cards: rows.reduce((s, r) => s + (r.report?.ordered_cards || 0), 0),
-            people_wrote:  rows.reduce((s, r) => s + (r.report?.people_wrote || 0), 0),
+            unsubscribed:  rows.reduce((s, r) => s + (r.report?.unsubscribed || 0), 0) + deletedTotals.unsubscribed,
+            replied:       rows.reduce((s, r) => s + (r.report?.replied || 0), 0) + deletedTotals.replied,
+            ordered_ip:    rows.reduce((s, r) => s + (r.report?.ordered_ip || 0), 0) + deletedTotals.ordered_ip,
+            ordered_cards: rows.reduce((s, r) => s + (r.report?.ordered_cards || 0), 0) + deletedTotals.ordered_cards,
+            people_wrote:  rows.reduce((s, r) => s + (r.report?.people_wrote || 0), 0) + deletedTotals.people_wrote,
           }
 
           return (
@@ -1141,10 +1160,10 @@ export default function TeamleadPage() {
                             <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
                           )}
                           <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
-                            {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0)}
+                            {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0) + deletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.ip || 0), 0)}
                           </td>
                           <td className="px-3 sm:px-5 py-3 text-sm font-bold text-purple-400">
-                            {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.debit || 0), 0)}
+                            {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.debit || 0), 0) + deletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.debit || 0), 0)}
                           </td>
                         </tr>
                       )}

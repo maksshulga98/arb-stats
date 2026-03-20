@@ -169,7 +169,7 @@ export default function AdminPage() {
   // Fetch Google Sheets ЦД data when daily tab is active
   useEffect(() => {
     if (activeTab !== 'daily' || managers.length === 0) return
-    const allMembers = [...managers, ...teamleads]
+    const allMembers = [...managers, ...teamleads, ...deletedMembers]
     const namesWithSheets = allMembers.filter(m => m.sheet_id || MANAGER_SHEETS[m.name]).map(m => m.name)
     if (namesWithSheets.length === 0) { setSheetsData({}); return }
     setSheetsLoading(true)
@@ -178,7 +178,7 @@ export default function AdminPage() {
       .then(data => setSheetsData(data))
       .catch(() => setSheetsData({}))
       .finally(() => setSheetsLoading(false))
-  }, [activeTab, dateFrom, dateTo, managers])
+  }, [activeTab, dateFrom, dateTo, managers, deletedMembers])
 
   // Fetch contact distribution stats when daily tab is active
   useEffect(() => {
@@ -671,6 +671,7 @@ export default function AdminPage() {
                 ...managers.filter(m => m.team === team.id),
                 ...teamleads.filter(t => t.team === team.id),
               ]
+              const teamDeletedMembers = deletedMembers.filter(m => m.team === team.id)
               const dayReports = reports.filter(r => r.date >= dateFrom && r.date <= dateTo)
 
               const rows = teamMembers.map(member => {
@@ -685,12 +686,25 @@ export default function AdminPage() {
                 return { member, report }
               })
 
+              // Include deleted members' reports in totals
+              const deletedTotals = teamDeletedMembers.reduce((acc, member) => {
+                const memberReports = dayReports.filter(r => r.manager_id === member.id)
+                memberReports.forEach(r => {
+                  acc.unsubscribed += r.unsubscribed || 0
+                  acc.replied += r.replied || 0
+                  acc.ordered_ip += r.ordered_ip || 0
+                  acc.ordered_cards += r.ordered_cards || 0
+                  acc.people_wrote += r.people_wrote || 0
+                })
+                return acc
+              }, { unsubscribed: 0, replied: 0, ordered_ip: 0, ordered_cards: 0, people_wrote: 0 })
+
               const totals = {
-                unsubscribed:  rows.reduce((s, r) => s + (r.report?.unsubscribed || 0), 0),
-                replied:       rows.reduce((s, r) => s + (r.report?.replied || 0), 0),
-                ordered_ip:    rows.reduce((s, r) => s + (r.report?.ordered_ip || 0), 0),
-                ordered_cards: rows.reduce((s, r) => s + (r.report?.ordered_cards || 0), 0),
-                people_wrote:  rows.reduce((s, r) => s + (r.report?.people_wrote || 0), 0),
+                unsubscribed:  rows.reduce((s, r) => s + (r.report?.unsubscribed || 0), 0) + deletedTotals.unsubscribed,
+                replied:       rows.reduce((s, r) => s + (r.report?.replied || 0), 0) + deletedTotals.replied,
+                ordered_ip:    rows.reduce((s, r) => s + (r.report?.ordered_ip || 0), 0) + deletedTotals.ordered_ip,
+                ordered_cards: rows.reduce((s, r) => s + (r.report?.ordered_cards || 0), 0) + deletedTotals.ordered_cards,
+                people_wrote:  rows.reduce((s, r) => s + (r.report?.people_wrote || 0), 0) + deletedTotals.people_wrote,
               }
 
               return (
@@ -789,10 +803,10 @@ export default function AdminPage() {
                                   <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
                                 )}
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
-                                  {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0)}
+                                  {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0) + teamDeletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.ip || 0), 0)}
                                 </td>
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-purple-400">
-                                  {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.debit || 0), 0)}
+                                  {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.debit || 0), 0) + teamDeletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.debit || 0), 0)}
                                 </td>
                                 {!isNikita && (
                                   <td className="px-3 sm:px-5 py-3 text-sm font-bold text-orange-400">
