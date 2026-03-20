@@ -9,28 +9,42 @@ const TEAMS = {
   anastasia: { name: 'Анастасии', type: 'standard' },
   yasmin:    { name: 'Ясмин',     type: 'standard' },
   olya:      { name: 'Оли',       type: 'standard' },
-  karina:    { name: 'Карины',    type: 'standard' },
+  karina:    { name: 'Карины',    type: 'karina'   },
   nikita:    { name: 'Никиты',    type: 'nikita'   },
 }
 
 // Команды с доступом к выдаче номеров
 const CONTACT_TEAMS = ['yasmin', 'karina', 'anastasia', 'olya']
 
-function getIPLast7Days(reports) {
+function getLast7Days(reports, field = 'ordered_ip') {
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - 7)
   cutoff.setHours(0, 0, 0, 0)
   return reports
     .filter(r => new Date(r.date) >= cutoff)
-    .reduce((sum, r) => sum + (r.ordered_ip || 0), 0)
+    .reduce((sum, r) => sum + (r[field] || 0), 0)
 }
 
-function getZone(ip) {
-  if (ip < 10) return {
+function getZone(value, teamType) {
+  if (teamType === 'karina') {
+    if (value < 15) return {
+      bg: 'bg-red-950/40', border: 'border-red-700',
+      text: 'text-red-400', badge: 'bg-red-900/60 text-red-300 border border-red-700', label: 'Красная зона'
+    }
+    if (value <= 30) return {
+      bg: 'bg-yellow-950/40', border: 'border-yellow-600',
+      text: 'text-yellow-400', badge: 'bg-yellow-900/60 text-yellow-300 border border-yellow-600', label: 'Жёлтая зона'
+    }
+    return {
+      bg: 'bg-green-950/40', border: 'border-green-700',
+      text: 'text-green-400', badge: 'bg-green-900/60 text-green-300 border border-green-700', label: 'Зелёная зона'
+    }
+  }
+  if (value < 10) return {
     bg: 'bg-red-950/40', border: 'border-red-700',
     text: 'text-red-400', badge: 'bg-red-900/60 text-red-300 border border-red-700', label: 'Красная зона'
   }
-  if (ip <= 15) return {
+  if (value <= 15) return {
     bg: 'bg-yellow-950/40', border: 'border-yellow-600',
     text: 'text-yellow-400', badge: 'bg-yellow-900/60 text-yellow-300 border border-yellow-600', label: 'Жёлтая зона'
   }
@@ -60,6 +74,7 @@ export default function DashboardPage() {
     unsubscribed: '',
     replied: '',
     ordered_ip: '',
+    ordered_cards: '',
     people_wrote: '',
   })
   const router = useRouter()
@@ -296,11 +311,16 @@ export default function DashboardPage() {
     const record = {
       manager_id: user.id,
       date: form.date,
-      ordered_ip: parseInt(form.ordered_ip) || 0,
     }
-    if (teamType === 'nikita') {
+    if (teamType === 'karina') {
+      record.ordered_cards = parseInt(form.ordered_cards) || 0
+      record.unsubscribed = parseInt(form.unsubscribed) || 0
+      record.replied      = parseInt(form.replied) || 0
+    } else if (teamType === 'nikita') {
+      record.ordered_ip = parseInt(form.ordered_ip) || 0
       record.people_wrote = parseInt(form.people_wrote) || 0
     } else {
+      record.ordered_ip = parseInt(form.ordered_ip) || 0
       record.unsubscribed = parseInt(form.unsubscribed) || 0
       record.replied      = parseInt(form.replied) || 0
     }
@@ -310,7 +330,7 @@ export default function DashboardPage() {
       setShowForm(false)
       setForm({
         date: new Date().toISOString().split('T')[0],
-        unsubscribed: '', replied: '', ordered_ip: '', people_wrote: '',
+        unsubscribed: '', replied: '', ordered_ip: '', ordered_cards: '', people_wrote: '',
       })
       await loadReports(user.id)
     }
@@ -332,8 +352,9 @@ export default function DashboardPage() {
 
   const teamType  = profile?.team ? (TEAMS[profile.team]?.type || 'standard') : 'standard'
   const isNikita  = teamType === 'nikita'
-  const weeklyIP  = getIPLast7Days(reports)
-  const zone      = getZone(weeklyIP)
+  const isKarina  = teamType === 'karina'
+  const weeklyValue = isKarina ? getLast7Days(reports, 'ordered_cards') : getLast7Days(reports, 'ordered_ip')
+  const zone      = getZone(weeklyValue, teamType)
   const { missing: myMissing } = getMissingReportAlerts(
     profile ? [profile] : [],
     reports
@@ -393,7 +414,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-gray-400 text-sm mb-1">Результаты за последние 7 дней</p>
                 <p className={`text-3xl font-bold ${zone.text}`}>
-                  {weeklyIP} <span className="text-lg font-normal">ИП</span>
+                  {weeklyValue} <span className="text-lg font-normal">{isKarina ? 'карт' : 'ИП'}</span>
                 </p>
               </div>
               <span className={`px-4 py-2 rounded-xl text-sm font-semibold ${zone.badge}`}>
@@ -446,7 +467,7 @@ export default function DashboardPage() {
                       />
                     </div>
 
-                    {!isNikita && (
+                    {!isNikita && !isKarina && (
                       <>
                         <div>
                           <label className="text-gray-400 text-xs mb-1.5 block">Отписанные</label>
@@ -471,6 +492,42 @@ export default function DashboardPage() {
                       </>
                     )}
 
+                    {isKarina && (
+                      <>
+                        <div>
+                          <label className="text-gray-400 text-xs mb-1.5 block">Отписанные</label>
+                          <input
+                            type="number" min="0"
+                            value={form.unsubscribed}
+                            onChange={e => setForm({ ...form, unsubscribed: e.target.value })}
+                            placeholder="0"
+                            className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-gray-400 text-xs mb-1.5 block">Ответившие</label>
+                          <input
+                            type="number" min="0"
+                            value={form.replied}
+                            onChange={e => setForm({ ...form, replied: e.target.value })}
+                            placeholder="0"
+                            className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-gray-400 text-xs mb-1.5 block">Заказано карт</label>
+                          <input
+                            type="number" min="0"
+                            value={form.ordered_cards}
+                            onChange={e => setForm({ ...form, ordered_cards: e.target.value })}
+                            placeholder="0"
+                            className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                            required
+                          />
+                        </div>
+                      </>
+                    )}
+
                     {isNikita && (
                       <div>
                         <label className="text-gray-400 text-xs mb-1.5 block">Написало людей</label>
@@ -484,6 +541,7 @@ export default function DashboardPage() {
                       </div>
                     )}
 
+                    {!isKarina && (
                     <div>
                       <label className="text-gray-400 text-xs mb-1.5 block">Заказали ИП</label>
                       <input
@@ -495,6 +553,7 @@ export default function DashboardPage() {
                         required
                       />
                     </div>
+                    )}
 
                   </div>
 
@@ -527,23 +586,32 @@ export default function DashboardPage() {
                 <thead>
                   <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                     <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
-                    {!isNikita && (
+                    {!isNikita && !isKarina && (
                       <>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Отписанные</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответившие</th>
                       </>
                     )}
+                    {isKarina && (
+                      <>
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Отписанные</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответившие</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
+                      </>
+                    )}
                     {isNikita && (
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
                     )}
-                    <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                    {!isKarina && (
+                      <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {reports.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={isNikita ? 3 : 4}
+                        colSpan={isKarina ? 4 : isNikita ? 3 : 4}
                         className="text-center py-16 text-gray-600 text-sm"
                       >
                         Нет данных — добавьте первый отчёт
@@ -559,16 +627,25 @@ export default function DashboardPage() {
                         <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">
                           {new Date(r.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         </td>
-                        {!isNikita && (
+                        {!isNikita && !isKarina && (
                           <>
                             <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.unsubscribed ?? '—'}</td>
                             <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.replied ?? '—'}</td>
                           </>
                         )}
+                        {isKarina && (
+                          <>
+                            <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.unsubscribed ?? '—'}</td>
+                            <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.replied ?? '—'}</td>
+                            <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-purple-400">{r.ordered_cards ?? '—'}</td>
+                          </>
+                        )}
                         {isNikita && (
                           <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
                         )}
-                        <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                        {!isKarina && (
+                          <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                        )}
                       </tr>
                     ))
                   )}

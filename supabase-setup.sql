@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS reports (
   date DATE NOT NULL,
   unsubscribed INTEGER DEFAULT 0,   -- отписанные (anastasia, yasmin, olya, karina)
   replied INTEGER DEFAULT 0,        -- ответившие (anastasia, yasmin, olya, karina)
-  ordered_ip INTEGER DEFAULT 0,     -- заказали ИП (all teams)
+  ordered_ip INTEGER DEFAULT 0,     -- заказали ИП (all teams except karina)
+  ordered_cards INTEGER DEFAULT 0,  -- заказано карт (karina only)
   people_wrote INTEGER DEFAULT 0,   -- написало людей (nikita only)
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

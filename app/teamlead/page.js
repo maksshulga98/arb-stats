@@ -11,7 +11,7 @@ const TEAMS = [
   { id: 'anastasia', name: 'Анастасии', type: 'standard' },
   { id: 'yasmin',    name: 'Ясмин',     type: 'standard' },
   { id: 'olya',      name: 'Оли',       type: 'standard' },
-  { id: 'karina',    name: 'Карины',    type: 'standard' },
+  { id: 'karina',    name: 'Карины',    type: 'karina'   },
   { id: 'nikita',    name: 'Никиты',    type: 'nikita'   },
 ]
 
@@ -47,9 +47,14 @@ function isRedFor14Days(reports, createdAt) {
   return getIPForPeriod(reports, 0, 7) < 10 && getIPForPeriod(reports, 7, 14) < 10
 }
 
-function getZoneKey(ip) {
-  if (ip < 10) return 'red'
-  if (ip <= 15) return 'yellow'
+function getZoneKey(value, teamType) {
+  if (teamType === 'karina') {
+    if (value < 15) return 'red'
+    if (value <= 30) return 'yellow'
+    return 'green'
+  }
+  if (value < 10) return 'red'
+  if (value <= 15) return 'yellow'
   return 'green'
 }
 
@@ -60,8 +65,8 @@ const ZONE = {
 }
 
 // Personal zone (for the teamlead's own indicator strip)
-function getPersonalZone(ip) {
-  const key = getZoneKey(ip)
+function getPersonalZone(ip, teamType) {
+  const key = getZoneKey(ip, teamType)
   const map = {
     red:    { bg: 'bg-red-950/40',    border: 'border-red-700',    text: 'text-red-400',    badge: 'bg-red-900/60 text-red-300 border border-red-700',    label: 'Красная зона' },
     yellow: { bg: 'bg-yellow-950/40', border: 'border-yellow-600', text: 'text-yellow-400', badge: 'bg-yellow-900/60 text-yellow-300 border border-yellow-600', label: 'Жёлтая зона' },
@@ -139,7 +144,7 @@ export default function TeamleadPage() {
   const [submitting, setSubmitting] = useState(false)
   const [reportForm, setReportForm] = useState({
     date: new Date().toISOString().split('T')[0],
-    unsubscribed: '', replied: '', ordered_ip: '', people_wrote: '',
+    unsubscribed: '', replied: '', ordered_ip: '', ordered_cards: '', people_wrote: '',
   })
 
   // Team manager detail modal
@@ -416,17 +421,23 @@ export default function TeamleadPage() {
     e.preventDefault()
     setSubmitting(true)
     const teamType = TEAMS.find(t => t.id === profile?.team)?.type || 'standard'
-    const record = { manager_id: user.id, date: reportForm.date, ordered_ip: parseInt(reportForm.ordered_ip) || 0 }
-    if (teamType === 'nikita') {
+    const record = { manager_id: user.id, date: reportForm.date }
+    if (teamType === 'karina') {
+      record.ordered_cards = parseInt(reportForm.ordered_cards) || 0
+      record.unsubscribed = parseInt(reportForm.unsubscribed) || 0
+      record.replied      = parseInt(reportForm.replied) || 0
+    } else if (teamType === 'nikita') {
+      record.ordered_ip = parseInt(reportForm.ordered_ip) || 0
       record.people_wrote = parseInt(reportForm.people_wrote) || 0
     } else {
+      record.ordered_ip = parseInt(reportForm.ordered_ip) || 0
       record.unsubscribed = parseInt(reportForm.unsubscribed) || 0
       record.replied      = parseInt(reportForm.replied) || 0
     }
     const { error } = await supabase.from('reports').insert([record])
     if (!error) {
       setShowReportForm(false)
-      setReportForm({ date: new Date().toISOString().split('T')[0], unsubscribed: '', replied: '', ordered_ip: '', people_wrote: '' })
+      setReportForm({ date: new Date().toISOString().split('T')[0], unsubscribed: '', replied: '', ordered_ip: '', ordered_cards: '', people_wrote: '' })
       await loadMyReports(user.id)
     }
     setSubmitting(false)
@@ -501,11 +512,14 @@ export default function TeamleadPage() {
 
   const teamInfo  = TEAMS.find(t => t.id === profile?.team)
   const isNikita  = teamInfo?.type === 'nikita'
-  const myWeekIP  = getIPLast7Days(myReports)
-  const myZone    = getPersonalZone(myWeekIP)
+  const isKarina  = teamInfo?.type === 'karina'
+  const myWeekValue = isKarina
+    ? myReports.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const start = new Date(now); start.setDate(start.getDate()-7); start.setHours(0,0,0,0); return d >= start && d <= now }).reduce((s, r) => s + (r.ordered_cards || 0), 0)
+    : getIPLast7Days(myReports)
+  const myZone    = getPersonalZone(myWeekValue, teamInfo?.type)
 
   const mgr7Reps  = (id) => teamReports.filter(r => r.manager_id === id)
-  const redManagers = managers.filter(m => isRedFor14Days(mgr7Reps(m.id), m.created_at))
+  const redManagers = isKarina ? [] : managers.filter(m => isRedFor14Days(mgr7Reps(m.id), m.created_at))
 
   // Missing report notifications
   const { missing: missingAlerts, streaks: streakAlerts } = getMissingReportAlerts(managers, teamReports)
@@ -513,6 +527,7 @@ export default function TeamleadPage() {
 
   const modalReports  = selectedManager ? teamReports.filter(r => r.manager_id === selectedManager.id) : []
   const modalIsNikita = TEAMS.find(t => t.id === selectedManager?.team)?.type === 'nikita'
+  const modalIsKarina = TEAMS.find(t => t.id === selectedManager?.team)?.type === 'karina'
 
   const hasContactsAccess = CONTACT_TEAMS.includes(profile?.team)
 
@@ -713,7 +728,7 @@ export default function TeamleadPage() {
               <div className={`${myZone.bg} border ${myZone.border} rounded-2xl p-4 mb-4 flex items-center justify-between`}>
                 <div>
                   <p className="text-gray-400 text-xs mb-1">Мои результаты за последние 7 дней</p>
-                  <p className={`text-2xl font-bold ${myZone.text}`}>{myWeekIP} <span className="text-sm font-normal">ИП</span></p>
+                  <p className={`text-2xl font-bold ${myZone.text}`}>{myWeekValue} <span className="text-sm font-normal">{isKarina ? 'карт' : 'ИП'}</span></p>
                 </div>
                 <span className={`px-3 py-1.5 rounded-xl text-xs font-semibold ${myZone.badge}`}>{myZone.label}</span>
               </div>
@@ -737,7 +752,7 @@ export default function TeamleadPage() {
                         <input type="date" value={reportForm.date} onChange={e => setReportForm({ ...reportForm, date: e.target.value })}
                           className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" required />
                       </div>
-                      {!isNikita && (
+                      {!isNikita && !isKarina && (
                         <>
                           <div>
                             <label className="text-gray-400 text-xs mb-1.5 block">Отписанные</label>
@@ -751,6 +766,25 @@ export default function TeamleadPage() {
                           </div>
                         </>
                       )}
+                      {isKarina && (
+                        <>
+                          <div>
+                            <label className="text-gray-400 text-xs mb-1.5 block">Отписанные</label>
+                            <input type="number" min="0" value={reportForm.unsubscribed} onChange={e => setReportForm({ ...reportForm, unsubscribed: e.target.value })}
+                              placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                          </div>
+                          <div>
+                            <label className="text-gray-400 text-xs mb-1.5 block">Ответившие</label>
+                            <input type="number" min="0" value={reportForm.replied} onChange={e => setReportForm({ ...reportForm, replied: e.target.value })}
+                              placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                          </div>
+                          <div>
+                            <label className="text-gray-400 text-xs mb-1.5 block">Заказано карт</label>
+                            <input type="number" min="0" value={reportForm.ordered_cards} onChange={e => setReportForm({ ...reportForm, ordered_cards: e.target.value })}
+                              placeholder="0" required className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                          </div>
+                        </>
+                      )}
                       {isNikita && (
                         <div>
                           <label className="text-gray-400 text-xs mb-1.5 block">Написало людей</label>
@@ -758,11 +792,13 @@ export default function TeamleadPage() {
                             placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
                         </div>
                       )}
+                      {!isKarina && (
                       <div>
                         <label className="text-gray-400 text-xs mb-1.5 block">Заказали ИП</label>
                         <input type="number" min="0" value={reportForm.ordered_ip} onChange={e => setReportForm({ ...reportForm, ordered_ip: e.target.value })}
                           placeholder="0" required className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
                       </div>
+                      )}
                     </div>
                     <div className="flex gap-3 mt-4">
                       <button type="submit" disabled={submitting}
@@ -789,7 +825,11 @@ export default function TeamleadPage() {
                         </>
                       )}
                       {isNikita && <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>}
-                      <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                      {isKarina ? (
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
+                      ) : (
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                      )}
                       <th className="w-10" />
                     </tr>
                   </thead>
@@ -806,7 +846,11 @@ export default function TeamleadPage() {
                           </>
                         )}
                         {isNikita && <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>}
-                        <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                        {isKarina ? (
+                          <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-purple-400">{r.ordered_cards ?? '—'}</td>
+                        ) : (
+                          <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                        )}
                         <td className="pr-4 py-3 text-right">
                           <button
                             onClick={() => handleDeleteReport(r.id, true)}
@@ -849,10 +893,12 @@ export default function TeamleadPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {managers.map(manager => {
                     const mRep    = mgr7Reps(manager.id)
-                    const ip7     = getIPLast7Days(mRep)
-                    const zKey    = getZoneKey(ip7)
+                    const value7  = isKarina
+                      ? mRep.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const start = new Date(now); start.setDate(start.getDate()-7); start.setHours(0,0,0,0); return d >= start && d <= now }).reduce((s, r) => s + (r.ordered_cards || 0), 0)
+                      : getIPLast7Days(mRep)
+                    const zKey    = getZoneKey(value7, teamInfo?.type)
                     const z       = ZONE[zKey]
-                    const alert14 = isRedFor14Days(mRep, manager.created_at)
+                    const alert14 = !isKarina && isRedFor14Days(mRep, manager.created_at)
                     const isDeletePending = deleteConfirm === manager.id
 
                     return (
@@ -884,8 +930,8 @@ export default function TeamleadPage() {
                         {!isDeletePending ? (
                           <>
                             <div className="mb-3">
-                              <span className={`text-2xl font-bold ${z.text}`}>{ip7}</span>
-                              <span className="text-gray-500 text-xs ml-1">ИП / 7 дн</span>
+                              <span className={`text-2xl font-bold ${z.text}`}>{value7}</span>
+                              <span className="text-gray-500 text-xs ml-1">{isKarina ? 'карт' : 'ИП'} / 7 дн</span>
                             </div>
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>{z.label}</span>
                             {(() => {
@@ -939,19 +985,21 @@ export default function TeamleadPage() {
           const rows = teamMembers.map(member => {
             const memberReports = dayReports.filter(r => r.manager_id === member.id)
             const report = memberReports.length > 0 ? {
-              unsubscribed: memberReports.reduce((s, r) => s + (r.unsubscribed || 0), 0),
-              replied:      memberReports.reduce((s, r) => s + (r.replied || 0), 0),
-              ordered_ip:   memberReports.reduce((s, r) => s + (r.ordered_ip || 0), 0),
-              people_wrote: memberReports.reduce((s, r) => s + (r.people_wrote || 0), 0),
+              unsubscribed:  memberReports.reduce((s, r) => s + (r.unsubscribed || 0), 0),
+              replied:       memberReports.reduce((s, r) => s + (r.replied || 0), 0),
+              ordered_ip:    memberReports.reduce((s, r) => s + (r.ordered_ip || 0), 0),
+              ordered_cards: memberReports.reduce((s, r) => s + (r.ordered_cards || 0), 0),
+              people_wrote:  memberReports.reduce((s, r) => s + (r.people_wrote || 0), 0),
             } : null
             return { member, report }
           })
 
           const totals = {
-            unsubscribed: rows.reduce((s, r) => s + (r.report?.unsubscribed || 0), 0),
-            replied:      rows.reduce((s, r) => s + (r.report?.replied || 0), 0),
-            ordered_ip:   rows.reduce((s, r) => s + (r.report?.ordered_ip || 0), 0),
-            people_wrote: rows.reduce((s, r) => s + (r.report?.people_wrote || 0), 0),
+            unsubscribed:  rows.reduce((s, r) => s + (r.report?.unsubscribed || 0), 0),
+            replied:       rows.reduce((s, r) => s + (r.report?.replied || 0), 0),
+            ordered_ip:    rows.reduce((s, r) => s + (r.report?.ordered_ip || 0), 0),
+            ordered_cards: rows.reduce((s, r) => s + (r.report?.ordered_cards || 0), 0),
+            people_wrote:  rows.reduce((s, r) => s + (r.report?.people_wrote || 0), 0),
           }
 
           return (
@@ -991,8 +1039,8 @@ export default function TeamleadPage() {
                     <p className="text-xl font-bold text-gray-200">{totals.replied}</p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs mb-1">Заказали ИП</p>
-                    <p className="text-xl font-bold text-blue-400">{totals.ordered_ip}</p>
+                    <p className="text-gray-500 text-xs mb-1">{isKarina ? 'Заказано карт' : 'Заказали ИП'}</p>
+                    <p className={`text-xl font-bold ${isKarina ? 'text-purple-400' : 'text-blue-400'}`}>{isKarina ? totals.ordered_cards : totals.ordered_ip}</p>
                   </div>
                   <div>
                     <p className="text-gray-500 text-xs mb-1">Написало людей</p>
@@ -1033,7 +1081,11 @@ export default function TeamleadPage() {
                         {isNikita && (
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
                         )}
-                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                        {isKarina ? (
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
+                        ) : (
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                        )}
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дебетовые</th>
                       </tr>
@@ -1056,7 +1108,11 @@ export default function TeamleadPage() {
                             {isNikita && (
                               <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
                             )}
-                            <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
+                            {isKarina ? (
+                              <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-purple-400">{report ? report.ordered_cards : '—'}</td>
+                            ) : (
+                              <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
+                            )}
                             <td className="px-3 sm:px-5 py-3 text-sm">
                               <CdValue value={sd ? sd.ip : null} loading={sheetsLoading && sd === undefined} />
                             </td>
@@ -1078,7 +1134,11 @@ export default function TeamleadPage() {
                           {isNikita && (
                             <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
                           )}
-                          <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
+                          {isKarina ? (
+                            <td className="px-3 sm:px-5 py-3 text-sm font-bold text-purple-400">{totals.ordered_cards}</td>
+                          ) : (
+                            <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
+                          )}
                           <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
                             {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0)}
                           </td>
@@ -1735,16 +1795,23 @@ export default function TeamleadPage() {
 
             {/* Zone summary */}
             {(() => {
-              const ip7  = getIPForPeriod(modalReports, 0, 7)
-              const ip14 = getIPForPeriod(modalReports, 7, 14)
+              const field = modalIsKarina ? 'ordered_cards' : 'ordered_ip'
+              const unitLabel = modalIsKarina ? 'карт' : 'ИП'
+              const modalTeamType = TEAMS.find(t => t.id === selectedManager?.team)?.type
+              const val7  = modalIsKarina
+                ? modalReports.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const start = new Date(now); start.setDate(start.getDate()-7); start.setHours(0,0,0,0); return d >= start && d <= now }).reduce((s, r) => s + (r[field] || 0), 0)
+                : getIPForPeriod(modalReports, 0, 7)
+              const val14 = modalIsKarina
+                ? modalReports.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const end = new Date(now); end.setDate(end.getDate()-7); const start = new Date(now); start.setDate(start.getDate()-14); start.setHours(0,0,0,0); return d >= start && d <= end }).reduce((s, r) => s + (r[field] || 0), 0)
+                : getIPForPeriod(modalReports, 7, 14)
               return (
                 <div className="px-6 pt-4 pb-2 flex gap-3">
-                  {[{ ip: ip7, label: 'Последние 7 дней' }, { ip: ip14, label: 'Предыдущие 7 дней' }].map(({ ip, label }) => {
-                    const z = ZONE[getZoneKey(ip)]
+                  {[{ val: val7, label: 'Последние 7 дней' }, { val: val14, label: 'Предыдущие 7 дней' }].map(({ val, label }) => {
+                    const z = ZONE[getZoneKey(val, modalTeamType)]
                     return (
                       <div key={label} className={`flex-1 border rounded-xl px-4 py-3 ${z.card}`}>
                         <p className="text-gray-500 text-xs mb-1">{label}</p>
-                        <p className={`text-xl font-bold ${z.text}`}>{ip} ИП</p>
+                        <p className={`text-xl font-bold ${z.text}`}>{val} {unitLabel}</p>
                         <span className={`text-xs ${z.badge} inline-block px-2 py-0.5 rounded-md mt-1`}>{z.label}</span>
                       </div>
                     )
@@ -1765,7 +1832,11 @@ export default function TeamleadPage() {
                       </>
                     )}
                     {modalIsNikita && <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>}
-                    <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                    {modalIsKarina ? (
+                      <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
+                    ) : (
+                      <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
+                    )}
                     <th className="w-8" />
                   </tr>
                 </thead>
@@ -1782,7 +1853,11 @@ export default function TeamleadPage() {
                         </>
                       )}
                       {modalIsNikita && <td className="py-2.5 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>}
-                      <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                      {modalIsKarina ? (
+                        <td className="py-2.5 text-sm font-semibold text-purple-400">{r.ordered_cards ?? '—'}</td>
+                      ) : (
+                        <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                      )}
                       <td className="py-2.5 pr-1 text-right">
                         <button
                           onClick={() => handleDeleteReport(r.id, false)}
