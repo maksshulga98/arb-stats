@@ -9,12 +9,13 @@ const CYR_MAP = { a:'а',b:'в',c:'с',e:'е',h:'н',k:'к',m:'м',o:'о',p:'р'
 const normName = s => (s||'').trim().replace(/\s+/g,' ').toLowerCase().replace(/[a-z]/g, c => CYR_MAP[c] || c)
 import { MANAGER_SHEETS, MONTHS_RU } from '../../lib/sheets-config'
 
+// ─── НАСТРОЙКА КОМАНД ───
+// Добавьте свои команды. type определяет набор полей в отчёте:
+//   'standard' — отписанные, ответившие, заказали ИП
+//   'karina'   — отписанные, ответившие, заказано карт
+//   'nikita'   — написало людей, заказали ИП
 const TEAMS = [
-  { id: 'anastasia', name: 'Анастасии', type: 'standard' },
-  { id: 'yasmin',    name: 'Ясмин',     type: 'standard' },
-  { id: 'olya',      name: 'Оли',       type: 'standard' },
-  { id: 'karina',    name: 'Карины',    type: 'karina'   },
-  { id: 'nikita',    name: 'Никиты',    type: 'nikita'   },
+  // { id: 'team_id', name: 'Имя тимлида', type: 'standard' },
 ]
 
 function getIPForPeriod(reports, daysStart, daysEnd) {

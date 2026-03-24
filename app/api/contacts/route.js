@@ -36,8 +36,8 @@ async function authenticateUser(request) {
     .single()
 
   const isManager = profile?.role === 'manager'
-  const isKarinaTeamlead = profile?.role === 'teamlead' && profile?.name === 'Карина Калинина'
-  if (!profile || (!isManager && !isKarinaTeamlead)) {
+  const isTeamleadWithAccess = profile?.role === 'teamlead'
+  if (!profile || (!isManager && !isTeamleadWithAccess)) {
     return { error: 'Только менеджеры могут запрашивать контакты', status: 403 }
   }
 

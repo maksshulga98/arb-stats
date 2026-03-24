@@ -5,16 +5,17 @@ import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getMissingReportAlerts } from '../../lib/notifications'
 
+// ─── НАСТРОЙКА КОМАНД ───
+// Добавьте свои команды. type определяет набор полей в отчёте:
+//   'standard' — отписанные, ответившие, заказали ИП
+//   'karina'   — отписанные, ответившие, заказано карт
+//   'nikita'   — написало людей, заказали ИП
 const TEAMS = {
-  anastasia: { name: 'Анастасии', type: 'standard' },
-  yasmin:    { name: 'Ясмин',     type: 'standard' },
-  olya:      { name: 'Оли',       type: 'standard' },
-  karina:    { name: 'Карины',    type: 'karina'   },
-  nikita:    { name: 'Никиты',    type: 'nikita'   },
+  // team_id: { name: 'Имя тимлида', type: 'standard' },
 }
 
-// Команды с доступом к выдаче номеров
-const CONTACT_TEAMS = ['yasmin', 'karina', 'anastasia', 'olya']
+// Команды с доступом к выдаче номеров (контактов)
+const CONTACT_TEAMS = [/* 'team_id1', 'team_id2' */]
 
 function getLast7Days(reports, field = 'ordered_ip') {
   const cutoff = new Date()
