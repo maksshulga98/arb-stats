@@ -104,22 +104,12 @@ export default function IpApplicationTab({ profile, scope }) {
               Скачать CSV
             </button>
           )}
-          {!isAdmin && !isTeamlead && (
-            <button
-              onClick={() => { setShowForm(true); setSuccess(false); setError(null) }}
-              className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold transition"
-            >
-              + Новая заявка
-            </button>
-          )}
-          {isTeamlead && (
-            <button
-              onClick={() => { setShowForm(true); setSuccess(false); setError(null) }}
-              className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold transition"
-            >
-              + Новая заявка
-            </button>
-          )}
+          <button
+            onClick={() => { setShowForm(true); setSuccess(false); setError(null) }}
+            className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold transition"
+          >
+            + Новая заявка
+          </button>
         </div>
       </div>
 
