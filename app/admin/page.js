@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getMissingReportAlerts } from '../../lib/notifications'
+import IpApplicationTab from '../../components/IpApplicationTab'
 
 // Normalize latin lookalikes to cyrillic for name comparison
 const CYR_MAP = { a:'а',b:'в',c:'с',e:'е',h:'н',k:'к',m:'м',o:'о',p:'р',t:'т',x:'х',y:'у' }
@@ -339,7 +340,8 @@ export default function AdminPage() {
     { id: 'daily',     label: 'Дневной отчёт' },
     { id: 'salary',    label: 'Расчёт ЗП' },
     { id: 'telegram',  label: 'Аккаунты Телеграмм' },
-    { id: 'ip-link',   label: 'Ссылка ИП' },
+    { id: 'ip-link',        label: 'Ссылка ИП' },
+    { id: 'ip-application', label: 'Заявка ИП' },
   ]
 
   return (
@@ -1331,6 +1333,11 @@ export default function AdminPage() {
               )}
             </div>
           </>
+        )}
+
+        {/* ─── Заявка ИП tab ─── */}
+        {activeTab === 'ip-application' && (
+          <IpApplicationTab profile={profile} scope="all" />
         )}
 
       </main>

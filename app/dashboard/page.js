@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getMissingReportAlerts } from '../../lib/notifications'
+import IpApplicationTab from '../../components/IpApplicationTab'
 
 const TEAMS = {
   anastasia: { name: 'Анастасии', type: 'standard' },
@@ -365,6 +366,7 @@ export default function DashboardPage() {
     { id: 'report', label: 'Отчёт' },
     ...(hasContactsAccess ? [{ id: 'contacts', label: 'Выдача номеров' }] : []),
     { id: 'ip-link', label: 'Ссылка ИП' },
+    { id: 'ip-application', label: 'Заявка ИП' },
   ]
 
   return (
@@ -910,6 +912,11 @@ export default function DashboardPage() {
               )}
             </div>
           </>
+        )}
+
+        {/* ─── Заявка ИП tab ─── */}
+        {activeTab === 'ip-application' && (
+          <IpApplicationTab profile={profile} />
         )}
 
       </main>
