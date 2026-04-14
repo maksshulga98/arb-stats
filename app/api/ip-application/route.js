@@ -97,7 +97,7 @@ export async function POST(request) {
       await sheets.spreadsheets.values.append({
         spreadsheetId: IP_REQUESTS_SHEET_ID,
         range: 'Лист1!A:I',
-        valueInputOption: 'USER_ENTERED',
+        valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
         requestBody: {
           values: [[date, time, profile.name, profile.team, fullName, phone, email, city, linkUrl]],
