@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { getSheetsClient } from '../../../lib/google-sheets-api'
+
+const IP_REQUESTS_SHEET_ID = '1I6bIULv-rcYz8ebK_ulDPYGJDLDBAX4KjaTyJguA5gE'
 
 const LINKS = [
   'https://trk.ppdu.ru/click/dM45mQlM?erid=erid&siteId=12145',
@@ -83,6 +86,25 @@ export async function POST(request) {
     if (insertError) {
       console.error('ip_requests insert error:', insertError)
       return NextResponse.json({ error: 'Ошибка сохранения: ' + insertError.message }, { status: 500 })
+    }
+
+    // Append to Google Sheet (non-blocking — don't fail the request if sheet write fails)
+    try {
+      const sheets = getSheetsClient()
+      const now = new Date()
+      const date = now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Moscow' })
+      const time = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/Moscow' })
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: IP_REQUESTS_SHEET_ID,
+        range: 'Лист1!A:I',
+        valueInputOption: 'USER_ENTERED',
+        insertDataOption: 'INSERT_ROWS',
+        requestBody: {
+          values: [[date, time, profile.name, profile.team, fullName, phone, email, city, linkUrl]],
+        },
+      })
+    } catch (sheetErr) {
+      console.error('Google Sheet append error:', sheetErr)
     }
 
     return NextResponse.json({ linkUrl, linkIndex: linkIndex + 1 })
