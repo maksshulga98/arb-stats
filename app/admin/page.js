@@ -1524,7 +1524,7 @@ export default function AdminPage() {
 
         {/* ─── Заявка ИП tab ─── */}
         {activeTab === 'ip-application' && (
-          <IpApplicationTab profile={profile} scope="all" />
+          <IpApplicationTab scope="all" />
         )}
 
       </main>
