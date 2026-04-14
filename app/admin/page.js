@@ -175,16 +175,16 @@ function IpApplicationTab({ profile, scope }) {
   const downloadIpCSV = () => {
     const isAdminScope = scope === 'all'
     const headers = isAdminScope
-      ? ['Дата', 'Время', 'Менеджер', 'Команда', 'ФИО клиента', 'Телефон', 'Email', 'Город', '№ ссылки']
-      : ['Дата', 'Время', 'ФИО клиента', 'Телефон', 'Email', 'Город', '№ ссылки']
+      ? ['Дата', 'Время', 'Менеджер', 'Команда', 'ФИО клиента', 'Телефон', 'Email', 'Город', 'Ссылка']
+      : ['Дата', 'Время', 'ФИО клиента', 'Телефон', 'Email', 'Город', 'Ссылка']
     const rows = history.map(app => {
       const dt = new Date(app.created_at)
       const date = dt.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
       const time = dt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
       if (isAdminScope) {
-        return [date, time, app.manager_name || '', app.team || '', app.full_name, app.phone, app.email, app.city, app.link_index]
+        return [date, time, app.manager_name || '', app.team || '', app.full_name, app.phone, app.email, app.city, app.link_url]
       }
-      return [date, time, app.full_name, app.phone, app.email, app.city, app.link_index]
+      return [date, time, app.full_name, app.phone, app.email, app.city, app.link_url]
     })
     const csv = [headers, ...rows]
       .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
@@ -277,7 +277,7 @@ function IpApplicationTab({ profile, scope }) {
                 <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Телефон</th>
                 <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Email</th>
                 <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Город</th>
-                <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">№</th>
+                <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ссылка</th>
               </tr>
             </thead>
             <tbody>
@@ -292,7 +292,7 @@ function IpApplicationTab({ profile, scope }) {
                   <td className="px-4 py-3 text-sm text-gray-300">{app.phone}</td>
                   <td className="px-4 py-3 text-sm text-gray-300">{app.email}</td>
                   <td className="px-4 py-3 text-sm text-gray-300">{app.city}</td>
-                  <td className="px-4 py-3 text-sm text-blue-400 font-medium">#{app.link_index}</td>
+                  <td className="px-4 py-3 text-sm"><a href={app.link_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline break-all">{app.link_url}</a></td>
                 </tr>
               ))}
             </tbody>
