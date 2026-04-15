@@ -286,7 +286,7 @@ export async function GET(request) {
       .from('ip_applications')
       .select('id, manager_id, full_name, inn, phone, email, city, referral_link, status, error_message, created_at')
       .order('created_at', { ascending: false })
-      .limit(100)
+      .limit(2000)
 
     if (scope === 'all' && profile.role === 'admin') {
       // Admin sees all
