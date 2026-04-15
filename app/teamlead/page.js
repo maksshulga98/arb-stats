@@ -189,6 +189,13 @@ export default function TeamleadPage() {
   const [ipHistoryLoading, setIpHistoryLoading] = useState(false)
   const [copiedIpLink, setCopiedIpLink] = useState(null)
 
+  // ── Состояние "Добавить ЦД" ──
+  const [showCdModal, setShowCdModal] = useState(false)
+  const [cdForm, setCdForm] = useState({ fullName: '', inn: '', phone: '' })
+  const [cdSubmitting, setCdSubmitting] = useState(false)
+  const [cdError, setCdError] = useState(null)
+  const [cdSuccess, setCdSuccess] = useState(false)
+
   // Contacts tab state
   const [accountsCount, setAccountsCount]           = useState(1)
   const [distributedContacts, setDistributedContacts] = useState(null)
@@ -515,6 +522,31 @@ export default function TeamleadPage() {
     router.push('/login')
   }
 
+  const handleCdSubmit = async (e) => {
+    e.preventDefault()
+    setCdSubmitting(true)
+    setCdError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/cd', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify(cdForm),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setCdError(data.error || 'Ошибка')
+      } else {
+        setCdSuccess(true)
+        setCdForm({ fullName: '', inn: '', phone: '' })
+        setTimeout(() => { setCdSuccess(false); setShowCdModal(false) }, 2500)
+      }
+    } catch {
+      setCdError('Ошибка сети')
+    }
+    setCdSubmitting(false)
+  }
+
   // ── Derived ──────────────────────────────────────────────────────────────────
   if (loading) {
     return <div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-400">Загрузка...</div>
@@ -548,6 +580,7 @@ export default function TeamleadPage() {
     { id: 'telegram',  label: 'Аккаунты Телеграмм' },
     ...(hasContactsAccess ? [{ id: 'contacts', label: 'Выдача номеров' }] : []),
     { id: 'ip-link', label: 'Ссылка ИП' },
+    { id: 'add-cd', label: 'Добавить ЦД' },
   ]
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -1610,7 +1643,68 @@ export default function TeamleadPage() {
           </>
         )}
 
+        {/* ── Вкладка "Добавить ЦД" ── */}
+        {activeTab === 'add-cd' && (
+          <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl p-6 max-w-xl">
+            <h2 className="text-base font-semibold text-gray-200 mb-2">Добавить ЦД</h2>
+            <p className="text-gray-500 text-xs mb-5">Введите данные ЦД — они попадут в сводную таблицу ЦД за текущий месяц.</p>
+            <button
+              onClick={() => { setShowCdModal(true); setCdSuccess(false); setCdError(null) }}
+              className="bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-lg text-sm font-semibold transition"
+            >
+              + Добавить ЦД
+            </button>
+          </div>
+        )}
+
       </main>
+
+      {/* ── Модалка "Добавить ЦД" ── */}
+      {showCdModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowCdModal(false)}>
+          <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            {cdSuccess ? (
+              <div className="bg-green-950/40 border border-green-700 rounded-xl p-5 text-center">
+                <p className="text-green-300 font-semibold text-sm">ЦД добавлен в таблицу</p>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-base font-semibold text-gray-200 mb-4">Добавить ЦД</h3>
+                <form onSubmit={handleCdSubmit} className="space-y-3">
+                  <div>
+                    <label className="text-gray-400 text-xs mb-1.5 block">ФИО</label>
+                    <input type="text" required value={cdForm.fullName} onChange={e => setCdForm({ ...cdForm, fullName: e.target.value })}
+                      placeholder="Иванов Иван Иванович" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-xs mb-1.5 block">ИНН (12 цифр)</label>
+                    <input type="text" value={cdForm.inn} onChange={e => setCdForm({ ...cdForm, inn: e.target.value })}
+                      placeholder="123456789012" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                  </div>
+                  <div className="text-center text-gray-600 text-xs">— или —</div>
+                  <div>
+                    <label className="text-gray-400 text-xs mb-1.5 block">Номер телефона</label>
+                    <input type="tel" value={cdForm.phone} onChange={e => setCdForm({ ...cdForm, phone: e.target.value })}
+                      placeholder="+7 999 123 45 67" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                  </div>
+                  <p className="text-gray-600 text-xs">Достаточно заполнить ФИО и одно из: ИНН или телефон.</p>
+                  {cdError && <p className="text-red-400 text-sm">{cdError}</p>}
+                  <div className="flex gap-2 pt-2">
+                    <button type="submit" disabled={cdSubmitting}
+                      className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition">
+                      {cdSubmitting ? 'Добавляем...' : 'Добавить'}
+                    </button>
+                    <button type="button" onClick={() => { setShowCdModal(false); setCdError(null) }}
+                      className="px-4 py-2.5 rounded-lg text-sm bg-gray-800 hover:bg-gray-700 transition">
+                      Отмена
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Модалка создания заявки ИП ── */}
       {showIpModal && (
