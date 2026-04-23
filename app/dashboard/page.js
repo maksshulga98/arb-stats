@@ -389,6 +389,7 @@ export default function DashboardPage() {
     reports
   )
   const hasContactsAccess = CONTACT_TEAMS.includes(profile?.team)
+    || (profile?.team === 'nikita' && profile?.name === 'София С')
 
   const TABS = [
     { id: 'report', label: 'Отчёт' },
