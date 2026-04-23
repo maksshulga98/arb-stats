@@ -35,10 +35,8 @@ async function authenticateUser(request) {
     .eq('id', user.id)
     .single()
 
-  const isManager = profile?.role === 'manager'
-  const isKarinaTeamlead = profile?.role === 'teamlead' && profile?.name === 'Карина Калинина'
-  if (!profile || (!isManager && !isKarinaTeamlead)) {
-    return { error: 'Только менеджеры могут запрашивать контакты', status: 403 }
+  if (!profile || !['manager', 'teamlead'].includes(profile.role)) {
+    return { error: 'Только менеджеры и тимлиды могут запрашивать контакты', status: 403 }
   }
 
   return { user, profile, supabaseAdmin }
