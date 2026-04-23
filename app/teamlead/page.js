@@ -439,15 +439,11 @@ export default function TeamleadPage() {
     setSubmitting(true)
     const teamType = TEAMS.find(t => t.id === profile?.team)?.type || 'standard'
     const record = { manager_id: user.id, date: reportForm.date }
-    if (teamType === 'karina') {
-      record.ordered_cards = parseInt(reportForm.ordered_cards) || 0
-      record.unsubscribed = parseInt(reportForm.unsubscribed) || 0
-      record.replied      = parseInt(reportForm.replied) || 0
-    } else if (teamType === 'nikita') {
-      record.ordered_ip = parseInt(reportForm.ordered_ip) || 0
+    record.ordered_cards = parseInt(reportForm.ordered_cards) || 0
+    record.ordered_ip = parseInt(reportForm.ordered_ip) || 0
+    if (teamType === 'nikita') {
       record.people_wrote = parseInt(reportForm.people_wrote) || 0
     } else {
-      record.ordered_ip = parseInt(reportForm.ordered_ip) || 0
       record.unsubscribed = parseInt(reportForm.unsubscribed) || 0
       record.replied      = parseInt(reportForm.replied) || 0
     }
@@ -795,7 +791,7 @@ export default function TeamleadPage() {
                         <input type="date" value={reportForm.date} onChange={e => setReportForm({ ...reportForm, date: e.target.value })}
                           className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" required />
                       </div>
-                      {!isNikita && !isKarina && (
+                      {!isNikita && (
                         <>
                           <div>
                             <label className="text-gray-400 text-xs mb-1.5 block">Отписанные</label>
@@ -806,25 +802,6 @@ export default function TeamleadPage() {
                             <label className="text-gray-400 text-xs mb-1.5 block">Ответившие</label>
                             <input type="number" min="0" value={reportForm.replied} onChange={e => setReportForm({ ...reportForm, replied: e.target.value })}
                               placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
-                          </div>
-                        </>
-                      )}
-                      {isKarina && (
-                        <>
-                          <div>
-                            <label className="text-gray-400 text-xs mb-1.5 block">Отписанные</label>
-                            <input type="number" min="0" value={reportForm.unsubscribed} onChange={e => setReportForm({ ...reportForm, unsubscribed: e.target.value })}
-                              placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
-                          </div>
-                          <div>
-                            <label className="text-gray-400 text-xs mb-1.5 block">Ответившие</label>
-                            <input type="number" min="0" value={reportForm.replied} onChange={e => setReportForm({ ...reportForm, replied: e.target.value })}
-                              placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
-                          </div>
-                          <div>
-                            <label className="text-gray-400 text-xs mb-1.5 block">Заказано карт</label>
-                            <input type="number" min="0" value={reportForm.ordered_cards} onChange={e => setReportForm({ ...reportForm, ordered_cards: e.target.value })}
-                              placeholder="0" required className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
                           </div>
                         </>
                       )}
@@ -835,13 +812,16 @@ export default function TeamleadPage() {
                             placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
                         </div>
                       )}
-                      {!isKarina && (
+                      <div>
+                        <label className="text-gray-400 text-xs mb-1.5 block">Заказано карт</label>
+                        <input type="number" min="0" value={reportForm.ordered_cards} onChange={e => setReportForm({ ...reportForm, ordered_cards: e.target.value })}
+                          placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                      </div>
                       <div>
                         <label className="text-gray-400 text-xs mb-1.5 block">Заказали ИП</label>
                         <input type="number" min="0" value={reportForm.ordered_ip} onChange={e => setReportForm({ ...reportForm, ordered_ip: e.target.value })}
-                          placeholder="0" required className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                          placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
                       </div>
-                      )}
                     </div>
                     <div className="flex gap-3 mt-4">
                       <button type="submit" disabled={submitting}

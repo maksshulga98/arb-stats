@@ -319,15 +319,12 @@ export default function DashboardPage() {
       manager_id: user.id,
       date: form.date,
     }
-    if (teamType === 'karina') {
-      record.ordered_cards = parseInt(form.ordered_cards) || 0
-      record.unsubscribed = parseInt(form.unsubscribed) || 0
-      record.replied      = parseInt(form.replied) || 0
-    } else if (teamType === 'nikita') {
-      record.ordered_ip = parseInt(form.ordered_ip) || 0
+    // ordered_cards и ordered_ip доступны всем командам
+    record.ordered_cards = parseInt(form.ordered_cards) || 0
+    record.ordered_ip = parseInt(form.ordered_ip) || 0
+    if (teamType === 'nikita') {
       record.people_wrote = parseInt(form.people_wrote) || 0
     } else {
-      record.ordered_ip = parseInt(form.ordered_ip) || 0
       record.unsubscribed = parseInt(form.unsubscribed) || 0
       record.replied      = parseInt(form.replied) || 0
     }
@@ -500,7 +497,7 @@ export default function DashboardPage() {
                       />
                     </div>
 
-                    {!isNikita && !isKarina && (
+                    {!isNikita && (
                       <>
                         <div>
                           <label className="text-gray-400 text-xs mb-1.5 block">Отписанные</label>
@@ -520,42 +517,6 @@ export default function DashboardPage() {
                             onChange={e => setForm({ ...form, replied: e.target.value })}
                             placeholder="0"
                             className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {isKarina && (
-                      <>
-                        <div>
-                          <label className="text-gray-400 text-xs mb-1.5 block">Отписанные</label>
-                          <input
-                            type="number" min="0"
-                            value={form.unsubscribed}
-                            onChange={e => setForm({ ...form, unsubscribed: e.target.value })}
-                            placeholder="0"
-                            className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-gray-400 text-xs mb-1.5 block">Ответившие</label>
-                          <input
-                            type="number" min="0"
-                            value={form.replied}
-                            onChange={e => setForm({ ...form, replied: e.target.value })}
-                            placeholder="0"
-                            className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-gray-400 text-xs mb-1.5 block">Заказано карт</label>
-                          <input
-                            type="number" min="0"
-                            value={form.ordered_cards}
-                            onChange={e => setForm({ ...form, ordered_cards: e.target.value })}
-                            placeholder="0"
-                            className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
-                            required
                           />
                         </div>
                       </>
@@ -574,7 +535,17 @@ export default function DashboardPage() {
                       </div>
                     )}
 
-                    {!isKarina && (
+                    <div>
+                      <label className="text-gray-400 text-xs mb-1.5 block">Заказано карт</label>
+                      <input
+                        type="number" min="0"
+                        value={form.ordered_cards}
+                        onChange={e => setForm({ ...form, ordered_cards: e.target.value })}
+                        placeholder="0"
+                        className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                      />
+                    </div>
+
                     <div>
                       <label className="text-gray-400 text-xs mb-1.5 block">Заказали ИП</label>
                       <input
@@ -583,10 +554,8 @@ export default function DashboardPage() {
                         onChange={e => setForm({ ...form, ordered_ip: e.target.value })}
                         placeholder="0"
                         className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
-                        required
                       />
                     </div>
-                    )}
 
                   </div>
 
