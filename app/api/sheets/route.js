@@ -142,7 +142,7 @@ export async function GET(request) {
           months.map(async (monthIndex) => {
             const monthName = MONTHS_RU[monthIndex]
             const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(monthName)}`
-            const res = await fetch(url, { next: { revalidate: 300 } })
+            const res = await fetch(url, { next: { revalidate: 1800 } })
             if (!res.ok) return
 
             const text = await res.text()

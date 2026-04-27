@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getMissingReportAlerts } from '../../lib/notifications'
@@ -556,14 +556,31 @@ export default function TeamleadPage() {
     : getIPLast7Days(myReports)
   const myZone    = getPersonalZone(myWeekValue, teamInfo?.type)
 
-  const mgr7Reps  = (id) => teamReports.filter(r => r.manager_id === id)
-  const redManagers = isKarina ? [] : managers.filter(m => isRedFor14Days(mgr7Reps(m.id), m.created_at))
+  // ── Мемоизированный индекс отчётов команды по manager_id ──
+  const teamReportsByManager = useMemo(() => {
+    const m = new Map()
+    for (const r of teamReports) {
+      const arr = m.get(r.manager_id)
+      if (arr) arr.push(r)
+      else m.set(r.manager_id, [r])
+    }
+    return m
+  }, [teamReports])
+
+  const mgr7Reps  = (id) => teamReportsByManager.get(id) || []
+  const redManagers = useMemo(
+    () => isKarina ? [] : managers.filter(m => isRedFor14Days(teamReportsByManager.get(m.id) || [], m.created_at)),
+    [isKarina, managers, teamReportsByManager]
+  )
 
   // Missing report notifications
-  const { missing: missingAlerts, streaks: streakAlerts } = getMissingReportAlerts(managers, teamReports)
+  const { missing: missingAlerts, streaks: streakAlerts } = useMemo(
+    () => getMissingReportAlerts(managers, teamReports),
+    [managers, teamReports]
+  )
   const totalNotifications = redManagers.length + missingAlerts.length + streakAlerts.length
 
-  const modalReports  = selectedManager ? teamReports.filter(r => r.manager_id === selectedManager.id) : []
+  const modalReports  = selectedManager ? (teamReportsByManager.get(selectedManager.id) || []) : []
   const modalIsNikita = TEAMS.find(t => t.id === selectedManager?.team)?.type === 'nikita'
   const modalIsKarina = TEAMS.find(t => t.id === selectedManager?.team)?.type === 'karina'
 
@@ -1003,11 +1020,23 @@ export default function TeamleadPage() {
         {/* ─── Daily report tab ─── */}
         {activeTab === 'daily' && (() => {
           const teamMembers = [profile, ...managers]
-          const allReports = [...myReports, ...teamReports]
-          const dayReports = allReports.filter(r => r.date >= dateFrom && r.date <= dateTo)
+          // Группируем отчёты по manager_id один раз, потом берём из Map
+          const dayReportsMap = new Map()
+          for (const r of myReports) {
+            if (r.date >= dateFrom && r.date <= dateTo) {
+              const arr = dayReportsMap.get(r.manager_id)
+              if (arr) arr.push(r); else dayReportsMap.set(r.manager_id, [r])
+            }
+          }
+          for (const r of teamReports) {
+            if (r.date >= dateFrom && r.date <= dateTo) {
+              const arr = dayReportsMap.get(r.manager_id)
+              if (arr) arr.push(r); else dayReportsMap.set(r.manager_id, [r])
+            }
+          }
 
           const rows = teamMembers.map(member => {
-            const memberReports = dayReports.filter(r => r.manager_id === member.id)
+            const memberReports = dayReportsMap.get(member.id) || []
             const report = memberReports.length > 0 ? {
               unsubscribed:  memberReports.reduce((s, r) => s + (r.unsubscribed || 0), 0),
               replied:       memberReports.reduce((s, r) => s + (r.replied || 0), 0),
@@ -1020,7 +1049,7 @@ export default function TeamleadPage() {
 
           // Include deleted members' reports in totals
           const deletedTotals = deletedMembers.reduce((acc, member) => {
-            const memberReports = dayReports.filter(r => r.manager_id === member.id)
+            const memberReports = dayReportsMap.get(member.id) || []
             memberReports.forEach(r => {
               acc.unsubscribed += r.unsubscribed || 0
               acc.replied += r.replied || 0

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getMissingReportAlerts } from '../../lib/notifications'
@@ -338,7 +338,55 @@ export default function AdminPage() {
     setCdSubmitting(false)
   }
 
-  const managerReports = (id) => reports.filter(r => r.manager_id === id)
+  // ── Мемоизированные индексы для быстрого поиска (избегаем O(n²) на каждом рендере) ──
+  const reportsByManager = useMemo(() => {
+    const m = new Map()
+    for (const r of reports) {
+      const arr = m.get(r.manager_id)
+      if (arr) arr.push(r)
+      else m.set(r.manager_id, [r])
+    }
+    return m
+  }, [reports])
+
+  const managerReports = (id) => reportsByManager.get(id) || []
+
+  // Отчёты в выбранном диапазоне дат, сгруппированные по manager_id
+  const dayReportsByManager = useMemo(() => {
+    const m = new Map()
+    for (const r of reports) {
+      if (r.date >= dateFrom && r.date <= dateTo) {
+        const arr = m.get(r.manager_id)
+        if (arr) arr.push(r)
+        else m.set(r.manager_id, [r])
+      }
+    }
+    return m
+  }, [reports, dateFrom, dateTo])
+
+  // Менеджеры по командам — индекс
+  const managersByTeam = useMemo(() => {
+    const m = new Map()
+    for (const mgr of managers) {
+      const arr = m.get(mgr.team)
+      if (arr) arr.push(mgr)
+      else m.set(mgr.team, [mgr])
+    }
+    return m
+  }, [managers])
+
+  // TG аккаунты по нормализованному имени
+  const tgByName = useMemo(() => {
+    const m = new Map()
+    for (const a of tgAccounts) {
+      const key = normName(a.assignedTo)
+      if (!key) continue
+      const arr = m.get(key)
+      if (arr) arr.push(a)
+      else m.set(key, [a])
+    }
+    return m
+  }, [tgAccounts])
 
   const handleDeleteReport = async (reportId) => {
     setDeletingReport(reportId)
@@ -347,10 +395,16 @@ export default function AdminPage() {
     setDeletingReport(null)
   }
 
-  const redManagers = managers.filter(m => isRedFor14Days(managerReports(m.id), m.created_at))
+  const redManagers = useMemo(
+    () => managers.filter(m => isRedFor14Days(reportsByManager.get(m.id) || [], m.created_at)),
+    [managers, reportsByManager]
+  )
 
   // Missing report notifications (all managers across all teams)
-  const { missing: missingAlerts, streaks: streakAlerts } = getMissingReportAlerts(managers, reports)
+  const { missing: missingAlerts, streaks: streakAlerts } = useMemo(
+    () => getMissingReportAlerts(managers, reports),
+    [managers, reports]
+  )
   const totalNotifications = redManagers.length + missingAlerts.length + streakAlerts.length
 
   if (loading) {
@@ -527,7 +581,7 @@ export default function AdminPage() {
         {activeTab === 'analytics' && (
           <div className="space-y-10">
             {TEAMS.map(team => {
-              const teamManagers = managers.filter(m => m.team === team.id)
+              const teamManagers = managersByTeam.get(team.id) || []
               const teamTLs = team.id !== 'nikita' ? teamleads.filter(t => t.team === team.id) : []
               const teamAll = [...teamTLs, ...teamManagers]
 
@@ -596,7 +650,7 @@ export default function AdminPage() {
                             </span>
                             {(() => {
                               const mName = normName(manager.name || manager.email)
-                              const accs = tgAccounts.filter(a => normName(a.assignedTo) === mName)
+                              const accs = tgByName.get(mName) || []
                               if (accs.length === 0) return null
                               return (
                                 <div className="mt-2 pt-2 border-t border-white/5">
@@ -706,14 +760,14 @@ export default function AdminPage() {
               const isNikita = team.type === 'nikita'
               const isKarina = team.type === 'karina'
               const teamMembers = [
-                ...managers.filter(m => m.team === team.id),
+                ...(managersByTeam.get(team.id) || []),
                 ...teamleads.filter(t => t.team === team.id),
               ]
               const teamDeletedMembers = deletedMembers.filter(m => m.team === team.id)
-              const dayReports = reports.filter(r => r.date >= dateFrom && r.date <= dateTo)
 
               const rows = teamMembers.map(member => {
-                const memberReports = dayReports.filter(r => r.manager_id === member.id)
+                const allMemberReports = dayReportsByManager.get(member.id) || []
+                const memberReports = allMemberReports
                 const report = memberReports.length > 0 ? {
                   unsubscribed:  memberReports.reduce((s, r) => s + (r.unsubscribed || 0), 0),
                   replied:       memberReports.reduce((s, r) => s + (r.replied || 0), 0),
@@ -726,7 +780,7 @@ export default function AdminPage() {
 
               // Include deleted members' reports in totals
               const deletedTotals = teamDeletedMembers.reduce((acc, member) => {
-                const memberReports = dayReports.filter(r => r.manager_id === member.id)
+                const memberReports = dayReportsByManager.get(member.id) || []
                 memberReports.forEach(r => {
                   acc.unsubscribed += r.unsubscribed || 0
                   acc.replied += r.replied || 0
@@ -890,7 +944,7 @@ export default function AdminPage() {
 
           // Build salary data per team
           const salaryTeams = TEAMS.map(team => {
-            const teamMgrs = managers.filter(m => m.team === team.id)
+            const teamMgrs = managersByTeam.get(team.id) || []
             const teamTLs  = team.id !== 'nikita' ? teamleads.filter(t => t.team === team.id) : []
             const teamDeleted = deletedMembers.filter(m => MANAGER_SHEETS[m.name] || m.sheet_id) // show deleted who had sheets
             // Filter deleted that were in this team - we check by MANAGER_SHEETS grouping or fallback
