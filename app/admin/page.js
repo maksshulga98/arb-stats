@@ -211,7 +211,9 @@ export default function AdminPage() {
   const ADMIN_EMAILS = ['nikita.tatarintsev@arbteam.ru']
 
   const checkAdmin = async () => {
-    const { data: { user: u } } = await supabase.auth.getUser()
+    // getSession() читает из localStorage без сетевого запроса (vs getUser() который дёргает сервер)
+    const { data: { session } } = await supabase.auth.getSession()
+    const u = session?.user
     if (!u) { router.push('/login'); return }
     setUser(u)
 

@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -9,6 +9,14 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+
+  // Префетчим бандлы целевых кабинетов пока пользователь вводит логин/пароль —
+  // когда нажмёт «Войти», JS уже скачан и страница откроется мгновенно.
+  useEffect(() => {
+    router.prefetch('/dashboard')
+    router.prefetch('/teamlead')
+    router.prefetch('/admin')
+  }, [router])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -31,6 +39,12 @@ export default function LoginPage() {
       .select('role')
       .eq('id', data.user.id)
       .single()
+
+    // Кешируем роль в sessionStorage, чтобы целевая страница могла сразу определиться
+    // с навигацией без повторного запроса профиля
+    try {
+      sessionStorage.setItem('arb_user_role', profile?.role || 'manager')
+    } catch { /* ignore */ }
 
     if (profile?.role === 'admin') {
       router.push('/admin')

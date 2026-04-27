@@ -241,7 +241,9 @@ export default function TeamleadPage() {
 
   // ── Data loading ────────────────────────────────────────────────────────────
   const init = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
+    // getSession() читает из localStorage без сетевого запроса (vs getUser() который дёргает сервер)
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
     if (!user) { router.push('/login'); return }
     setUser(user)
 
