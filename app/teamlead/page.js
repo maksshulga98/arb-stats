@@ -462,11 +462,15 @@ export default function TeamleadPage() {
       record.unsubscribed = parseInt(reportForm.unsubscribed) || 0
       record.replied      = parseInt(reportForm.replied) || 0
     }
-    const { error } = await supabase.from('reports').insert([record])
+    const { data: inserted, error } = await supabase.from('reports').insert([record]).select().single()
     if (!error) {
       setShowReportForm(false)
       setReportForm({ date: new Date().toISOString().split('T')[0], unsubscribed: '', replied: '', ordered_ip: '', ordered_cards: '', people_wrote: '' })
-      await loadMyReports(user.id)
+      if (inserted) {
+        setMyReports(prev => [inserted, ...prev].sort((a, b) => b.date.localeCompare(a.date)))
+      } else {
+        await loadMyReports(user.id)
+      }
     }
     setSubmitting(false)
   }

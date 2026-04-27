@@ -331,14 +331,19 @@ export default function DashboardPage() {
       record.replied      = parseInt(form.replied) || 0
     }
 
-    const { error } = await supabase.from('reports').insert([record])
+    const { data: inserted, error } = await supabase.from('reports').insert([record]).select().single()
     if (!error) {
       setShowForm(false)
       setForm({
         date: new Date().toISOString().split('T')[0],
         unsubscribed: '', replied: '', ordered_ip: '', ordered_cards: '', people_wrote: '',
       })
-      await loadReports(user.id)
+      // Оптимистичное обновление — не делаем повторный запрос на сервер
+      if (inserted) {
+        setReports(prev => [inserted, ...prev].sort((a, b) => b.date.localeCompare(a.date)))
+      } else {
+        await loadReports(user.id)
+      }
     }
     setSubmitting(false)
   }
