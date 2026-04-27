@@ -1,5 +1,4 @@
 'use client'
-export const dynamic = 'force-dynamic'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -118,18 +117,18 @@ export default function DashboardPage() {
     if (!user) { router.push('/login'); return }
     setUser(user)
 
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+    // Параллельно тянем профиль и отчёты — экономим один round-trip
+    const [{ data: profileData }, { data: reportsData }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', user.id).single(),
+      supabase.from('reports').select('*').eq('manager_id', user.id).order('date', { ascending: false }).limit(180),
+    ])
 
     if (profileData?.role === 'teamlead') { router.push('/teamlead'); return }
     if (profileData?.role === 'admin') { router.push('/admin'); return }
 
     setProfile(profileData)
-
-    await loadReports(user.id)
+    setReports(reportsData || [])
+    setLoading(false)
   }
 
   const loadReports = async (userId) => {
@@ -138,6 +137,7 @@ export default function DashboardPage() {
       .select('*')
       .eq('manager_id', userId)
       .order('date', { ascending: false })
+      .limit(180)
     setReports(data || [])
     setLoading(false)
   }

@@ -215,20 +215,28 @@ export default function AdminPage() {
     if (!u) { router.push('/login'); return }
     setUser(u)
 
-    const { data: profile } = await supabase
-      .from('profiles').select('*').eq('id', u.id).single()
+    // Параллельно: проверка профиля + основные данные + TG аккаунты
+    const profilePromise = supabase.from('profiles').select('*').eq('id', u.id).single()
+    const dataPromise = loadData()
+    const tgPromise = loadTgAccountsInit()
+
+    const { data: profile } = await profilePromise
     const isAdmin = profile?.role === 'admin' || ADMIN_EMAILS.includes(u.email)
     if (!isAdmin) { router.push('/dashboard'); return }
 
-    await loadData()
-    loadTgAccountsInit()
+    await Promise.all([dataPromise, tgPromise])
   }
 
   const loadData = async () => {
+    // Берём отчёты за последние 180 дней — хватает для аналитики, daily, и расчёта ЗП за текущий+прошлый месяц
+    const dateLimit = new Date()
+    dateLimit.setDate(dateLimit.getDate() - 180)
+    const dateLimitStr = dateLimit.toISOString().split('T')[0]
+
     const [{ data: mgrs }, { data: tls }, { data: reps }, { data: deleted }] = await Promise.all([
       supabase.from('profiles').select('*').eq('role', 'manager'),
       supabase.from('profiles').select('*').eq('role', 'teamlead'),
-      supabase.from('reports').select('*').order('date', { ascending: false }),
+      supabase.from('reports').select('*').gte('date', dateLimitStr).order('date', { ascending: false }),
       supabase.from('profiles').select('*').eq('role', 'deleted'),
     ])
     setManagers(mgrs || [])

@@ -1,5 +1,4 @@
 'use client'
-export const dynamic = 'force-dynamic'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -246,14 +245,24 @@ export default function TeamleadPage() {
     if (!user) { router.push('/login'); return }
     setUser(user)
 
-    const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    // Сразу фигачим в параллель то, для чего нужен только user.id (profile + my reports + tg)
+    const profilePromise = supabase.from('profiles').select('*').eq('id', user.id).single()
+    const myReportsPromise = supabase.from('reports').select('*').eq('manager_id', user.id).order('date', { ascending: false }).limit(180)
+    const tgPromise = loadTgAccountsInit()
+
+    const { data: p } = await profilePromise
     if (!p || p.role !== 'teamlead') {
       router.push(p?.role === 'admin' ? '/admin' : '/dashboard')
       return
     }
     setProfile(p)
 
-    await Promise.all([loadMyReports(user.id), loadTeamData(p.team), loadTgAccountsInit()])
+    // Профиль готов — теперь грузим данные команды; myReports и tg в это время уже идут
+    await Promise.all([
+      myReportsPromise.then(({ data }) => setMyReports(data || [])),
+      loadTeamData(p.team),
+      tgPromise,
+    ])
     setLoading(false)
   }
 
@@ -269,7 +278,7 @@ export default function TeamleadPage() {
   }
 
   const loadMyReports = async (userId) => {
-    const { data } = await supabase.from('reports').select('*').eq('manager_id', userId).order('date', { ascending: false })
+    const { data } = await supabase.from('reports').select('*').eq('manager_id', userId).order('date', { ascending: false }).limit(180)
     setMyReports(data || [])
   }
 
@@ -285,7 +294,11 @@ export default function TeamleadPage() {
 
     const allIds = [...list, ...deletedList].map(m => m.id)
     if (allIds.length > 0) {
-      const { data: reps } = await supabase.from('reports').select('*').in('manager_id', allIds).order('date', { ascending: false })
+      // Берём только последние 90 дней — этого хватает для всех вкладок (daily, analytics, salary)
+      const dateLimit = new Date()
+      dateLimit.setDate(dateLimit.getDate() - 90)
+      const dateLimitStr = dateLimit.toISOString().split('T')[0]
+      const { data: reps } = await supabase.from('reports').select('*').in('manager_id', allIds).gte('date', dateLimitStr).order('date', { ascending: false })
       setTeamReports(reps || [])
     } else {
       setTeamReports([])
