@@ -259,12 +259,18 @@ export default function TeamleadPage() {
       }
       setProfile(p)
 
-      // Каждый промис обёрнут в catch — если один упадёт, остальные всё равно завершатся
-      // и страница покажется (а не зависнет на «Загрузка...»)
+      // Каждый промис обёрнут в catch + race с таймаутом 12 сек.
+      // Если один из запросов зависает, страница всё равно покажется
+      // через 12 сек с тем что успело прогрузиться.
+      const withTimeout = (p, name, ms = 12000) => Promise.race([
+        p,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`${name} timed out after ${ms}ms`)), ms)),
+      ]).catch(e => console.error(`${name} failed:`, e?.message || e))
+
       await Promise.allSettled([
-        myReportsPromise.then(({ data }) => setMyReports(data || [])).catch(e => console.error('myReports failed:', e)),
-        loadTeamData(p.team).catch(e => console.error('loadTeamData failed:', e)),
-        tgPromise.catch(e => console.error('tg failed:', e)),
+        withTimeout(myReportsPromise.then(({ data }) => setMyReports(data || [])), 'myReports'),
+        withTimeout(loadTeamData(p.team), 'loadTeamData'),
+        withTimeout(tgPromise, 'tg'),
       ])
     } catch (e) {
       console.error('teamlead init failed:', e)
@@ -275,10 +281,8 @@ export default function TeamleadPage() {
 
   const loadTgAccountsInit = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/telegram-accounts', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
+      // authFetch имеет таймаут 15 сек — иначе если Google Sheets зависает, страница висит до 5 мин
+      const res = await authFetch('/api/telegram-accounts')
       const data = await res.json()
       setTgAccounts(data.accounts || [])
     } catch { /* ignore */ }

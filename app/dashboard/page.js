@@ -119,10 +119,15 @@ export default function DashboardPage() {
       if (!user) { router.push('/login'); return }
       setUser(user)
 
-      // Параллельно тянем профиль и отчёты — каждый со своим catch чтобы один сбой не блокировал второй
+      // Параллельно тянем профиль и отчёты с таймаутом 12 сек —
+      // если Supabase медленный, страница всё равно покажется
+      const withTimeout = (p, ms = 12000) => Promise.race([
+        p,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`timeout ${ms}ms`)), ms)),
+      ])
       const [profileRes, reportsRes] = await Promise.allSettled([
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
-        supabase.from('reports').select('*').eq('manager_id', user.id).order('date', { ascending: false }).limit(180),
+        withTimeout(supabase.from('profiles').select('*').eq('id', user.id).single()),
+        withTimeout(supabase.from('reports').select('*').eq('manager_id', user.id).order('date', { ascending: false }).limit(180)),
       ])
       const profileData = profileRes.status === 'fulfilled' ? profileRes.value.data : null
       const reportsData = reportsRes.status === 'fulfilled' ? reportsRes.value.data : []

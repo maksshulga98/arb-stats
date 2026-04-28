@@ -225,10 +225,16 @@ export default function AdminPage() {
       const isAdmin = profile?.role === 'admin' || ADMIN_EMAILS.includes(u.email)
       if (!isAdmin) { router.push('/dashboard'); return }
 
-      // Каждый промис со своим catch чтобы один сбой не блокировал страницу
+      // Каждый промис обёрнут в race с таймаутом — если один зависает,
+      // страница всё равно покажется через 12 сек.
+      const withTimeout = (p, name, ms = 12000) => Promise.race([
+        p,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`${name} timed out after ${ms}ms`)), ms)),
+      ]).catch(e => console.error(`${name} failed:`, e?.message || e))
+
       await Promise.allSettled([
-        dataPromise.catch(e => console.error('loadData failed:', e)),
-        tgPromise.catch(e => console.error('tg failed:', e)),
+        withTimeout(dataPromise, 'loadData'),
+        withTimeout(tgPromise, 'tg'),
       ])
     } catch (e) {
       console.error('admin checkAdmin failed:', e)
@@ -256,13 +262,11 @@ export default function AdminPage() {
 
   const loadTgAccountsInit = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/telegram-accounts', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
+      // authFetch имеет таймаут 15 сек — иначе если Google Sheets зависает, страница висит до 5 мин
+      const res = await authFetch('/api/telegram-accounts')
       const data = await res.json()
       setTgAccounts(data.accounts || [])
-    } catch { /* ignore */ }
+    } catch (e) { console.error('TG accounts initial load failed:', e?.message || e) }
   }
 
   // ── IP Link functions ──
