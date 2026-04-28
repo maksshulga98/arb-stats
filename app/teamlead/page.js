@@ -562,18 +562,10 @@ export default function TeamleadPage() {
     setCdSubmitting(false)
   }
 
-  // ── Derived ──────────────────────────────────────────────────────────────────
-  if (loading) {
-    return <div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-400">Загрузка...</div>
-  }
-
+  // ── Derived (хуки должны вызываться ДО early return — правила React) ──────
   const teamInfo  = TEAMS.find(t => t.id === profile?.team)
   const isNikita  = teamInfo?.type === 'nikita'
   const isKarina  = teamInfo?.type === 'karina'
-  const myWeekValue = isKarina
-    ? myReports.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const start = new Date(now); start.setDate(start.getDate()-7); start.setHours(0,0,0,0); return d >= start && d <= now }).reduce((s, r) => s + (r.ordered_cards || 0), 0)
-    : getIPLast7Days(myReports)
-  const myZone    = getPersonalZone(myWeekValue, teamInfo?.type)
 
   // ── Мемоизированный индекс отчётов команды по manager_id ──
   const teamReportsByManager = useMemo(() => {
@@ -586,7 +578,6 @@ export default function TeamleadPage() {
     return m
   }, [teamReports])
 
-  const mgr7Reps  = (id) => teamReportsByManager.get(id) || []
   const redManagers = useMemo(
     () => isKarina ? [] : managers.filter(m => isRedFor14Days(teamReportsByManager.get(m.id) || [], m.created_at)),
     [isKarina, managers, teamReportsByManager]
@@ -597,6 +588,17 @@ export default function TeamleadPage() {
     () => getMissingReportAlerts(managers, teamReports),
     [managers, teamReports]
   )
+
+  if (loading) {
+    return <div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-400">Загрузка...</div>
+  }
+
+  const myWeekValue = isKarina
+    ? myReports.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const start = new Date(now); start.setDate(start.getDate()-7); start.setHours(0,0,0,0); return d >= start && d <= now }).reduce((s, r) => s + (r.ordered_cards || 0), 0)
+    : getIPLast7Days(myReports)
+  const myZone    = getPersonalZone(myWeekValue, teamInfo?.type)
+
+  const mgr7Reps  = (id) => teamReportsByManager.get(id) || []
   const totalNotifications = redManagers.length + missingAlerts.length + streakAlerts.length
 
   const modalReports  = selectedManager ? (teamReportsByManager.get(selectedManager.id) || []) : []
