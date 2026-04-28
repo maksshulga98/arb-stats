@@ -211,41 +211,47 @@ export default function AdminPage() {
   const ADMIN_EMAILS = ['nikita.tatarintsev@arbteam.ru']
 
   const checkAdmin = async () => {
-    // getSession() читает из localStorage без сетевого запроса (vs getUser() который дёргает сервер)
-    const { data: { session } } = await supabase.auth.getSession()
-    const u = session?.user
-    if (!u) { router.push('/login'); return }
-    setUser(u)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const u = session?.user
+      if (!u) { router.push('/login'); return }
+      setUser(u)
 
-    // Параллельно: проверка профиля + основные данные + TG аккаунты
-    const profilePromise = supabase.from('profiles').select('*').eq('id', u.id).single()
-    const dataPromise = loadData()
-    const tgPromise = loadTgAccountsInit()
+      const profilePromise = supabase.from('profiles').select('*').eq('id', u.id).single()
+      const dataPromise = loadData()
+      const tgPromise = loadTgAccountsInit()
 
-    const { data: profile } = await profilePromise
-    const isAdmin = profile?.role === 'admin' || ADMIN_EMAILS.includes(u.email)
-    if (!isAdmin) { router.push('/dashboard'); return }
+      const { data: profile } = await profilePromise
+      const isAdmin = profile?.role === 'admin' || ADMIN_EMAILS.includes(u.email)
+      if (!isAdmin) { router.push('/dashboard'); return }
 
-    await Promise.all([dataPromise, tgPromise])
+      // Каждый промис со своим catch чтобы один сбой не блокировал страницу
+      await Promise.allSettled([
+        dataPromise.catch(e => console.error('loadData failed:', e)),
+        tgPromise.catch(e => console.error('tg failed:', e)),
+      ])
+    } catch (e) {
+      console.error('admin checkAdmin failed:', e)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const loadData = async () => {
-    // Берём отчёты за последние 180 дней — хватает для аналитики, daily, и расчёта ЗП за текущий+прошлый месяц
     const dateLimit = new Date()
     dateLimit.setDate(dateLimit.getDate() - 180)
     const dateLimitStr = dateLimit.toISOString().split('T')[0]
 
-    const [{ data: mgrs }, { data: tls }, { data: reps }, { data: deleted }] = await Promise.all([
+    const [mgrsRes, tlsRes, repsRes, deletedRes] = await Promise.allSettled([
       supabase.from('profiles').select('*').eq('role', 'manager'),
       supabase.from('profiles').select('*').eq('role', 'teamlead'),
       supabase.from('reports').select('*').gte('date', dateLimitStr).order('date', { ascending: false }),
       supabase.from('profiles').select('*').eq('role', 'deleted'),
     ])
-    setManagers(mgrs || [])
-    setTeamleads(tls || [])
-    setReports(reps || [])
-    setDeletedMembers(deleted || [])
-    setLoading(false)
+    setManagers(mgrsRes.status === 'fulfilled' ? (mgrsRes.value.data || []) : [])
+    setTeamleads(tlsRes.status === 'fulfilled' ? (tlsRes.value.data || []) : [])
+    setReports(repsRes.status === 'fulfilled' ? (repsRes.value.data || []) : [])
+    setDeletedMembers(deletedRes.status === 'fulfilled' ? (deletedRes.value.data || []) : [])
   }
 
   const loadTgAccountsInit = async () => {

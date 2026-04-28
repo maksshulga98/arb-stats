@@ -113,24 +113,30 @@ export default function DashboardPage() {
   useEffect(() => { init() }, [])
 
   const init = async () => {
-    // getSession() читает из localStorage без сетевого запроса (vs getUser() который дёргает сервер)
-    const { data: { session } } = await supabase.auth.getSession()
-    const user = session?.user
-    if (!user) { router.push('/login'); return }
-    setUser(user)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
+      if (!user) { router.push('/login'); return }
+      setUser(user)
 
-    // Параллельно тянем профиль и отчёты — экономим один round-trip
-    const [{ data: profileData }, { data: reportsData }] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', user.id).single(),
-      supabase.from('reports').select('*').eq('manager_id', user.id).order('date', { ascending: false }).limit(180),
-    ])
+      // Параллельно тянем профиль и отчёты — каждый со своим catch чтобы один сбой не блокировал второй
+      const [profileRes, reportsRes] = await Promise.allSettled([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('reports').select('*').eq('manager_id', user.id).order('date', { ascending: false }).limit(180),
+      ])
+      const profileData = profileRes.status === 'fulfilled' ? profileRes.value.data : null
+      const reportsData = reportsRes.status === 'fulfilled' ? reportsRes.value.data : []
 
-    if (profileData?.role === 'teamlead') { router.push('/teamlead'); return }
-    if (profileData?.role === 'admin') { router.push('/admin'); return }
+      if (profileData?.role === 'teamlead') { router.push('/teamlead'); return }
+      if (profileData?.role === 'admin') { router.push('/admin'); return }
 
-    setProfile(profileData)
-    setReports(reportsData || [])
-    setLoading(false)
+      setProfile(profileData)
+      setReports(reportsData || [])
+    } catch (e) {
+      console.error('dashboard init failed:', e)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const loadReports = async (userId) => {

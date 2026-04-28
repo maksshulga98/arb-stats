@@ -241,31 +241,36 @@ export default function TeamleadPage() {
 
   // ── Data loading ────────────────────────────────────────────────────────────
   const init = async () => {
-    // getSession() читает из localStorage без сетевого запроса (vs getUser() который дёргает сервер)
-    const { data: { session } } = await supabase.auth.getSession()
-    const user = session?.user
-    if (!user) { router.push('/login'); return }
-    setUser(user)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
+      if (!user) { router.push('/login'); return }
+      setUser(user)
 
-    // Сразу фигачим в параллель то, для чего нужен только user.id (profile + my reports + tg)
-    const profilePromise = supabase.from('profiles').select('*').eq('id', user.id).single()
-    const myReportsPromise = supabase.from('reports').select('*').eq('manager_id', user.id).order('date', { ascending: false }).limit(180)
-    const tgPromise = loadTgAccountsInit()
+      // Сразу фигачим в параллель то, для чего нужен только user.id
+      const profilePromise = supabase.from('profiles').select('*').eq('id', user.id).single()
+      const myReportsPromise = supabase.from('reports').select('*').eq('manager_id', user.id).order('date', { ascending: false }).limit(180)
+      const tgPromise = loadTgAccountsInit()
 
-    const { data: p } = await profilePromise
-    if (!p || p.role !== 'teamlead') {
-      router.push(p?.role === 'admin' ? '/admin' : '/dashboard')
-      return
+      const { data: p } = await profilePromise
+      if (!p || p.role !== 'teamlead') {
+        router.push(p?.role === 'admin' ? '/admin' : '/dashboard')
+        return
+      }
+      setProfile(p)
+
+      // Каждый промис обёрнут в catch — если один упадёт, остальные всё равно завершатся
+      // и страница покажется (а не зависнет на «Загрузка...»)
+      await Promise.allSettled([
+        myReportsPromise.then(({ data }) => setMyReports(data || [])).catch(e => console.error('myReports failed:', e)),
+        loadTeamData(p.team).catch(e => console.error('loadTeamData failed:', e)),
+        tgPromise.catch(e => console.error('tg failed:', e)),
+      ])
+    } catch (e) {
+      console.error('teamlead init failed:', e)
+    } finally {
+      setLoading(false)
     }
-    setProfile(p)
-
-    // Профиль готов — теперь грузим данные команды; myReports и tg в это время уже идут
-    await Promise.all([
-      myReportsPromise.then(({ data }) => setMyReports(data || [])),
-      loadTeamData(p.team),
-      tgPromise,
-    ])
-    setLoading(false)
   }
 
   const loadTgAccountsInit = async () => {
