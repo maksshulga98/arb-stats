@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../../lib/supabase'
+import { supabase, authFetch } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getMissingReportAlerts } from '../../lib/notifications'
 
@@ -155,10 +155,7 @@ export default function DashboardPage() {
     if (!user) return
     setContactsLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/contacts', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
+      const res = await authFetch('/api/contacts')
       const data = await res.json()
       if (res.ok) {
         setDistributions(data.distributions || [])
@@ -166,8 +163,9 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error('Ошибка загрузки истории:', err)
+    } finally {
+      setContactsLoading(false)
     }
-    setContactsLoading(false)
   }, [user])
 
   // Загружаем историю при переключении на вкладку контактов
@@ -182,16 +180,14 @@ export default function DashboardPage() {
     if (!user) return
     setIpHistoryLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/ip-link', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
+      const res = await authFetch('/api/ip-link')
       const data = await res.json()
       if (res.ok) setIpHistory(data.applications || [])
     } catch (err) {
       console.error('Ошибка загрузки истории ИП:', err)
+    } finally {
+      setIpHistoryLoading(false)
     }
-    setIpHistoryLoading(false)
   }, [user])
 
   useEffect(() => {
@@ -215,17 +211,20 @@ export default function DashboardPage() {
     if (!validateINN12(ipForm.inn)) { setIpError('Некорректный ИНН'); return }
     setIpSubmitting(true); setIpError(null); setIpResult(null)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/ip-link', {
+      const res = await authFetch('/api/ip-link', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ipForm),
       })
       const data = await res.json()
       if (!res.ok) { setIpError(data.error || 'Ошибка') }
       else { setIpResult(data); await loadIpHistory() }
-    } catch { setIpError('Ошибка сети') }
-    setIpSubmitting(false)
+    } catch (err) {
+      console.error('IP link create failed:', err)
+      setIpError(err.code === 'NO_SESSION' ? 'Сессия истекла, войдите заново' : 'Ошибка сети')
+    } finally {
+      setIpSubmitting(false)
+    }
   }
 
   // ── Копирование ссылки ИП ──
@@ -268,13 +267,9 @@ export default function DashboardPage() {
     setDistributedContacts(null)
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/contacts', {
+      const res = await authFetch('/api/contacts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accountsCount }),
       })
       const data = await res.json()
@@ -293,9 +288,11 @@ export default function DashboardPage() {
         await loadContactHistory()
       }
     } catch (err) {
-      setContactsError('Ошибка сети. Попробуйте ещё раз.')
+      console.error('Request contacts failed:', err)
+      setContactsError(err.code === 'NO_SESSION' ? 'Сессия истекла, войдите заново' : 'Ошибка сети. Попробуйте ещё раз.')
+    } finally {
+      setDistributing(false)
     }
-    setDistributing(false)
   }
 
   // ── Копирование списка ──
@@ -364,10 +361,9 @@ export default function DashboardPage() {
     setCdSubmitting(true)
     setCdError(null)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/cd', {
+      const res = await authFetch('/api/cd', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cdForm),
       })
       const data = await res.json()
@@ -378,10 +374,12 @@ export default function DashboardPage() {
         setCdForm({ fullName: '', inn: '', phone: '' })
         setTimeout(() => { setCdSuccess(false); setShowCdModal(false) }, 2500)
       }
-    } catch {
-      setCdError('Ошибка сети')
+    } catch (err) {
+      console.error('CD submit failed:', err)
+      setCdError(err.code === 'NO_SESSION' ? 'Сессия истекла, войдите заново' : 'Ошибка сети')
+    } finally {
+      setCdSubmitting(false)
     }
-    setCdSubmitting(false)
   }
 
   if (loading) {

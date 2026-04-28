@@ -78,11 +78,14 @@ export async function DELETE(request, { params }) {
             requestBody: { valueInputOption: 'RAW', data: updates },
           })
         }
-      } catch { /* TG cleanup is non-critical, don't block deletion */ }
+      } catch (e) {
+        console.error('TG cleanup failed (non-critical):', e?.message || e)
+      }
     }
 
     return NextResponse.json({ success: true })
-  } catch {
+  } catch (e) {
+    console.error('DELETE /api/managers/[id] error:', e?.message || e)
     return NextResponse.json({ error: 'Внутренняя ошибка' }, { status: 500 })
   }
 }
@@ -168,7 +171,8 @@ export async function PUT(request, { params }) {
     }
 
     return NextResponse.json({ success: true, sheetId: updateFields.sheet_id, paymentInfo: updateFields.payment_info })
-  } catch {
+  } catch (e) {
+    console.error('PUT /api/managers/[id] error:', e?.message || e)
     return NextResponse.json({ error: 'Внутренняя ошибка' }, { status: 500 })
   }
 }

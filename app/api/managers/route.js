@@ -74,7 +74,8 @@ export async function POST(request) {
     }
 
     return NextResponse.json({ success: true, userId: newUser.user.id })
-  } catch {
+  } catch (e) {
+    console.error('POST /api/managers error:', e?.message || e)
     return NextResponse.json({ error: 'Внутренняя ошибка' }, { status: 500 })
   }
 }

@@ -120,8 +120,8 @@ export async function GET(request) {
         if (p.sheet_id) dbSheetMap[p.name] = p.sheet_id
       }
     }
-  } catch {
-    // fallback to hardcoded if DB fails
+  } catch (e) {
+    console.error('GET /api/sheets DB lookup failed (using hardcoded fallback):', e?.message || e)
   }
 
   const results = {}
@@ -164,7 +164,8 @@ export async function GET(request) {
         )
 
         results[name] = acc
-      } catch {
+      } catch (e) {
+        console.error(`Failed to fetch sheets for "${name}":`, e?.message || e)
         results[name] = null
       }
     })

@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { supabase } from '../../lib/supabase'
+import { supabase, authFetch } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getMissingReportAlerts } from '../../lib/notifications'
 
@@ -270,16 +270,14 @@ export default function AdminPage() {
     if (!user) return
     setIpHistoryLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/ip-link?scope=all', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
+      const res = await authFetch('/api/ip-link?scope=all')
       const data = await res.json()
       if (res.ok) setIpHistory(data.applications || [])
-    } catch (err) {
-      console.error('Ошибка загрузки истории ИП:', err)
+    } catch (e) {
+      console.error('loadIpHistory:', e)
+    } finally {
+      setIpHistoryLoading(false)
     }
-    setIpHistoryLoading(false)
   }, [user])
 
   useEffect(() => {
@@ -301,17 +299,20 @@ export default function AdminPage() {
     if (!validateINN12(ipForm.inn)) { setIpError('Некорректный ИНН'); return }
     setIpSubmitting(true); setIpError(null); setIpResult(null)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/ip-link', {
+      const res = await authFetch('/api/ip-link', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ipForm),
       })
       const data = await res.json()
       if (!res.ok) { setIpError(data.error || 'Ошибка') }
       else { setIpResult(data); await loadIpHistory() }
-    } catch { setIpError('Ошибка сети') }
-    setIpSubmitting(false)
+    } catch (err) {
+      console.error('handleCreateIpLink:', err)
+      setIpError(err.code === 'NO_SESSION' ? 'Сессия истекла, войдите заново' : 'Ошибка сети')
+    } finally {
+      setIpSubmitting(false)
+    }
   }
 
   const handleCopyIpLink = async (link, id) => {
@@ -334,10 +335,9 @@ export default function AdminPage() {
     setCdSubmitting(true)
     setCdError(null)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/cd', {
+      const res = await authFetch('/api/cd', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cdForm),
       })
       const data = await res.json()
@@ -348,10 +348,12 @@ export default function AdminPage() {
         setCdForm({ fullName: '', inn: '', phone: '' })
         setTimeout(() => { setCdSuccess(false); setShowCdModal(false) }, 2500)
       }
-    } catch {
-      setCdError('Ошибка сети')
+    } catch (err) {
+      console.error('handleCdSubmit:', err)
+      setCdError(err.code === 'NO_SESSION' ? 'Сессия истекла, войдите заново' : 'Ошибка сети')
+    } finally {
+      setCdSubmitting(false)
     }
-    setCdSubmitting(false)
   }
 
   // ── Мемоизированные индексы для быстрого поиска (избегаем O(n²) на каждом рендере) ──
@@ -1007,17 +1009,18 @@ export default function AdminPage() {
           const savePaymentInfo = async (profileId, value) => {
             setPaymentSaving(prev => ({ ...prev, [profileId]: true }))
             try {
-              const { data: { session } } = await supabase.auth.getSession()
-              const res = await fetch(`/api/managers/${profileId}`, {
+              const res = await authFetch(`/api/managers/${profileId}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ paymentInfo: value }),
               })
               if (res.ok) {
                 setManagers(prev => prev.map(m => m.id === profileId ? { ...m, payment_info: value } : m))
                 setTeamleads(prev => prev.map(t => t.id === profileId ? { ...t, payment_info: value } : t))
               }
-            } catch {} finally {
+            } catch (e) {
+              console.error('savePaymentInfo:', e)
+            } finally {
               setPaymentSaving(prev => ({ ...prev, [profileId]: false }))
               setPaymentEditing(prev => { const n = { ...prev }; delete n[profileId]; return n })
             }
@@ -1186,23 +1189,23 @@ export default function AdminPage() {
           const loadTgAccounts = async () => {
             setTgLoading(true)
             try {
-              const { data: { session } } = await supabase.auth.getSession()
-              const res = await fetch('/api/telegram-accounts', {
-                headers: { Authorization: `Bearer ${session.access_token}` },
-              })
+              const res = await authFetch('/api/telegram-accounts')
               const data = await res.json()
               setTgAccounts(data.accounts || [])
-            } catch { setTgAccounts([]) }
-            finally { setTgLoading(false) }
+            } catch (e) {
+              console.error('loadTgAccounts:', e)
+              setTgAccounts([])
+            } finally {
+              setTgLoading(false)
+            }
           }
 
           const fetchCode = async (acc) => {
             setTgCodeLoading(prev => ({ ...prev, [acc.rowIndex]: true }))
             try {
-              const { data: { session } } = await supabase.auth.getSession()
-              const res = await fetch('/api/telegram-accounts/code', {
+              const res = await authFetch('/api/telegram-accounts/code', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: acc.email, password: acc.emailPassword }),
               })
               const data = await res.json()
@@ -1212,7 +1215,8 @@ export default function AdminPage() {
                 setTgCode({ error: data.error, phone: acc.phone })
               }
             } catch (e) {
-              setTgCode({ error: e.message, phone: acc.phone })
+              console.error('fetchCode:', e)
+              setTgCode({ error: e.code === 'NO_SESSION' ? 'Сессия истекла, войдите заново' : (e.message || 'Ошибка сети'), phone: acc.phone })
             } finally {
               setTgCodeLoading(prev => ({ ...prev, [acc.rowIndex]: false }))
             }
@@ -1221,15 +1225,16 @@ export default function AdminPage() {
           const assignAccount = async (rowIndex, name) => {
             setTgAssigning(prev => ({ ...prev, [rowIndex]: true }))
             try {
-              const { data: { session } } = await supabase.auth.getSession()
-              await fetch('/api/telegram-accounts', {
+              await authFetch('/api/telegram-accounts', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ rowIndex, assignedTo: name }),
               })
               setTgAccounts(prev => prev.map(a => a.rowIndex === rowIndex ? { ...a, assignedTo: name } : a))
               setTgAssignSelect(prev => { const n = { ...prev }; delete n[rowIndex]; return n })
-            } catch {} finally {
+            } catch (e) {
+              console.error('assignAccount:', e)
+            } finally {
               setTgAssigning(prev => ({ ...prev, [rowIndex]: false }))
             }
           }
@@ -1640,10 +1645,9 @@ export default function AdminPage() {
                       onClick={async () => {
                         setSheetSaving(true)
                         try {
-                          const { data: { session } } = await supabase.auth.getSession()
-                          const res = await fetch(`/api/managers/${selectedManager.id}`, {
+                          const res = await authFetch(`/api/managers/${selectedManager.id}`, {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ sheetUrl: sheetUrlInput }),
                           })
                           const result = await res.json()
@@ -1652,7 +1656,11 @@ export default function AdminPage() {
                             setSelectedManager(prev => ({ ...prev, sheet_id: result.sheetId }))
                             setSheetEditing(false)
                           }
-                        } catch {} finally { setSheetSaving(false) }
+                        } catch (e) {
+                          console.error('sheet bind save:', e)
+                        } finally {
+                          setSheetSaving(false)
+                        }
                       }}
                       disabled={sheetSaving}
                       className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
@@ -1670,10 +1678,9 @@ export default function AdminPage() {
                         onClick={async () => {
                           setSheetSaving(true)
                           try {
-                            const { data: { session } } = await supabase.auth.getSession()
-                            const res = await fetch(`/api/managers/${selectedManager.id}`, {
+                            const res = await authFetch(`/api/managers/${selectedManager.id}`, {
                               method: 'PUT',
-                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                              headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ sheetUrl: '' }),
                             })
                             if (res.ok) {
@@ -1682,7 +1689,11 @@ export default function AdminPage() {
                               setSheetEditing(false)
                               setSheetUrlInput('')
                             }
-                          } catch {} finally { setSheetSaving(false) }
+                          } catch (e) {
+                            console.error('sheet unbind:', e)
+                          } finally {
+                            setSheetSaving(false)
+                          }
                         }}
                         disabled={sheetSaving}
                         className="text-red-400 hover:text-red-300 text-xs transition ml-auto"
