@@ -18,59 +18,61 @@ export default function LoginPage() {
     router.prefetch('/admin')
   }, [router])
 
-  // Гонка промиса с таймаутом. Если запрос не уложился — кидаем понятную ошибку,
-  // чтобы кнопка «Входим...» не висела вечно при тормозящем Supabase / firewall.
-  const withTimeout = (p, name, ms) =>
-    Promise.race([
-      p,
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`${name} timeout ${ms}ms`)), ms),
-      ),
-    ])
-
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
     try {
-      const { data, error } = await withTimeout(
-        supabase.auth.signInWithPassword({ email, password }),
-        'signIn',
-        8000,
-      )
+      // Серверный прокси /api/auth/login — стучимся только в наш Vercel-домен,
+      // он уже на сервере дёргает Supabase. У многих российских юзеров прямой
+      // запрос к supabase.co режется провайдером, через наш домен идёт чище.
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 20000)
 
-      if (error) {
-        setError('Неверный email или пароль')
+      let res
+      try {
+        res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+          signal: controller.signal,
+        })
+      } finally {
+        clearTimeout(timer)
+      }
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok || !data?.session) {
+        setError(data?.error || 'Неверный email или пароль')
         setLoading(false)
         return
       }
 
-      const { data: profile } = await withTimeout(
-        supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single(),
-        'profile',
-        6000,
-      )
+      // Кладём полученную с сервера сессию в supabase-js, чтобы дальше все
+      // остальные запросы (supabase.from(...).select() и т.д.) работали
+      // с авторизацией без повторного логина.
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      })
 
       // Кешируем роль в sessionStorage, чтобы целевая страница могла сразу определиться
       // с навигацией без повторного запроса профиля
       try {
-        sessionStorage.setItem('arb_user_role', profile?.role || 'manager')
+        sessionStorage.setItem('arb_user_role', data.role || 'manager')
       } catch { /* ignore */ }
 
-      if (profile?.role === 'admin') {
+      if (data.role === 'admin') {
         router.push('/admin')
-      } else if (profile?.role === 'teamlead') {
+      } else if (data.role === 'teamlead') {
         router.push('/teamlead')
       } else {
         router.push('/dashboard')
       }
     } catch (err) {
-      console.error('Login failed:', err?.message || err)
+      console.error('Login failed:', err?.name === 'AbortError' ? 'timeout 20s' : err?.message || err)
       setError('Сервер долго отвечает. Попробуйте ещё раз через несколько секунд.')
       setLoading(false)
     }
