@@ -18,40 +18,61 @@ export default function LoginPage() {
     router.prefetch('/admin')
   }, [router])
 
+  // Гонка промиса с таймаутом. Если запрос не уложился — кидаем понятную ошибку,
+  // чтобы кнопка «Входим...» не висела вечно при тормозящем Supabase / firewall.
+  const withTimeout = (p, name, ms) =>
+    Promise.race([
+      p,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`${name} timeout ${ms}ms`)), ms),
+      ),
+    ])
+
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (error) {
-      setError('Неверный email или пароль')
-      setLoading(false)
-      return
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .single()
-
-    // Кешируем роль в sessionStorage, чтобы целевая страница могла сразу определиться
-    // с навигацией без повторного запроса профиля
     try {
-      sessionStorage.setItem('arb_user_role', profile?.role || 'manager')
-    } catch { /* ignore */ }
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        'signIn',
+        8000,
+      )
 
-    if (profile?.role === 'admin') {
-      router.push('/admin')
-    } else if (profile?.role === 'teamlead') {
-      router.push('/teamlead')
-    } else {
-      router.push('/dashboard')
+      if (error) {
+        setError('Неверный email или пароль')
+        setLoading(false)
+        return
+      }
+
+      const { data: profile } = await withTimeout(
+        supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single(),
+        'profile',
+        6000,
+      )
+
+      // Кешируем роль в sessionStorage, чтобы целевая страница могла сразу определиться
+      // с навигацией без повторного запроса профиля
+      try {
+        sessionStorage.setItem('arb_user_role', profile?.role || 'manager')
+      } catch { /* ignore */ }
+
+      if (profile?.role === 'admin') {
+        router.push('/admin')
+      } else if (profile?.role === 'teamlead') {
+        router.push('/teamlead')
+      } else {
+        router.push('/dashboard')
+      }
+    } catch (err) {
+      console.error('Login failed:', err?.message || err)
+      setError('Сервер долго отвечает. Попробуйте ещё раз через несколько секунд.')
+      setLoading(false)
     }
   }
 
