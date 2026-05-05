@@ -447,7 +447,7 @@ export default function AdminPage() {
     { id: 'daily',     label: 'Дневной отчёт' },
     { id: 'salary',    label: 'Расчёт ЗП' },
     { id: 'telegram',  label: 'Аккаунты Телеграмм' },
-    // { id: 'ip-link',   label: 'Ссылка ИП' }, // временно скрыто — отключили от оффера
+    { id: 'ip-link',   label: 'Ссылка ИП' },
     { id: 'add-cd',    label: 'Добавить ЦД' },
   ]
 

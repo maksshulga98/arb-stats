@@ -410,7 +410,7 @@ export default function DashboardPage() {
   const TABS = [
     { id: 'report', label: 'Отчёт' },
     ...(hasContactsAccess ? [{ id: 'contacts', label: 'Выдача номеров' }] : []),
-    // { id: 'ip-link', label: 'Ссылка ИП' }, // временно скрыто — отключили от оффера
+    { id: 'ip-link', label: 'Ссылка ИП' },
     { id: 'add-cd', label: 'Добавить ЦД' },
   ]
 

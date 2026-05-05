@@ -631,7 +631,7 @@ export default function TeamleadPage() {
     { id: 'salary',    label: 'Расчёт ЗП' },
     { id: 'telegram',  label: 'Аккаунты Телеграмм' },
     ...(hasContactsAccess ? [{ id: 'contacts', label: 'Выдача номеров' }] : []),
-    // { id: 'ip-link', label: 'Ссылка ИП' }, // временно скрыто — отключили от оффера
+    { id: 'ip-link', label: 'Ссылка ИП' },
     { id: 'add-cd', label: 'Добавить ЦД' },
   ]
 

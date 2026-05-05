@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSheetsClient } from '../../../../lib/google-sheets-api'
 import { loginToRkoPartner, fetchAllRkoOrders, mapRkoState } from '../../../../lib/rko-partner'
+import { getActiveAccounts } from '../../../../lib/rko-accounts'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -100,11 +101,30 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // 1) Логинимся в rko-partner и тянем все заявки
-    const auth = await loginToRkoPartner()
-    const orders = await fetchAllRkoOrders(auth)
+    // 1) Идём по ВСЕМ активным кабинетам (заявки могут быть в любом из них —
+    //    зависит от того, в какой кабинет ушла заявка через round-robin).
+    //    Если один кабинет недоступен — лог ошибку, продолжаем с остальными.
+    const accounts = getActiveAccounts()
+    if (accounts.length === 0) {
+      throw new Error('Нет настроенных RKO-аккаунтов')
+    }
 
-    // 2) Строим индекс order by normalized ФИО (при коллизиях берём самый свежий)
+    const orders = []
+    const accountStats = []
+    for (const account of accounts) {
+      try {
+        const auth = await loginToRkoPartner(account)
+        const accOrders = await fetchAllRkoOrders(auth)
+        orders.push(...accOrders)
+        accountStats.push({ account: account.id, fetched: accOrders.length, ok: true })
+      } catch (err) {
+        console.error(`RKO[${account.id}] crone fetch failed:`, err.message)
+        accountStats.push({ account: account.id, ok: false, error: err.message })
+      }
+    }
+
+    // 2) Строим индекс order by normalized ФИО. При коллизиях между
+    //    кабинетами (одно и то же ФИО заведено в обоих) берём самый свежий.
     const orderByFio = {}
     for (const o of orders) {
       if (!o.fio) continue
@@ -128,6 +148,7 @@ export async function GET(request) {
 
     return NextResponse.json({
       ok: true,
+      accounts: accountStats,
       rkoOrdersTotal: orders.length,
       uniqueFios: Object.keys(orderByFio).length,
       results,
