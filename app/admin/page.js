@@ -34,6 +34,26 @@ function getIPForPeriod(reports, daysStart, daysEnd) {
     .reduce((sum, r) => sum + (r.ordered_ip || 0), 0)
 }
 
+// Аналог getIPForPeriod для дебетовых карт.
+// Используется на карточках менеджеров в "Аналитика команды" — там нужны
+// обе метрики одновременно (ИП + карты), а не только основная по типу команды.
+function getCardsForPeriod(reports, daysStart, daysEnd) {
+  const now = new Date()
+  now.setHours(23, 59, 59, 999)
+  const end = new Date(now)
+  end.setDate(end.getDate() - daysStart)
+  const start = new Date(now)
+  start.setDate(start.getDate() - daysEnd)
+  start.setHours(0, 0, 0, 0)
+
+  return reports
+    .filter(r => {
+      const d = new Date(r.date)
+      return d >= start && d <= end
+    })
+    .reduce((sum, r) => sum + (r.ordered_cards || 0), 0)
+}
+
 function getZoneKey(value, teamType) {
   if (teamType === 'karina') {
     if (value < 15) return 'red'
@@ -630,9 +650,11 @@ export default function AdminPage() {
                       {teamAll.map(manager => {
                         const mRep    = managerReports(manager.id)
                         const isKarinaTeam = team.type === 'karina'
-                        const value7  = isKarinaTeam
-                          ? mRep.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const start = new Date(now); start.setDate(start.getDate()-7); start.setHours(0,0,0,0); return d >= start && d <= now }).reduce((s, r) => s + (r.ordered_cards || 0), 0)
-                          : getIPForPeriod(mRep, 0, 7)
+                        // Считаем обе метрики, чтобы вывести их обе на карточку.
+                        // value7 — основная по типу команды (по ней рисуется зона/цвет).
+                        const ip7     = getIPForPeriod(mRep, 0, 7)
+                        const cards7  = getCardsForPeriod(mRep, 0, 7)
+                        const value7  = isKarinaTeam ? cards7 : ip7
                         const zKey    = getZoneKey(value7, team.type)
                         const z       = ZONE[zKey]
                         const alert14 = !isKarinaTeam && isRedFor14Days(mRep, manager.created_at)
@@ -662,9 +684,15 @@ export default function AdminPage() {
                               )}
                             </div>
 
-                            <div className="mb-3">
-                              <span className={`text-3xl font-bold ${z.text}`}>{value7}</span>
-                              <span className="text-gray-500 text-xs ml-1">{isKarinaTeam ? 'карт' : 'ИП'} / 7 дн</span>
+                            <div className="mb-3 space-y-0.5">
+                              <div>
+                                <span className={`text-3xl font-bold ${z.text}`}>{value7}</span>
+                                <span className="text-gray-500 text-xs ml-1">{isKarinaTeam ? 'карт' : 'ИП'} / 7 дн</span>
+                              </div>
+                              <div>
+                                <span className="text-lg font-semibold text-gray-300">{isKarinaTeam ? ip7 : cards7}</span>
+                                <span className="text-gray-500 text-xs ml-1">{isKarinaTeam ? 'ИП' : 'карт'} / 7 дн</span>
+                              </div>
                             </div>
 
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>

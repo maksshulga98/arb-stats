@@ -42,6 +42,18 @@ function getIPForPeriod(reports, daysStart, daysEnd) {
 
 function getIPLast7Days(reports) { return getIPForPeriod(reports, 0, 7) }
 
+// Аналог getIPLast7Days для дебетовых карт. На карточках менеджеров в
+// "Аналитика команды" показываем обе метрики рядом, чтобы тимлид видел и ИП,
+// и карты независимо от типа команды.
+function getCardsLast7Days(reports) {
+  const now = new Date()
+  now.setHours(23, 59, 59, 999)
+  const start = new Date(now); start.setDate(start.getDate() - 7); start.setHours(0, 0, 0, 0)
+  return reports
+    .filter(r => { const d = new Date(r.date); return d >= start && d <= now })
+    .reduce((sum, r) => sum + (r.ordered_cards || 0), 0)
+}
+
 function isRedFor14Days(reports, createdAt) {
   if (createdAt) {
     const ago14 = new Date(); ago14.setDate(ago14.getDate() - 14)
@@ -972,9 +984,11 @@ export default function TeamleadPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {managers.map(manager => {
                     const mRep    = mgr7Reps(manager.id)
-                    const value7  = isKarina
-                      ? mRep.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const start = new Date(now); start.setDate(start.getDate()-7); start.setHours(0,0,0,0); return d >= start && d <= now }).reduce((s, r) => s + (r.ordered_cards || 0), 0)
-                      : getIPLast7Days(mRep)
+                    // Обе метрики на карточке, основная определяется типом команды
+                    // (по ней — цвет зоны и порог в isRedFor14Days).
+                    const ip7     = getIPLast7Days(mRep)
+                    const cards7  = getCardsLast7Days(mRep)
+                    const value7  = isKarina ? cards7 : ip7
                     const zKey    = getZoneKey(value7, teamInfo?.type)
                     const z       = ZONE[zKey]
                     const alert14 = !isKarina && isRedFor14Days(mRep, manager.created_at)
@@ -1008,9 +1022,15 @@ export default function TeamleadPage() {
 
                         {!isDeletePending ? (
                           <>
-                            <div className="mb-3">
-                              <span className={`text-2xl font-bold ${z.text}`}>{value7}</span>
-                              <span className="text-gray-500 text-xs ml-1">{isKarina ? 'карт' : 'ИП'} / 7 дн</span>
+                            <div className="mb-3 space-y-0.5">
+                              <div>
+                                <span className={`text-2xl font-bold ${z.text}`}>{value7}</span>
+                                <span className="text-gray-500 text-xs ml-1">{isKarina ? 'карт' : 'ИП'} / 7 дн</span>
+                              </div>
+                              <div>
+                                <span className="text-base font-semibold text-gray-300">{isKarina ? ip7 : cards7}</span>
+                                <span className="text-gray-500 text-xs ml-1">{isKarina ? 'ИП' : 'карт'} / 7 дн</span>
+                              </div>
                             </div>
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>{z.label}</span>
                             {(() => {
