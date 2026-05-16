@@ -12,14 +12,13 @@ import { MANAGER_SHEETS } from '../../lib/sheets-config'
 // ── Team config ──────────────────────────────────────────────────────────────
 const TEAMS = [
   { id: 'anastasia', name: 'Анастасии', type: 'standard' },
-  { id: 'yasmin',    name: 'Ясмин',     type: 'standard' },
   { id: 'olya',      name: 'Оли',       type: 'standard' },
   { id: 'karina',    name: 'Карины',    type: 'karina'   },
   { id: 'nikita',    name: 'Никиты',    type: 'nikita'   },
 ]
 
 // Команды с доступом к выдаче номеров
-const CONTACT_TEAMS = ['yasmin', 'karina', 'anastasia', 'olya']
+const CONTACT_TEAMS = ['karina', 'anastasia', 'olya']
 
 function formatTimeLeft(ms) {
   if (ms <= 0) return null

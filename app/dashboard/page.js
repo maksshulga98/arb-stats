@@ -6,14 +6,13 @@ import { getMissingReportAlerts } from '../../lib/notifications'
 
 const TEAMS = {
   anastasia: { name: 'Анастасии', type: 'standard' },
-  yasmin:    { name: 'Ясмин',     type: 'standard' },
   olya:      { name: 'Оли',       type: 'standard' },
   karina:    { name: 'Карины',    type: 'karina'   },
   nikita:    { name: 'Никиты',    type: 'nikita'   },
 }
 
 // Команды с доступом к выдаче номеров
-const CONTACT_TEAMS = ['yasmin', 'karina', 'anastasia', 'olya']
+const CONTACT_TEAMS = ['karina', 'anastasia', 'olya']
 
 function getLast7Days(reports, field = 'ordered_ip') {
   const cutoff = new Date()

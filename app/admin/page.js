@@ -11,7 +11,6 @@ import { MANAGER_SHEETS, MONTHS_RU } from '../../lib/sheets-config'
 
 const TEAMS = [
   { id: 'anastasia', name: 'Анастасии', type: 'standard' },
-  { id: 'yasmin',    name: 'Ясмин',     type: 'standard' },
   { id: 'olya',      name: 'Оли',       type: 'standard' },
   { id: 'karina',    name: 'Карины',    type: 'karina'   },
   { id: 'nikita',    name: 'Никиты',    type: 'nikita'   },
