@@ -48,6 +48,12 @@ export async function DELETE(request, { params }) {
       }
     }
 
+    // Admin can delete managers from any team, но НЕ других админов/тимлидов
+    // (для удаления тимлида/админа нужно идти прямо в Supabase — защита от случайностей).
+    if (callerProfile.role === 'admin' && targetProfile.role !== 'manager') {
+      return NextResponse.json({ error: 'Через эту функцию можно удалять только менеджеров' }, { status: 403 })
+    }
+
     // Soft-delete: keep team so stats remain in team analytics, only change role
     await supabaseAdmin
       .from('profiles')

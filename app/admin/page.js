@@ -145,6 +145,9 @@ export default function AdminPage() {
   const [dateTo, setDateTo]              = useState(new Date().toISOString().split('T')[0])
   const [selectedManager, setSelectedManager] = useState(null)
   const [deletingReport, setDeletingReport]   = useState(null)
+  // Удаление менеджера: deleteConfirm — id того, по которому идёт подтверждение
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [deleting, setDeleting]           = useState(false)
   const [showBell, setShowBell]           = useState(false)
   const [sheetsData, setSheetsData]       = useState({})
   const [sheetsLoading, setSheetsLoading] = useState(false)
@@ -436,6 +439,43 @@ export default function AdminPage() {
     setDeletingReport(null)
   }
 
+  // ── Soft-delete менеджера ──────────────────────────────────────────────────
+  // Бэкенд: DELETE /api/managers/[id]. Меняет role: manager → deleted,
+  // удаляет auth-пользователя (отзывает логин) и чистит TG-привязки в Google Sheets.
+  // Профиль сохраняется, чтобы исторические отчёты продолжали учитываться
+  // в командной аналитике (через массив deletedMembers).
+  const handleDeleteManager = async (managerId) => {
+    setDeleting(true)
+    try {
+      const res = await authFetch(`/api/managers/${managerId}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.success) {
+        setDeleteConfirm(null)
+        if (selectedManager?.id === managerId) setSelectedManager(null)
+        // Перемещаем менеджера из активных в удалённые без перезагрузки всех данных
+        setManagers(prev => prev.filter(m => m.id !== managerId))
+        setDeletedMembers(prev => {
+          // если профиль уже есть в активных — добавляем его сюда с role=deleted
+          const moved = (prev.find(m => m.id === managerId)) ? prev : [
+            ...prev,
+            ...((() => {
+              const found = managers.find(m => m.id === managerId)
+              return found ? [{ ...found, role: 'deleted' }] : []
+            })()),
+          ]
+          return moved
+        })
+      } else {
+        alert(`Не удалось удалить: ${data.error || 'неизвестная ошибка'}`)
+      }
+    } catch (e) {
+      console.error('handleDeleteManager:', e)
+      alert('Сетевая ошибка при удалении')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const redManagers = useMemo(
     () => managers.filter(m => isRedFor14Days(reportsByManager.get(m.id) || [], m.created_at)),
     [managers, reportsByManager]
@@ -657,12 +697,15 @@ export default function AdminPage() {
                         const zKey    = getZoneKey(value7, team.type)
                         const z       = ZONE[zKey]
                         const alert14 = !isKarinaTeam && isRedFor14Days(mRep, manager.created_at)
+                        const isDeletePending = deleteConfirm === manager.id
+                        // Тимлидов в админке не удаляем — только менеджеров
+                        const canDelete = manager.role === 'manager'
 
                         return (
-                          <button
+                          <div
                             key={manager.id}
-                            onClick={() => setSelectedManager(manager)}
-                            className={`border rounded-2xl p-4 text-left transition-all hover:scale-[1.02] hover:shadow-lg cursor-pointer ${z.card}`}
+                            onClick={() => !isDeletePending && setSelectedManager(manager)}
+                            className={`group border rounded-2xl p-4 text-left transition-all ${z.card} ${!isDeletePending ? 'hover:scale-[1.02] hover:shadow-lg cursor-pointer' : ''}`}
                           >
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex items-center gap-1.5 min-w-0">
@@ -673,44 +716,74 @@ export default function AdminPage() {
                                 {manager.role === 'teamlead' && <span className="text-xs text-blue-400 ml-1">(ТЛ)</span>}
                               </span>
                               </div>
-                              {alert14 && (
-                                <span
-                                  title="14 дней в красной зоне"
-                                  className="text-red-400 text-base leading-none ml-1 flex-shrink-0"
-                                >
-                                  ⚠
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="mb-3 space-y-0.5">
-                              <div>
-                                <span className={`text-3xl font-bold ${z.text}`}>{value7}</span>
-                                <span className="text-gray-500 text-xs ml-1">{isKarinaTeam ? 'карт' : 'ИП'} / 7 дн</span>
-                              </div>
-                              <div>
-                                <span className="text-lg font-semibold text-gray-300">{isKarinaTeam ? ip7 : cards7}</span>
-                                <span className="text-gray-500 text-xs ml-1">{isKarinaTeam ? 'ИП' : 'карт'} / 7 дн</span>
+                              <div className="flex items-center gap-1 ml-1 flex-shrink-0">
+                                {alert14 && (
+                                  <span title="14 дней в красной зоне" className="text-red-400 text-base leading-none">⚠</span>
+                                )}
+                                {canDelete && !isDeletePending && (
+                                  <button
+                                    onClick={e => { e.stopPropagation(); setDeleteConfirm(manager.id) }}
+                                    className="text-gray-700 hover:text-red-400 transition opacity-0 group-hover:opacity-100 p-0.5"
+                                    title="Удалить менеджера"
+                                  >
+                                    <TrashIcon />
+                                  </button>
+                                )}
                               </div>
                             </div>
 
-                            <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>
-                              {z.label}
-                            </span>
-                            {(() => {
-                              const mName = normName(manager.name || manager.email)
-                              const accs = tgByName.get(mName) || []
-                              if (accs.length === 0) return null
-                              return (
-                                <div className="mt-2 pt-2 border-t border-white/5">
-                                  <p className="text-gray-500 text-xs mb-1">TG аккаунтов: <span className="text-gray-300 font-medium">{accs.length}</span></p>
-                                  {accs.map((a, i) => (
-                                    <p key={i} className="text-gray-500 text-xs truncate">{a.phone}{a.tgLink ? ` · ${a.tgLink}` : ''}</p>
-                                  ))}
+                            {!isDeletePending ? (
+                              <>
+                                <div className="mb-3 space-y-0.5">
+                                  <div>
+                                    <span className={`text-3xl font-bold ${z.text}`}>{value7}</span>
+                                    <span className="text-gray-500 text-xs ml-1">{isKarinaTeam ? 'карт' : 'ИП'} / 7 дн</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-lg font-semibold text-gray-300">{isKarinaTeam ? ip7 : cards7}</span>
+                                    <span className="text-gray-500 text-xs ml-1">{isKarinaTeam ? 'ИП' : 'карт'} / 7 дн</span>
+                                  </div>
                                 </div>
-                              )
-                            })()}
-                          </button>
+
+                                <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>
+                                  {z.label}
+                                </span>
+                                {(() => {
+                                  const mName = normName(manager.name || manager.email)
+                                  const accs = tgByName.get(mName) || []
+                                  if (accs.length === 0) return null
+                                  return (
+                                    <div className="mt-2 pt-2 border-t border-white/5">
+                                      <p className="text-gray-500 text-xs mb-1">TG аккаунтов: <span className="text-gray-300 font-medium">{accs.length}</span></p>
+                                      {accs.map((a, i) => (
+                                        <p key={i} className="text-gray-500 text-xs truncate">{a.phone}{a.tgLink ? ` · ${a.tgLink}` : ''}</p>
+                                      ))}
+                                    </div>
+                                  )
+                                })()}
+                              </>
+                            ) : (
+                              <div onClick={e => e.stopPropagation()}>
+                                <p className="text-gray-400 text-xs mb-3">Удалить менеджера? История отчётов сохранится в командной аналитике.</p>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleDeleteManager(manager.id)}
+                                    disabled={deleting}
+                                    className="bg-red-600 hover:bg-red-500 disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                                  >
+                                    {deleting ? '...' : 'Удалить'}
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteConfirm(null)}
+                                    disabled={deleting}
+                                    className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs transition"
+                                  >
+                                    Отмена
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         )
                       })}
                     </div>
@@ -1836,6 +1909,39 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Footer: удалить менеджера (только для role=manager) */}
+            {selectedManager.role === 'manager' && (
+              <div style={{ borderTop: '1px solid #1f1f2e' }} className="px-6 py-4 flex justify-end">
+                {deleteConfirm === selectedManager.id ? (
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-400 text-sm">Удалить менеджера?</span>
+                    <button
+                      onClick={() => handleDeleteManager(selectedManager.id)}
+                      disabled={deleting}
+                      className="bg-red-600 hover:bg-red-500 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-semibold transition"
+                    >
+                      {deleting ? '...' : 'Да, удалить'}
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(null)}
+                      disabled={deleting}
+                      className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm transition"
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setDeleteConfirm(selectedManager.id)}
+                    className="text-gray-600 hover:text-red-400 text-sm flex items-center gap-1.5 transition"
+                  >
+                    <TrashIcon />
+                    Удалить менеджера
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
