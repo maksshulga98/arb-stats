@@ -96,9 +96,19 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Нет TELEGRAM_CHAT_ID_*' }, { status: 500 })
     }
 
-    const today      = mskDate(0)
-    const yesterday  = mskDate(-1)
-    const monthStart = firstDayOfMonthMsk()
+    // По умолчанию — сегодня в МСК. Для теста можно передать ?date=YYYY-MM-DD,
+    // тогда "сегодня" сводки = указанная дата, "вчера" = -1 день, "месяц" = с 1-го числа того месяца.
+    const url = new URL(request.url)
+    const overrideDate = url.searchParams.get('date')
+    const today = overrideDate && /^\d{4}-\d{2}-\d{2}$/.test(overrideDate)
+      ? overrideDate
+      : mskDate(0)
+
+    // yesterday/monthStart вычисляем относительно today
+    const yesterdayDt = new Date(`${today}T12:00:00Z`)
+    yesterdayDt.setUTCDate(yesterdayDt.getUTCDate() - 1)
+    const yesterday  = yesterdayDt.toISOString().slice(0, 10)
+    const monthStart = today.slice(0, 7) + '-01'
     const monthName  = currentMonthName(today)
 
     const supabase = createClient(
