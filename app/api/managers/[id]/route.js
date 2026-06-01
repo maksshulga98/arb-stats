@@ -142,7 +142,7 @@ export async function PUT(request, { params }) {
     }
 
     const body = await request.json()
-    const { sheetUrl, paymentInfo } = body
+    const { sheetUrl, paymentInfo, team } = body
     const updateFields = {}
 
     // Sheet URL handling
@@ -163,6 +163,25 @@ export async function PUT(request, { params }) {
       updateFields.payment_info = paymentInfo || null
     }
 
+    // Перенос менеджера в другую команду (admin only). Тимлид этого делать не может —
+    // иначе он бы мог утащить чужих людей в свою команду.
+    if ('team' in body) {
+      if (callerProfile.role !== 'admin') {
+        return NextResponse.json({ error: 'Только админ может переносить менеджеров между командами' }, { status: 403 })
+      }
+      // Допустимые команды соответствуют TEAMS в UI. null разрешён — означает «вне команды».
+      const ALLOWED_TEAMS = ['anastasia', 'olya', 'karina', 'nikita', null]
+      if (!ALLOWED_TEAMS.includes(team)) {
+        return NextResponse.json({ error: `Неизвестная команда: ${team}` }, { status: 400 })
+      }
+      // Перенос имеет смысл только для активных менеджеров. Тимлидов и админов
+      // через эту функцию не двигаем (для них перенос — это смена обязанностей).
+      if (targetProfile.role !== 'manager') {
+        return NextResponse.json({ error: 'Через эту функцию переносятся только менеджеры' }, { status: 403 })
+      }
+      updateFields.team = team
+    }
+
     if (Object.keys(updateFields).length === 0) {
       return NextResponse.json({ error: 'Нет данных для обновления' }, { status: 400 })
     }
@@ -176,7 +195,12 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: updateError.message }, { status: 400 })
     }
 
-    return NextResponse.json({ success: true, sheetId: updateFields.sheet_id, paymentInfo: updateFields.payment_info })
+    return NextResponse.json({
+      success: true,
+      sheetId: updateFields.sheet_id,
+      paymentInfo: updateFields.payment_info,
+      team: updateFields.team,
+    })
   } catch (e) {
     console.error('PUT /api/managers/[id] error:', e?.message || e)
     return NextResponse.json({ error: 'Внутренняя ошибка' }, { status: 500 })

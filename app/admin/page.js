@@ -148,6 +148,10 @@ export default function AdminPage() {
   // Удаление менеджера: deleteConfirm — id того, по которому идёт подтверждение
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [deleting, setDeleting]           = useState(false)
+  // Перенос менеджера между командами (только в модалке выбранного)
+  const [editingTeam, setEditingTeam] = useState(false)
+  const [newTeamValue, setNewTeamValue] = useState('')
+  const [savingTeam, setSavingTeam] = useState(false)
   const [showBell, setShowBell]           = useState(false)
   const [sheetsData, setSheetsData]       = useState({})
   const [sheetsLoading, setSheetsLoading] = useState(false)
@@ -198,6 +202,8 @@ export default function AdminPage() {
 
   useEffect(() => { checkAdmin() }, [])
   useEffect(() => { setSheetEditing(false); setSheetUrlInput('') }, [selectedManager?.id])
+  // Закрываем редактор команды при смене выбранного менеджера/закрытии модалки
+  useEffect(() => { setEditingTeam(false); setNewTeamValue('') }, [selectedManager?.id])
 
   // Fetch Google Sheets ЦД data when daily tab is active
   useEffect(() => {
@@ -437,6 +443,34 @@ export default function AdminPage() {
     await supabase.from('reports').delete().eq('id', reportId)
     setReports(prev => prev.filter(r => r.id !== reportId))
     setDeletingReport(null)
+  }
+
+  // ── Перенос менеджера в другую команду ─────────────────────────────────────
+  // PUT /api/managers/[id] с { team }. Бэкенд проверяет что caller=admin
+  // и target=manager (тимлидов/админов не двигаем).
+  const handleTransferTeam = async (managerId, newTeam) => {
+    setSavingTeam(true)
+    try {
+      const res = await authFetch(`/api/managers/${managerId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ team: newTeam }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        // Обновляем менеджера в локальном стейте — без full reload
+        setManagers(prev => prev.map(m => m.id === managerId ? { ...m, team: newTeam } : m))
+        setSelectedManager(prev => prev && prev.id === managerId ? { ...prev, team: newTeam } : prev)
+        setEditingTeam(false)
+        setNewTeamValue('')
+      } else {
+        alert(`Не удалось перенести: ${data.error || 'неизвестная ошибка'}`)
+      }
+    } catch (e) {
+      console.error('handleTransferTeam:', e)
+      alert('Сетевая ошибка при переносе')
+    } finally {
+      setSavingTeam(false)
+    }
   }
 
   // ── Soft-delete менеджера ──────────────────────────────────────────────────
@@ -1687,13 +1721,57 @@ export default function AdminPage() {
               style={{ borderBottom: '1px solid #1f1f2e' }}
               className="px-6 py-5 flex justify-between items-start"
             >
-              <div>
+              <div className="min-w-0 flex-1">
                 <h2 className="text-lg font-bold text-white">{selectedManager.name || selectedManager.email}</h2>
-                <p className="text-gray-500 text-sm mt-0.5">
-                  {modalTeam ? `Команда ${modalTeam.name}` : 'Команда не задана'}
-                  {' · '}
-                  {modalReports.length} отчётов
-                </p>
+                {/* Команда: при role=manager и НЕ в режиме редактирования — клик по имени команды
+                    открывает выпадающий select для переноса в другую команду. */}
+                <div className="text-gray-500 text-sm mt-0.5 flex items-center gap-2 flex-wrap">
+                  {selectedManager.role === 'manager' && editingTeam ? (
+                    <>
+                      <span>Команда:</span>
+                      <select
+                        value={newTeamValue}
+                        onChange={e => setNewTeamValue(e.target.value)}
+                        disabled={savingTeam}
+                        style={{ backgroundColor: '#1a1a28', border: '1px solid #2a2a3e' }}
+                        className="text-gray-200 text-xs rounded-md px-2 py-1"
+                      >
+                        {TEAMS.map(t => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => handleTransferTeam(selectedManager.id, newTeamValue)}
+                        disabled={savingTeam || newTeamValue === selectedManager.team}
+                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 px-2.5 py-1 rounded-md text-xs text-white transition"
+                      >
+                        {savingTeam ? '...' : 'Перенести'}
+                      </button>
+                      <button
+                        onClick={() => { setEditingTeam(false); setNewTeamValue('') }}
+                        disabled={savingTeam}
+                        className="text-gray-500 hover:text-gray-300 text-xs transition"
+                      >
+                        Отмена
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span>{modalTeam ? `Команда ${modalTeam.name}` : 'Команда не задана'}</span>
+                      {selectedManager.role === 'manager' && (
+                        <button
+                          onClick={() => { setEditingTeam(true); setNewTeamValue(selectedManager.team || '') }}
+                          className="text-blue-400 hover:text-blue-300 text-xs underline-offset-2 hover:underline transition"
+                          title="Перенести менеджера в другую команду"
+                        >
+                          сменить команду
+                        </button>
+                      )}
+                      <span>·</span>
+                      <span>{modalReports.length} отчётов</span>
+                    </>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => setSelectedManager(null)}
