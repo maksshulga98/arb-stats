@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/check-cd-status",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/daily-summary",
+      "schedule": "0 18 * * *"
     }
   ]
 }
