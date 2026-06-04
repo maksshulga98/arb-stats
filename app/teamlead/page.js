@@ -8,6 +8,7 @@ import { getMissingReportAlerts } from '../../lib/notifications'
 const CYR_MAP = { a:'а',b:'в',c:'с',e:'е',h:'н',k:'к',m:'м',o:'о',p:'р',t:'т',x:'х',y:'у' }
 const normName = s => (s||'').trim().replace(/\s+/g,' ').toLowerCase().replace(/[a-z]/g, c => CYR_MAP[c] || c)
 import { MANAGER_SHEETS } from '../../lib/sheets-config'
+import AccountLinkSection from '../../components/AccountLinkSection'
 
 // ── Team config ──────────────────────────────────────────────────────────────
 const TEAMS = [
@@ -642,7 +643,8 @@ export default function TeamleadPage() {
     { id: 'salary',    label: 'Расчёт ЗП' },
     { id: 'telegram',  label: 'Аккаунты Телеграмм' },
     ...(hasContactsAccess ? [{ id: 'contacts', label: 'Выдача номеров' }] : []),
-    { id: 'ip-link', label: 'Ссылка ИП' },
+    // { id: 'ip-link', label: 'Ссылка ИП' },  // временно скрыто
+    { id: 'account-link', label: 'Счёт ИП' },
     { id: 'add-cd', label: 'Добавить ЦД' },
   ]
 
@@ -1649,7 +1651,16 @@ export default function TeamleadPage() {
           </>
         )}
 
-        {/* ─── IP Link tab ─── */}
+        {/* ─── Счёт ИП (РКО, оффер 533) ─── */}
+        {activeTab === 'account-link' && (
+          <AccountLinkSection
+            scope="team"
+            showManagerColumn
+            managerNameById={Object.fromEntries(managers.map(m => [m.id, m.name]))}
+          />
+        )}
+
+        {/* ─── IP Link tab (временно скрыт) ─── */}
         {activeTab === 'ip-link' && (
           <>
             <div className="flex justify-between items-center mb-4">

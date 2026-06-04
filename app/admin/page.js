@@ -8,6 +8,7 @@ import { getMissingReportAlerts } from '../../lib/notifications'
 const CYR_MAP = { a:'а',b:'в',c:'с',e:'е',h:'н',k:'к',m:'м',o:'о',p:'р',t:'т',x:'х',y:'у' }
 const normName = s => (s||'').trim().replace(/\s+/g,' ').toLowerCase().replace(/[a-z]/g, c => CYR_MAP[c] || c)
 import { MANAGER_SHEETS, MONTHS_RU } from '../../lib/sheets-config'
+import AccountLinkSection from '../../components/AccountLinkSection'
 
 const TEAMS = [
   { id: 'anastasia', name: 'Анастасии', type: 'standard' },
@@ -540,7 +541,8 @@ export default function AdminPage() {
     { id: 'daily',     label: 'Дневной отчёт' },
     { id: 'salary',    label: 'Расчёт ЗП' },
     { id: 'telegram',  label: 'Аккаунты Телеграмм' },
-    { id: 'ip-link',   label: 'Ссылка ИП' },
+    // { id: 'ip-link',   label: 'Ссылка ИП' },  // временно скрыто — заменён на "Счёт ИП"
+    { id: 'account-link', label: 'Счёт ИП' },
     { id: 'add-cd',    label: 'Добавить ЦД' },
   ]
 
@@ -1517,7 +1519,16 @@ export default function AdminPage() {
           )
         })()}
 
-        {/* ─── IP Link tab ─── */}
+        {/* ─── Счёт ИП (РКО, оффер 533) ─── */}
+        {activeTab === 'account-link' && (
+          <AccountLinkSection
+            scope="all"
+            showManagerColumn
+            managerNameById={Object.fromEntries(managers.map(m => [m.id, m.name]))}
+          />
+        )}
+
+        {/* ─── IP Link tab (временно скрыт) ─── */}
         {activeTab === 'ip-link' && (
           <>
             <div className="flex justify-between items-center mb-4">
