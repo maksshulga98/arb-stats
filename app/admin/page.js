@@ -11,7 +11,7 @@ import { MANAGER_SHEETS, MONTHS_RU } from '../../lib/sheets-config'
 import AccountLinkSection from '../../components/AccountLinkSection'
 
 const TEAMS = [
-  { id: 'anastasia', name: 'Анастасии', type: 'standard' },
+  // 04.06.2026: команда Анастасии расформирована
   { id: 'olya',      name: 'Оли',       type: 'standard' },
   { id: 'karina',    name: 'Карины',    type: 'karina'   },
   { id: 'nikita',    name: 'Никиты',    type: 'nikita'   },

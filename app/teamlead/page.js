@@ -12,14 +12,13 @@ import AccountLinkSection from '../../components/AccountLinkSection'
 
 // ── Team config ──────────────────────────────────────────────────────────────
 const TEAMS = [
-  { id: 'anastasia', name: 'Анастасии', type: 'standard' },
   { id: 'olya',      name: 'Оли',       type: 'standard' },
   { id: 'karina',    name: 'Карины',    type: 'karina'   },
   { id: 'nikita',    name: 'Никиты',    type: 'nikita'   },
 ]
 
-// Команды с доступом к выдаче номеров
-const CONTACT_TEAMS = ['karina', 'anastasia', 'olya']
+// Команды с доступом к выдаче номеров (04.06.2026: команда Анастасии расформирована)
+const CONTACT_TEAMS = ['karina', 'olya']
 
 function formatTimeLeft(ms) {
   if (ms <= 0) return null

@@ -59,13 +59,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'accountsCount должен быть 1, 2 или 3' }, { status: 400 })
     }
 
-    // Точечное разрешение: София С из команды Никиты — колонка B (администратор)
-    let columnIndex
-    if (profile.team === 'nikita' && profile.name === 'София С') {
-      columnIndex = 1
-    } else {
-      columnIndex = TEAM_CONTACT_COLUMN[profile.team]
-    }
+    // 04.06.2026: спецкейс София С (Никита) убран — теперь только TEAM_CONTACT_COLUMN
+    const columnIndex = TEAM_CONTACT_COLUMN[profile.team]
     if (columnIndex === undefined) {
       return NextResponse.json(
         { error: 'Для вашей команды выдача контактов не доступна' },

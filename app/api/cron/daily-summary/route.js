@@ -15,7 +15,7 @@ export const maxDuration = 60
 
 // Команды — синхронизировано с TEAMS в app/admin/page.js
 const TEAMS = [
-  { id: 'anastasia', name: 'Анастасии', type: 'standard' },
+  // 04.06.2026: команда Анастасии расформирована
   { id: 'olya',      name: 'Оли',       type: 'standard' },
   { id: 'karina',    name: 'Карины',    type: 'karina'   },
   { id: 'nikita',    name: 'Никиты',    type: 'nikita'   },

@@ -170,7 +170,8 @@ export async function PUT(request, { params }) {
         return NextResponse.json({ error: 'Только админ может переносить менеджеров между командами' }, { status: 403 })
       }
       // Допустимые команды соответствуют TEAMS в UI. null разрешён — означает «вне команды».
-      const ALLOWED_TEAMS = ['anastasia', 'olya', 'karina', 'nikita', null]
+      // 04.06.2026: команда Анастасии расформирована
+      const ALLOWED_TEAMS = ['olya', 'karina', 'nikita', null]
       if (!ALLOWED_TEAMS.includes(team)) {
         return NextResponse.json({ error: `Неизвестная команда: ${team}` }, { status: 400 })
       }
