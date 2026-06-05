@@ -9,6 +9,7 @@ const CYR_MAP = { a:'а',b:'в',c:'с',e:'е',h:'н',k:'к',m:'м',o:'о',p:'р'
 const normName = s => (s||'').trim().replace(/\s+/g,' ').toLowerCase().replace(/[a-z]/g, c => CYR_MAP[c] || c)
 import { MANAGER_SHEETS, MONTHS_RU } from '../../lib/sheets-config'
 import AccountLinkSection from '../../components/AccountLinkSection'
+import TasksSection from '../../components/TasksSection'
 
 const TEAMS = [
   // 04.06.2026: команда Анастасии расформирована
@@ -159,6 +160,7 @@ export default function AdminPage() {
   const [contactStats, setContactStats]   = useState({ total: 0, byManager: [] })
   const [contactsLoading, setContactsLoading] = useState(false)
   const [deletedMembers, setDeletedMembers] = useState([])
+  const [admins, setAdmins] = useState([])  // для раздела "Задачи"
   // Salary tab state
   const now = new Date()
   const [salaryMonth, setSalaryMonth]     = useState(now.getMonth())
@@ -277,16 +279,18 @@ export default function AdminPage() {
     dateLimit.setDate(dateLimit.getDate() - 180)
     const dateLimitStr = dateLimit.toISOString().split('T')[0]
 
-    const [mgrsRes, tlsRes, repsRes, deletedRes] = await Promise.allSettled([
+    const [mgrsRes, tlsRes, repsRes, deletedRes, admsRes] = await Promise.allSettled([
       supabase.from('profiles').select('*').eq('role', 'manager'),
       supabase.from('profiles').select('*').eq('role', 'teamlead'),
       supabase.from('reports').select('*').gte('date', dateLimitStr).order('date', { ascending: false }),
       supabase.from('profiles').select('*').eq('role', 'deleted'),
+      supabase.from('profiles').select('id, name, email').eq('role', 'admin'),
     ])
     setManagers(mgrsRes.status === 'fulfilled' ? (mgrsRes.value.data || []) : [])
     setTeamleads(tlsRes.status === 'fulfilled' ? (tlsRes.value.data || []) : [])
     setReports(repsRes.status === 'fulfilled' ? (repsRes.value.data || []) : [])
     setDeletedMembers(deletedRes.status === 'fulfilled' ? (deletedRes.value.data || []) : [])
+    setAdmins(admsRes.status === 'fulfilled' ? (admsRes.value.data || []) : [])
   }
 
   const loadTgAccountsInit = async () => {
@@ -538,6 +542,7 @@ export default function AdminPage() {
 
   const TABS = [
     { id: 'analytics', label: 'Аналитика команды' },
+    { id: 'tasks',     label: 'Задачи' },
     { id: 'daily',     label: 'Дневной отчёт' },
     { id: 'salary',    label: 'Расчёт ЗП' },
     { id: 'telegram',  label: 'Аккаунты Телеграмм' },
@@ -1518,6 +1523,11 @@ export default function AdminPage() {
             </div>
           )
         })()}
+
+        {/* ─── Задачи (приватный таск-трекер для админов) ─── */}
+        {activeTab === 'tasks' && user && (
+          <TasksSection currentUserId={user.id} admins={admins} />
+        )}
 
         {/* ─── Счёт ИП (РКО, оффер 533) ─── */}
         {activeTab === 'account-link' && (
