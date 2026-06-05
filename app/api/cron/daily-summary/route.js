@@ -96,13 +96,19 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Нет TELEGRAM_CHAT_ID_*' }, { status: 500 })
     }
 
-    // По умолчанию — сегодня в МСК. Для теста можно передать ?date=YYYY-MM-DD,
-    // тогда "сегодня" сводки = указанная дата, "вчера" = -1 день, "месяц" = с 1-го числа того месяца.
+    // Выбор "сегодня" для сводки:
+    //   - ?date=YYYY-MM-DD     — конкретная дата (отладка / бэкфилл)
+    //   - ?offset=N            — N дней назад (используется утренним cron'ом: offset=-1)
+    //   - по умолчанию         — текущий день в МСК
+    // Ограничение offset: -7..0 (защита от случайных гигантских сводок).
     const url = new URL(request.url)
     const overrideDate = url.searchParams.get('date')
+    const rawOffset = parseInt(url.searchParams.get('offset')) || 0
+    const offset = Math.max(-7, Math.min(0, rawOffset))
+    const isMorningRecap = offset === -1   // для заголовка сводки
     const today = overrideDate && /^\d{4}-\d{2}-\d{2}$/.test(overrideDate)
       ? overrideDate
-      : mskDate(0)
+      : mskDate(offset)
 
     // yesterday/monthStart вычисляем относительно today
     const yesterdayDt = new Date(`${today}T12:00:00Z`)
@@ -188,7 +194,9 @@ export async function GET(request) {
 
     // 5) Собираем сообщение
     const lines = []
-    lines.push(`📊 <b>Сводка за ${fmtDateHuman(today)}</b>`)
+    lines.push(isMorningRecap
+      ? `🌅 <b>Финальная сводка за ${fmtDateHuman(today)}</b> <i>(включая отчёты, сданные утром)</i>`
+      : `📊 <b>Сводка за ${fmtDateHuman(today)}</b>`)
     lines.push('')
 
     let totIpDay=0,totIpYest=0,totCardsDay=0,totCardsYest=0,totCdIpDay=0,totCdCardsDay=0,totNumDay=0
