@@ -96,12 +96,12 @@ export async function GET(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY,
     )
 
-    // 1) Все pending задачи с именем assignee
+    // 1) Все pending задачи с именем assignee (с email fallback'ом)
     const { data: tasks, error: tasksErr } = await supabase
       .from('tasks')
       .select(`
         id, title, deadline,
-        assignee:profiles!tasks_assignee_id_fkey(name)
+        assignee:profiles!tasks_assignee_id_fkey(name, email)
       `)
       .eq('status', 'pending')
     if (tasksErr) throw new Error(`tasks: ${tasksErr.message}`)
@@ -134,7 +134,9 @@ export async function GET(request) {
       for (const threshold of thresholdsNow) {
         if (sentSet.has(threshold)) continue
 
-        const taskWithName = { ...t, assignee_name: t.assignee?.name }
+        const fallbackName = t.assignee?.name
+          || (t.assignee?.email ? t.assignee.email.split('@')[0] : '?')
+        const taskWithName = { ...t, assignee_name: fallbackName }
         const message = buildMessage(threshold, taskWithName)
         const results = await broadcastTelegramMessage(token, recipients, message)
         const allOk = results.every(r => r.ok)

@@ -39,6 +39,14 @@ function fmtNotifSent(iso) {
   })
 }
 
+// Имя для отображения: name из profiles, иначе часть email до @
+function displayName(adminOrTask) {
+  if (adminOrTask?.name) return adminOrTask.name
+  const email = adminOrTask?.email || adminOrTask?.assignee_email
+  if (email) return email.split('@')[0]
+  return 'Без имени'
+}
+
 // Цветной кружок статуса по дедлайну
 function StatusDot({ task }) {
   if (task.status === 'done') return <span title="Выполнено">✅</span>
@@ -233,7 +241,7 @@ export default function TasksSection({ currentUserId, admins }) {
   const filterBtns = [
     { id: 'all',     label: 'Все',         count: counts.all },
     { id: 'mine',    label: 'Мои',         count: counts.mine },
-    { id: 'other',   label: otherAdmin ? `${otherAdmin.name?.split(' ')[0] || 'Другой'}` : '—', count: counts.other },
+    { id: 'other',   label: otherAdmin ? (displayName(otherAdmin).split(' ')[0]) : '—', count: counts.other },
     { id: 'overdue', label: 'Просрочены',  count: counts.overdue },
     { id: 'done',    label: 'Выполнены',   count: counts.done },
   ]
@@ -307,7 +315,7 @@ export default function TasksSection({ currentUserId, admins }) {
                       </>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-300">{t.assignee_name || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300">{t.assignee_name || displayName({ email: t.assignee_email }) || '—'}</td>
                   <td className="px-4 py-3 text-right">
                     <input
                       type="checkbox"
@@ -381,7 +389,9 @@ export default function TasksSection({ currentUserId, admins }) {
                   >
                     {!form.assignee_id && <option value="">— выбрать —</option>}
                     {admins.map(a => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
+                      <option key={a.id} value={a.id}>
+                        {displayName(a)}{a.id === currentUserId ? ' (я)' : ''}
+                      </option>
                     ))}
                   </select>
                 </div>
