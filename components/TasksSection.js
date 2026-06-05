@@ -248,29 +248,62 @@ export default function TasksSection({ currentUserId, admins }) {
 
   return (
     <>
-      {/* Шапка с фильтрами и кнопкой */}
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
-        <h2 className="text-base font-semibold text-gray-200">Задачи</h2>
-        <div className="flex gap-2 flex-wrap items-center">
-          {filterBtns.map(f => (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                filter === f.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
-              }`}
-            >
-              {f.label} <span className="opacity-60">{f.count}</span>
-            </button>
-          ))}
+      {/* Шапка: на мобильном — заголовок + кнопка на одной строке, фильтры на второй
+          На десктопе — всё в один ряд */}
+      <div className="mb-4">
+        <div className="flex justify-between items-center mb-3 sm:mb-0 sm:hidden">
+          <h2 className="text-base font-semibold text-gray-200">Задачи</h2>
           <button
             onClick={openCreateModal}
-            className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold transition ml-2"
+            className="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 px-4 py-2 rounded-lg text-sm font-semibold transition"
           >
-            + Новая задача
+            + Задача
           </button>
+        </div>
+
+        {/* Десктопная шапка (один ряд) */}
+        <div className="hidden sm:flex justify-between items-center flex-wrap gap-3">
+          <h2 className="text-base font-semibold text-gray-200">Задачи</h2>
+          <div className="flex gap-2 flex-wrap items-center">
+            {filterBtns.map(f => (
+              <button
+                key={f.id}
+                onClick={() => setFilter(f.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  filter === f.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+                }`}
+              >
+                {f.label} <span className="opacity-60">{f.count}</span>
+              </button>
+            ))}
+            <button
+              onClick={openCreateModal}
+              className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold transition ml-2"
+            >
+              + Новая задача
+            </button>
+          </div>
+        </div>
+
+        {/* Мобильные фильтры — горизонтальный скролл-ряд */}
+        <div className="sm:hidden -mx-4 px-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <div className="flex gap-2 pb-1" style={{ minWidth: 'max-content' }}>
+            {filterBtns.map(f => (
+              <button
+                key={f.id}
+                onClick={() => setFilter(f.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap ${
+                  filter === f.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-800 text-gray-400'
+                }`}
+              >
+                {f.label} <span className="opacity-60">{f.count}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -283,62 +316,102 @@ export default function TasksSection({ currentUserId, admins }) {
             {filter === 'all' ? 'Задач пока нет — создайте первую' : 'В этом разделе пусто'}
           </div>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
-                <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider w-12"></th>
-                <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Задача</th>
-                <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дедлайн</th>
-                <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответственный</th>
-                <th className="text-right px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider w-12"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTasks.map(t => (
-                <tr
+          <>
+            {/* Мобильные карточки (sm и ниже) */}
+            <div className="sm:hidden">
+              {filteredTasks.map((t, i) => (
+                <div
                   key={t.id}
                   onClick={() => openEditModal(t)}
-                  style={{ borderTop: '1px solid #1a1a28' }}
-                  className="hover:bg-white/[0.02] transition cursor-pointer"
+                  style={i > 0 ? { borderTop: '1px solid #1a1a28' } : {}}
+                  className="flex items-start gap-3 px-4 py-3 active:bg-white/[0.04] cursor-pointer"
                 >
-                  <td className="px-4 py-3 text-lg"><StatusDot task={t} /></td>
-                  <td className="px-4 py-3 text-sm text-gray-200 max-w-md truncate">
-                    {t.title}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {t.status === 'done' ? (
-                      <span className="text-gray-500">выполнено {t.completed_at ? fmtDeadline(t.completed_at) : ''}</span>
-                    ) : (
-                      <>
-                        <span className="text-gray-300">{fmtDeadline(t.deadline)}</span>{' '}
-                        <span className="text-gray-500 text-xs">({fmtRelative(t.deadline)})</span>
-                      </>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-300">{t.assignee_name || displayName({ email: t.assignee_email }) || '—'}</td>
-                  <td className="px-4 py-3 text-right">
-                    <input
-                      type="checkbox"
-                      checked={t.status === 'done'}
-                      onChange={e => handleToggleStatus(t, e)}
-                      onClick={e => e.stopPropagation()}
-                      className="w-4 h-4 cursor-pointer"
-                      title={t.status === 'done' ? 'Вернуть в pending' : 'Отметить выполненной'}
-                    />
-                  </td>
-                </tr>
+                  <div className="text-base flex-shrink-0 pt-0.5"><StatusDot task={t} /></div>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-sm font-medium truncate ${t.status === 'done' ? 'text-gray-500 line-through' : 'text-gray-200'}`}>
+                      {t.title}
+                    </div>
+                    <div className="text-xs mt-1">
+                      {t.status === 'done' ? (
+                        <span className="text-gray-500">выполнено {t.completed_at ? fmtDeadline(t.completed_at) : ''}</span>
+                      ) : (
+                        <>
+                          <span className="text-gray-400">{fmtDeadline(t.deadline)}</span>
+                          <span className="text-gray-600"> · {fmtRelative(t.deadline)}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {t.assignee_name || displayName({ email: t.assignee_email }) || '—'}
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={t.status === 'done'}
+                    onChange={e => handleToggleStatus(t, e)}
+                    onClick={e => e.stopPropagation()}
+                    className="w-5 h-5 cursor-pointer flex-shrink-0 mt-1"
+                  />
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Десктопная таблица (sm и выше) */}
+            <table className="hidden sm:table w-full">
+              <thead>
+                <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                  <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider w-12"></th>
+                  <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Задача</th>
+                  <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дедлайн</th>
+                  <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответственный</th>
+                  <th className="text-right px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider w-12"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTasks.map(t => (
+                  <tr
+                    key={t.id}
+                    onClick={() => openEditModal(t)}
+                    style={{ borderTop: '1px solid #1a1a28' }}
+                    className="hover:bg-white/[0.02] transition cursor-pointer"
+                  >
+                    <td className="px-4 py-3 text-lg"><StatusDot task={t} /></td>
+                    <td className="px-4 py-3 text-sm text-gray-200 max-w-md truncate">{t.title}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {t.status === 'done' ? (
+                        <span className="text-gray-500">выполнено {t.completed_at ? fmtDeadline(t.completed_at) : ''}</span>
+                      ) : (
+                        <>
+                          <span className="text-gray-300">{fmtDeadline(t.deadline)}</span>{' '}
+                          <span className="text-gray-500 text-xs">({fmtRelative(t.deadline)})</span>
+                        </>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-300">{t.assignee_name || displayName({ email: t.assignee_email }) || '—'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <input
+                        type="checkbox"
+                        checked={t.status === 'done'}
+                        onChange={e => handleToggleStatus(t, e)}
+                        onClick={e => e.stopPropagation()}
+                        className="w-4 h-4 cursor-pointer"
+                        title={t.status === 'done' ? 'Вернуть в pending' : 'Отметить выполненной'}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
 
       {/* Модалка */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={closeModal}>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center sm:items-center items-end justify-center p-0 sm:p-4" onClick={closeModal}>
           <div
             style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
-            className="rounded-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto"
+            className="w-full max-w-md p-5 sm:p-6 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4">
