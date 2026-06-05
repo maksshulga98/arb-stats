@@ -3,6 +3,11 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import {
+  notifyTaskCompleted,
+  notifyTaskDeadlineChanged,
+  notifyTaskDeleted,
+} from '../../../../lib/task-notifications'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,6 +105,14 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Нет полей для обновления' }, { status: 400 })
     }
 
+    // Подтягиваем старое состояние ДО апдейта — нужно для уведомлений
+    // (старый дедлайн, был ли status уже done и т.д.)
+    const { data: prev } = await supabaseAdmin
+      .from('tasks')
+      .select('title, deadline, status, assignee_id')
+      .eq('id', id)
+      .single()
+
     const { data: task, error } = await supabaseAdmin
       .from('tasks')
       .update(updates)
@@ -123,6 +136,17 @@ export async function PUT(request, { params }) {
     // При изменении deadline — сбрасываем уведомления, чтобы cron пересчитал
     if (deadlineChanged) {
       await supabaseAdmin.from('task_notifications').delete().eq('task_id', id)
+    }
+
+    // ─── TG уведомления (fire-and-forget) ───
+    // 1) Сменили deadline на новый (но не отменили задачу одновременно)
+    if (prev && deadlineChanged && prev.deadline !== task.deadline && task.status === 'pending') {
+      notifyTaskDeadlineChanged(task, prev.deadline, task.deadline, auth.profile.id, supabaseAdmin)
+        .catch(() => {})
+    }
+    // 2) Перевели задачу в done (был pending, стал done)
+    if (prev && prev.status === 'pending' && task.status === 'done') {
+      notifyTaskCompleted(task, auth.profile.id, supabaseAdmin).catch(() => {})
     }
 
     return NextResponse.json({
@@ -150,11 +174,24 @@ export async function DELETE(request, { params }) {
     const { supabaseAdmin } = auth
     const { id } = await params
 
+    // Подтягиваем задачу ДО удаления — нужно для уведомления
+    const { data: deletingTask } = await supabaseAdmin
+      .from('tasks')
+      .select('title, deadline, assignee_id')
+      .eq('id', id)
+      .single()
+
     const { error } = await supabaseAdmin.from('tasks').delete().eq('id', id)
     if (error) {
       console.error('DELETE /api/tasks/[id] error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    // TG уведомление о удалении (fire-and-forget)
+    if (deletingTask) {
+      notifyTaskDeleted(deletingTask, auth.profile.id, supabaseAdmin).catch(() => {})
+    }
+
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('DELETE /api/tasks/[id] error:', err)

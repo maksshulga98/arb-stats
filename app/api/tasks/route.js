@@ -4,7 +4,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { broadcastTelegramMessage, escapeHtml } from '../../../lib/telegram'
+import { notifyTaskCreated } from '../../../lib/task-notifications'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -17,66 +17,6 @@ function getClients() {
   return {
     supabaseAdmin: createClient(url, serviceKey),
     supabaseAnon: createClient(url, anonKey),
-  }
-}
-
-// Дата дедлайна в МСК для TG-сообщения
-function fmtDeadlineMsk(iso) {
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/Moscow',
-  }).format(new Date(iso))
-}
-
-// Имя для шаблона: name → email-handle → '?'
-function nameOrEmail(profile) {
-  if (profile?.name) return profile.name
-  if (profile?.email) return profile.email.split('@')[0]
-  return '?'
-}
-
-// Отправка уведомления о создании задачи в TG.
-// Не бросает — ошибки логируются, ответ POST'а не блокируется.
-async function notifyTaskCreated(task, supabaseAdmin) {
-  try {
-    const token = process.env.TELEGRAM_BOT_TOKEN
-    const recipients = [
-      process.env.TELEGRAM_CHAT_ID_OWNER,
-      process.env.TELEGRAM_CHAT_ID_NIKITA,
-    ].filter(Boolean)
-    if (!token || recipients.length === 0) return
-
-    // Подтянем email assignee/creator если name пустой
-    const ids = [task.assignee_id, task.creator_id].filter(Boolean)
-    const { data: profiles } = await supabaseAdmin
-      .from('profiles').select('id, name, email').in('id', ids)
-    const byId = Object.fromEntries((profiles || []).map(p => [p.id, p]))
-
-    const assigneeName = nameOrEmail(byId[task.assignee_id])
-    const creatorName = nameOrEmail(byId[task.creator_id])
-
-    const lines = [
-      '➕ <b>Создана новая задача</b>',
-      '',
-      `«<b>${escapeHtml(task.title)}</b>»`,
-    ]
-    if (task.description) {
-      lines.push('')
-      lines.push(`<i>${escapeHtml(task.description.slice(0, 500))}</i>`)
-    }
-    lines.push('')
-    lines.push(`Дедлайн: <i>${fmtDeadlineMsk(task.deadline)}</i>`)
-    lines.push(`Ответственный: <b>${escapeHtml(assigneeName)}</b>`)
-    if (task.creator_id && task.creator_id !== task.assignee_id) {
-      lines.push(`Поставил: <b>${escapeHtml(creatorName)}</b>`)
-    }
-
-    await broadcastTelegramMessage(token, recipients, lines.join('\n'))
-  } catch (err) {
-    console.error('notifyTaskCreated failed:', err?.message || err)
   }
 }
 
