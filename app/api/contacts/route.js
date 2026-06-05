@@ -93,24 +93,12 @@ export async function POST(request) {
       )
     }
 
-    // Собираем все уже выданные строки для этой колонки (source of truth)
-    const { data: allDists } = await supabaseAdmin
-      .from('contact_distributions')
-      .select('row_indices')
-      .eq('vacancy_column', vacancyColumn)
-
-    const claimedRows = []
-    if (allDists) {
-      for (const dist of allDists) {
-        if (Array.isArray(dist.row_indices)) {
-          claimedRows.push(...dist.row_indices)
-        }
-      }
-    }
-
-    // Читаем контакты из Google Sheets
+    // 04.06.2026: source of truth — заливка ячеек в Google Sheets, а не БД.
+    // Зелёные ячейки = выданные, белые = свободные. Это позволяет очищать
+    // выдачи через простое снятие заливки в самой таблице, не трогая БД.
+    // contact_distributions всё равно пишем — нужно для кулдауна и истории.
     const allContacts = await readColumnContacts(columnIndex)
-    const available = filterAvailableContacts(allContacts, claimedRows)
+    const available = filterAvailableContacts(allContacts)
 
     const totalNeeded = accountsCount * CONTACTS_PER_ACCOUNT
     if (available.length < totalNeeded) {
