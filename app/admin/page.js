@@ -10,6 +10,8 @@ const normName = s => (s||'').trim().replace(/\s+/g,' ').toLowerCase().replace(/
 import { MANAGER_SHEETS, MONTHS_RU } from '../../lib/sheets-config'
 import AccountLinkSection from '../../components/AccountLinkSection'
 import TasksSection from '../../components/TasksSection'
+import WarningButton from '../../components/WarningButton'
+import WarningsList from '../../components/WarningsList'
 
 const TEAMS = [
   // 04.06.2026: команда Анастасии расформирована
@@ -161,6 +163,7 @@ export default function AdminPage() {
   const [contactsLoading, setContactsLoading] = useState(false)
   const [deletedMembers, setDeletedMembers] = useState([])
   const [admins, setAdmins] = useState([])  // для раздела "Задачи"
+  const [warningCounts, setWarningCounts] = useState({})  // manager_id → N за текущий месяц
   // Salary tab state
   const now = new Date()
   const [salaryMonth, setSalaryMonth]     = useState(now.getMonth())
@@ -291,6 +294,15 @@ export default function AdminPage() {
     setReports(repsRes.status === 'fulfilled' ? (repsRes.value.data || []) : [])
     setDeletedMembers(deletedRes.status === 'fulfilled' ? (deletedRes.value.data || []) : [])
     setAdmins(admsRes.status === 'fulfilled' ? (admsRes.value.data || []) : [])
+
+    // Счётчики предупреждений за текущий месяц
+    try {
+      const warnRes = await authFetch('/api/manager-warnings')
+      const warnData = await warnRes.json()
+      if (warnRes.ok) setWarningCounts(warnData.counts || {})
+    } catch (e) {
+      console.error('loadData: warnings counts failed:', e?.message || e)
+    }
   }
 
   const loadTgAccountsInit = async () => {
@@ -760,6 +772,13 @@ export default function AdminPage() {
                               <div className="flex items-center gap-1 ml-1 flex-shrink-0">
                                 {alert14 && (
                                   <span title="14 дней в красной зоне" className="text-red-400 text-base leading-none">⚠</span>
+                                )}
+                                {canDelete && !isDeletePending && (
+                                  <WarningButton
+                                    managerId={manager.id}
+                                    monthCount={warningCounts[manager.id] || 0}
+                                    onIssued={(newCount) => setWarningCounts(prev => ({ ...prev, [manager.id]: newCount }))}
+                                  />
                                 )}
                                 {canDelete && !isDeletePending && (
                                   <button
@@ -2008,6 +2027,18 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Секция предупреждений (только для role=manager) */}
+            {selectedManager.role === 'manager' && (
+              <div style={{ borderTop: '1px solid #1f1f2e' }} className="px-6 py-4">
+                <h3 className="text-sm font-semibold text-gray-300 mb-2">Предупреждения</h3>
+                <WarningsList
+                  managerId={selectedManager.id}
+                  canDelete={true}
+                  onLoaded={(monthCount) => setWarningCounts(prev => ({ ...prev, [selectedManager.id]: monthCount }))}
+                />
+              </div>
+            )}
 
             {/* Footer: удалить менеджера (только для role=manager) */}
             {selectedManager.role === 'manager' && (

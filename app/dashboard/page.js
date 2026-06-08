@@ -101,6 +101,9 @@ export default function DashboardPage() {
   const [accountHistoryLoading, setAccountHistoryLoading] = useState(false)
   const [copiedAccountLink, setCopiedAccountLink] = useState(null)
 
+  // Предупреждения за текущий месяц (баннер в шапке)
+  const [warningMonthCount, setWarningMonthCount] = useState(0)
+
   // ── Состояние "Добавить ЦД" ──
   const [showCdModal, setShowCdModal] = useState(false)
   const [cdForm, setCdForm] = useState({ fullName: '', inn: '', phone: '' })
@@ -147,6 +150,15 @@ export default function DashboardPage() {
 
       setProfile(profileData)
       setReports(reportsData || [])
+
+      // Подгружаем кол-во предупреждений за текущий месяц
+      try {
+        const wRes = await authFetch(`/api/manager-warnings?manager_id=${profileData.id}`)
+        const wData = await wRes.json()
+        if (wRes.ok) setWarningMonthCount(wData.monthCount || 0)
+      } catch (e) {
+        console.error('warnings fetch failed:', e?.message || e)
+      }
     } catch (e) {
       console.error('dashboard init failed:', e)
     } finally {
@@ -532,6 +544,43 @@ export default function DashboardPage() {
 
       {/* ── Content ── */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+
+        {/* ── Баннер предупреждений ── */}
+        {warningMonthCount > 0 && (
+          <div className={`rounded-2xl p-4 sm:p-5 mb-6 border ${
+            warningMonthCount >= 3
+              ? 'bg-red-950/40 border-red-700'
+              : warningMonthCount === 2
+                ? 'bg-yellow-950/40 border-yellow-700'
+                : 'bg-orange-950/40 border-orange-700'
+          }`}>
+            <div className="flex items-start gap-3">
+              <span className="text-xl flex-shrink-0">⚠</span>
+              <div className="flex-1 min-w-0">
+                {warningMonthCount >= 3 ? (
+                  <>
+                    <p className="text-red-300 font-semibold text-sm sm:text-base">
+                      У тебя {warningMonthCount} предупреждения за этот месяц
+                    </p>
+                    <p className="text-red-400 text-xs sm:text-sm mt-1">
+                      Достигнут порог — вопрос об увольнении передан руководству.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className={`${warningMonthCount === 2 ? 'text-yellow-200' : 'text-orange-200'} font-semibold text-sm sm:text-base`}>
+                      У тебя {warningMonthCount} {warningMonthCount === 1 ? 'предупреждение' : 'предупреждения'} за этот месяц
+                    </p>
+                    <p className={`${warningMonthCount === 2 ? 'text-yellow-300' : 'text-orange-300'} text-xs sm:text-sm mt-1`}>
+                      При 3-х предупреждениях за месяц — вопрос об увольнении.
+                      {warningMonthCount === 2 && ' Осталось одно.'}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ─── Report tab ─── */}
         {activeTab === 'report' && (

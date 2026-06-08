@@ -9,6 +9,8 @@ const CYR_MAP = { a:'а',b:'в',c:'с',e:'е',h:'н',k:'к',m:'м',o:'о',p:'р'
 const normName = s => (s||'').trim().replace(/\s+/g,' ').toLowerCase().replace(/[a-z]/g, c => CYR_MAP[c] || c)
 import { MANAGER_SHEETS } from '../../lib/sheets-config'
 import AccountLinkSection from '../../components/AccountLinkSection'
+import WarningButton from '../../components/WarningButton'
+import WarningsList from '../../components/WarningsList'
 
 // ── Team config ──────────────────────────────────────────────────────────────
 const TEAMS = [
@@ -147,6 +149,7 @@ export default function TeamleadPage() {
   const [profile, setProfile]   = useState(null)
   const [myReports, setMyReports]     = useState([])
   const [managers, setManagers]       = useState([])
+  const [warningCounts, setWarningCounts] = useState({})
   const [deletedMembers, setDeletedMembers] = useState([])
   const [teamReports, setTeamReports] = useState([])
   const [loading, setLoading]   = useState(true)
@@ -313,6 +316,15 @@ export default function TeamleadPage() {
     const deletedList = deleted || []
     setManagers(list)
     setDeletedMembers(deletedList)
+
+    // Подгружаем счётчики предупреждений (за текущий месяц)
+    try {
+      const wRes = await authFetch('/api/manager-warnings')
+      const wData = await wRes.json()
+      if (wRes.ok) setWarningCounts(wData.counts || {})
+    } catch (e) {
+      console.error('loadTeamData: warnings counts failed:', e?.message || e)
+    }
 
     const allIds = [...list, ...deletedList].map(m => m.id)
     if (allIds.length > 0) {
@@ -1008,6 +1020,13 @@ export default function TeamleadPage() {
                           </div>
                           <div className="flex items-center gap-1 ml-1">
                             {alert14 && <span className="text-red-400 text-sm" title="14 дней в красной зоне">⚠</span>}
+                            {!isDeletePending && (
+                              <WarningButton
+                                managerId={manager.id}
+                                monthCount={warningCounts[manager.id] || 0}
+                                onIssued={(newCount) => setWarningCounts(prev => ({ ...prev, [manager.id]: newCount }))}
+                              />
+                            )}
                             {!isDeletePending && (
                               <button
                                 onClick={e => { e.stopPropagation(); setDeleteConfirm(manager.id) }}
@@ -2076,6 +2095,16 @@ export default function TeamleadPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Секция предупреждений */}
+            <div style={{ borderTop: '1px solid #1f1f2e' }} className="px-6 py-4">
+              <h3 className="text-sm font-semibold text-gray-300 mb-2">Предупреждения</h3>
+              <WarningsList
+                managerId={selectedManager.id}
+                canDelete={false}
+                onLoaded={(monthCount) => setWarningCounts(prev => ({ ...prev, [selectedManager.id]: monthCount }))}
+              />
             </div>
 
             {/* Delete manager button */}
