@@ -12,11 +12,12 @@ import AccountLinkSection from '../../components/AccountLinkSection'
 import TasksSection from '../../components/TasksSection'
 import WarningButton from '../../components/WarningButton'
 import WarningsList from '../../components/WarningsList'
+import TeamsSection from '../../components/TeamsSection'
 
-const TEAMS = [
-  // 04.06.2026: команда Анастасии расформирована
+// Fallback пока /api/teams ещё грузится — отображает что-то, чтобы не было flash'а
+// пустоты. После загрузки заменяется на актуальный список из БД (таблица teams).
+const STATIC_TEAMS_FALLBACK = [
   { id: 'olya',      name: 'Оли',       type: 'standard' },
-  { id: 'karina',    name: 'Карины',    type: 'karina'   },
   { id: 'nikita',    name: 'Никиты',    type: 'nikita'   },
 ]
 
@@ -164,6 +165,9 @@ export default function AdminPage() {
   const [deletedMembers, setDeletedMembers] = useState([])
   const [admins, setAdmins] = useState([])  // для раздела "Задачи"
   const [warningCounts, setWarningCounts] = useState({})  // manager_id → N за текущий месяц
+  // Динамический список команд из БД. Маппится в API-структуру { id, name, type }
+  // (id = slug). При наличии таблицы teams в БД заменяет STATIC_TEAMS_FALLBACK.
+  const [TEAMS, setTEAMS] = useState(STATIC_TEAMS_FALLBACK)
   // Salary tab state
   const now = new Date()
   const [salaryMonth, setSalaryMonth]     = useState(now.getMonth())
@@ -302,6 +306,18 @@ export default function AdminPage() {
       if (warnRes.ok) setWarningCounts(warnData.counts || {})
     } catch (e) {
       console.error('loadData: warnings counts failed:', e?.message || e)
+    }
+
+    // Список команд из БД (таблица teams). Если ещё не настроена — оставляем fallback.
+    try {
+      const teamsRes = await authFetch('/api/teams')
+      const teamsData = await teamsRes.json()
+      if (teamsRes.ok && Array.isArray(teamsData.teams) && teamsData.teams.length > 0) {
+        // Мапим slug → id для обратной совместимости со старым кодом
+        setTEAMS(teamsData.teams.map(t => ({ id: t.slug, name: t.name, type: t.type })))
+      }
+    } catch (e) {
+      console.error('loadData: teams load failed (using fallback):', e?.message || e)
     }
   }
 
@@ -561,6 +577,7 @@ export default function AdminPage() {
     // { id: 'ip-link',   label: 'Ссылка ИП' },  // временно скрыто — заменён на "Счёт ИП"
     { id: 'account-link', label: 'Счёт ИП' },
     { id: 'add-cd',    label: 'Добавить ЦД' },
+    { id: 'teams',     label: 'Команды' },
   ]
 
   return (
@@ -1632,6 +1649,11 @@ export default function AdminPage() {
               + Добавить ЦД
             </button>
           </div>
+        )}
+
+        {/* ─── Команды (создание/удаление, назначение тимлида) ─── */}
+        {activeTab === 'teams' && (
+          <TeamsSection allManagers={[...managers, ...teamleads]} />
         )}
 
       </main>

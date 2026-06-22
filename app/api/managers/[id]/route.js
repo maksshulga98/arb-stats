@@ -171,7 +171,8 @@ export async function PUT(request, { params }) {
       }
       // Допустимые команды соответствуют TEAMS в UI. null разрешён — означает «вне команды».
       // 04.06.2026: команда Анастасии расформирована
-      const ALLOWED_TEAMS = ['olya', 'karina', 'nikita', null]
+      // 11.06.2026: команда Карины расформирована
+      const ALLOWED_TEAMS = ['olya', 'nikita', null]
       if (!ALLOWED_TEAMS.includes(team)) {
         return NextResponse.json({ error: `Неизвестная команда: ${team}` }, { status: 400 })
       }

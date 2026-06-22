@@ -4,14 +4,15 @@ import { supabase, authFetch } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getMissingReportAlerts } from '../../lib/notifications'
 
-const TEAMS = {
+// Fallback map (slug → { name, type }) пока /api/teams грузится. После загрузки
+// заменяется на актуальный список из БД (таблица teams).
+const STATIC_TEAMS_FALLBACK = {
   olya:      { name: 'Оли',       type: 'standard' },
-  karina:    { name: 'Карины',    type: 'karina'   },
   nikita:    { name: 'Никиты',    type: 'nikita'   },
 }
 
-// Команды с доступом к выдаче номеров (04.06.2026: команда Анастасии расформирована)
-const CONTACT_TEAMS = ['karina', 'olya']
+// Команды с доступом к выдаче номеров (11.06.2026: команда Карины расформирована)
+const CONTACT_TEAMS = ['olya']
 
 function getLast7Days(reports, field = 'ordered_ip') {
   const cutoff = new Date()
@@ -64,6 +65,8 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState(null)
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
+  // Динамический map команд (slug → { name, type }) из БД, см. STATIC_TEAMS_FALLBACK
+  const [TEAMS, setTEAMS] = useState(STATIC_TEAMS_FALLBACK)
   const [showForm, setShowForm]   = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState({
@@ -124,6 +127,23 @@ export default function DashboardPage() {
   const [expandedDistId, setExpandedDistId] = useState(null)
 
   useEffect(() => { init() }, [])
+
+  // Динамическая загрузка списка команд (для отображения "Команда X" внизу шапки).
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await authFetch('/api/teams')
+        const data = await res.json()
+        if (res.ok && Array.isArray(data.teams) && data.teams.length > 0) {
+          const map = {}
+          for (const t of data.teams) map[t.slug] = { name: t.name, type: t.type }
+          setTEAMS(map)
+        }
+      } catch (e) {
+        console.error('teams load failed (fallback used):', e?.message || e)
+      }
+    })()
+  }, [])
 
   const init = async () => {
     try {

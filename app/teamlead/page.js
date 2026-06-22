@@ -13,14 +13,15 @@ import WarningButton from '../../components/WarningButton'
 import WarningsList from '../../components/WarningsList'
 
 // ── Team config ──────────────────────────────────────────────────────────────
-const TEAMS = [
+// Fallback пока /api/teams грузится. После загрузки заменяется на актуальный
+// список из БД (таблица teams).
+const STATIC_TEAMS_FALLBACK = [
   { id: 'olya',      name: 'Оли',       type: 'standard' },
-  { id: 'karina',    name: 'Карины',    type: 'karina'   },
   { id: 'nikita',    name: 'Никиты',    type: 'nikita'   },
 ]
 
-// Команды с доступом к выдаче номеров (04.06.2026: команда Анастасии расформирована)
-const CONTACT_TEAMS = ['karina', 'olya']
+// Команды с доступом к выдаче номеров (11.06.2026: команда Карины расформирована)
+const CONTACT_TEAMS = ['olya']
 
 function formatTimeLeft(ms) {
   if (ms <= 0) return null
@@ -151,6 +152,8 @@ export default function TeamleadPage() {
   const [managers, setManagers]       = useState([])
   const [warningCounts, setWarningCounts] = useState({})
   const [deletedMembers, setDeletedMembers] = useState([])
+  // Динамический список команд (см. STATIC_TEAMS_FALLBACK выше)
+  const [TEAMS, setTEAMS] = useState(STATIC_TEAMS_FALLBACK)
   const [teamReports, setTeamReports] = useState([])
   const [loading, setLoading]   = useState(true)
   const [activeTab, setActiveTab] = useState('analytics')
@@ -233,6 +236,21 @@ export default function TeamleadPage() {
   const router = useRouter()
 
   useEffect(() => { init() }, [])
+
+  // Динамический список команд из БД (см. lib/teams.js). Запускается параллельно с init.
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await authFetch('/api/teams')
+        const data = await res.json()
+        if (res.ok && Array.isArray(data.teams) && data.teams.length > 0) {
+          setTEAMS(data.teams.map(t => ({ id: t.slug, name: t.name, type: t.type })))
+        }
+      } catch (e) {
+        console.error('teams load failed (fallback used):', e?.message || e)
+      }
+    })()
+  }, [])
 
   // Fetch Google Sheets ЦД data when daily tab is active
   useEffect(() => {

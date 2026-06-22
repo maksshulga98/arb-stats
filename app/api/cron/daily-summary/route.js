@@ -13,13 +13,16 @@ import { fetchSheetsData } from '../../../../lib/sheets-data'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-// Команды — синхронизировано с TEAMS в app/admin/page.js
-const TEAMS = [
-  // 04.06.2026: команда Анастасии расформирована
+import { fetchTeamsFromDb } from '../../../../lib/teams'
+
+// Fallback используется только если из БД ничего не пришло (теоретически
+// быть не должно, но на всякий случай). Сам TEAMS грузится в начале GET().
+const STATIC_TEAMS_FALLBACK = [
   { id: 'olya',      name: 'Оли',       type: 'standard' },
-  { id: 'karina',    name: 'Карины',    type: 'karina'   },
   { id: 'nikita',    name: 'Никиты',    type: 'nikita'   },
 ]
+// Будет переопределён в GET() через fetchTeamsFromDb
+let TEAMS = STATIC_TEAMS_FALLBACK
 
 // Пороги зон — те же что в admin/page.js getZoneKey().
 function zoneEmoji(value, teamType) {
@@ -121,6 +124,13 @@ export async function GET(request) {
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY,
     )
+
+    // Подгружаем актуальный список команд из БД. Если таблицы нет или пусто —
+    // остаёмся на STATIC_TEAMS_FALLBACK (объявлен в module scope).
+    const teamsFromDb = await fetchTeamsFromDb(supabase)
+    if (teamsFromDb.length > 0) {
+      TEAMS = teamsFromDb.map(t => ({ id: t.slug, name: t.name, type: t.type }))
+    }
 
     // 1) Активные менеджеры
     const { data: managers, error: mErr } = await supabase
