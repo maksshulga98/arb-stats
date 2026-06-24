@@ -157,6 +157,9 @@ export default function TeamleadPage() {
   const [TEAMS, setTEAMS] = useState(STATIC_TEAMS_FALLBACK)
   // Редактирование отчёта менеджера в детальной модалке
   const [editingReport, setEditingReport] = useState(null)
+  // Сворачиваем "Мои отчёты" до 5 последних — раньше тимлид листал длинный
+  // список чтобы добраться до командной статистики ниже.
+  const [showAllMyReports, setShowAllMyReports] = useState(false)
   const [teamReports, setTeamReports] = useState([])
   const [loading, setLoading]   = useState(true)
   const [activeTab, setActiveTab] = useState('analytics')
@@ -936,9 +939,9 @@ export default function TeamleadPage() {
                 </div>
               )}
 
-              {/* My reports table */}
+              {/* My reports table — свёрнуто до 5 последних, см. showAllMyReports */}
               <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
-                <table className="w-full min-w-[480px]">
+                <table className="w-full min-w-[480px]" data-show-all={showAllMyReports}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
@@ -960,7 +963,7 @@ export default function TeamleadPage() {
                   <tbody>
                     {myReports.length === 0 ? (
                       <tr><td colSpan={isNikita ? 4 : 5} className="text-center py-12 text-gray-600 text-sm">Нет данных — добавьте первый отчёт</td></tr>
-                    ) : myReports.map(r => (
+                    ) : (showAllMyReports ? myReports : myReports.slice(0, 5)).map(r => (
                       <tr key={r.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] group">
                         <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{new Date(r.date).toLocaleDateString('ru-RU')}</td>
                         {!isNikita && (
@@ -990,6 +993,20 @@ export default function TeamleadPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Кнопка свернуть/развернуть — видна только если отчётов больше 5 */}
+              {myReports.length > 5 && (
+                <div className="flex justify-center mt-3">
+                  <button
+                    onClick={() => setShowAllMyReports(v => !v)}
+                    className="text-blue-400 hover:text-blue-300 text-sm font-medium px-4 py-2 transition"
+                  >
+                    {showAllMyReports
+                      ? `↑ Свернуть до 5 последних`
+                      : `↓ Показать все (${myReports.length})`}
+                  </button>
+                </div>
+              )}
             </section>
 
             {/* ─── Team section ─── */}
