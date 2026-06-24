@@ -9,20 +9,18 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { broadcastTelegramMessage, escapeHtml } from '../../../../lib/telegram'
 import { fetchSheetsData } from '../../../../lib/sheets-data'
+import { fetchTeamsFromDb } from '../../../../lib/teams'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-import { fetchTeamsFromDb } from '../../../../lib/teams'
-
-// Fallback используется только если из БД ничего не пришло (теоретически
-// быть не должно, но на всякий случай). Сам TEAMS грузится в начале GET().
+// Используется ТОЛЬКО если таблица teams в БД пустая или недоступна
+// (например миграция ещё не применена). В норме сам список команд грузится
+// в GET() через fetchTeamsFromDb и кладётся в локальную переменную.
 const STATIC_TEAMS_FALLBACK = [
   { id: 'olya',      name: 'Оли',       type: 'standard' },
   { id: 'nikita',    name: 'Никиты',    type: 'nikita'   },
 ]
-// Будет переопределён в GET() через fetchTeamsFromDb
-let TEAMS = STATIC_TEAMS_FALLBACK
 
 // Пороги зон — те же что в admin/page.js getZoneKey().
 function zoneEmoji(value, teamType) {
@@ -126,11 +124,12 @@ export async function GET(request) {
     )
 
     // Подгружаем актуальный список команд из БД. Если таблицы нет или пусто —
-    // остаёмся на STATIC_TEAMS_FALLBACK (объявлен в module scope).
+    // остаёмся на STATIC_TEAMS_FALLBACK. Локальная переменная — чтобы не было
+    // race condition'а между параллельными вызовами cron'а в serverless.
     const teamsFromDb = await fetchTeamsFromDb(supabase)
-    if (teamsFromDb.length > 0) {
-      TEAMS = teamsFromDb.map(t => ({ id: t.slug, name: t.name, type: t.type }))
-    }
+    const TEAMS = teamsFromDb.length > 0
+      ? teamsFromDb.map(t => ({ id: t.slug, name: t.name, type: t.type }))
+      : STATIC_TEAMS_FALLBACK
 
     // 1) Активные менеджеры
     const { data: managers, error: mErr } = await supabase
