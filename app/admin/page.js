@@ -13,6 +13,7 @@ import TasksSection from '../../components/TasksSection'
 import WarningButton from '../../components/WarningButton'
 import WarningsList from '../../components/WarningsList'
 import TeamsSection from '../../components/TeamsSection'
+import EditReportModal from '../../components/EditReportModal'
 
 // Fallback пока /api/teams ещё грузится — отображает что-то, чтобы не было flash'а
 // пустоты. После загрузки заменяется на актуальный список из БД (таблица teams).
@@ -168,6 +169,8 @@ export default function AdminPage() {
   // Динамический список команд из БД. Маппится в API-структуру { id, name, type }
   // (id = slug). При наличии таблицы teams в БД заменяет STATIC_TEAMS_FALLBACK.
   const [TEAMS, setTEAMS] = useState(STATIC_TEAMS_FALLBACK)
+  // Редактирование отчёта (только в детальной модалке менеджера)
+  const [editingReport, setEditingReport] = useState(null)
   // Salary tab state
   const now = new Date()
   const [salaryMonth, setSalaryMonth]     = useState(now.getMonth())
@@ -2034,14 +2037,23 @@ export default function AdminPage() {
                           <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
                         )}
                         <td className="py-2.5 pr-1 text-right">
-                          <button
-                            onClick={() => handleDeleteReport(r.id)}
-                            disabled={deletingReport === r.id}
-                            className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition disabled:opacity-30"
-                            title="Удалить отчёт"
-                          >
-                            <TrashIcon />
-                          </button>
+                          <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition">
+                            <button
+                              onClick={() => setEditingReport(r)}
+                              className="text-gray-600 hover:text-blue-400 transition"
+                              title="Редактировать цифры"
+                            >
+                              ✏
+                            </button>
+                            <button
+                              onClick={() => handleDeleteReport(r.id)}
+                              disabled={deletingReport === r.id}
+                              className="text-gray-600 hover:text-red-400 transition disabled:opacity-30"
+                              title="Удалить отчёт"
+                            >
+                              <TrashIcon />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -2096,6 +2108,19 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Модалка редактирования отчёта менеджера */}
+      {editingReport && (
+        <EditReportModal
+          report={editingReport}
+          teamType={modalTeam?.type || 'standard'}
+          onClose={() => setEditingReport(null)}
+          onSaved={(updated) => {
+            // Подменяем отчёт в общем списке
+            setReports(prev => prev.map(r => r.id === updated.id ? { ...r, ...updated } : r))
+          }}
+        />
       )}
 
     </div>

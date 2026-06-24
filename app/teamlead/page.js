@@ -11,6 +11,7 @@ import { MANAGER_SHEETS } from '../../lib/sheets-config'
 import AccountLinkSection from '../../components/AccountLinkSection'
 import WarningButton from '../../components/WarningButton'
 import WarningsList from '../../components/WarningsList'
+import EditReportModal from '../../components/EditReportModal'
 
 // ── Team config ──────────────────────────────────────────────────────────────
 // Fallback пока /api/teams грузится. После загрузки заменяется на актуальный
@@ -154,6 +155,8 @@ export default function TeamleadPage() {
   const [deletedMembers, setDeletedMembers] = useState([])
   // Динамический список команд (см. STATIC_TEAMS_FALLBACK выше)
   const [TEAMS, setTEAMS] = useState(STATIC_TEAMS_FALLBACK)
+  // Редактирование отчёта менеджера в детальной модалке
+  const [editingReport, setEditingReport] = useState(null)
   const [teamReports, setTeamReports] = useState([])
   const [loading, setLoading]   = useState(true)
   const [activeTab, setActiveTab] = useState('analytics')
@@ -2100,14 +2103,23 @@ export default function TeamleadPage() {
                         <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
                       )}
                       <td className="py-2.5 pr-1 text-right">
-                        <button
-                          onClick={() => handleDeleteReport(r.id, false)}
-                          disabled={deletingReport === r.id}
-                          className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition disabled:opacity-30"
-                          title="Удалить отчёт"
-                        >
-                          <TrashIcon />
-                        </button>
+                        <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition">
+                          <button
+                            onClick={() => setEditingReport(r)}
+                            className="text-gray-600 hover:text-blue-400 transition"
+                            title="Редактировать цифры"
+                          >
+                            ✏
+                          </button>
+                          <button
+                            onClick={() => handleDeleteReport(r.id, false)}
+                            disabled={deletingReport === r.id}
+                            className="text-gray-600 hover:text-red-400 transition disabled:opacity-30"
+                            title="Удалить отчёт"
+                          >
+                            <TrashIcon />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -2247,6 +2259,22 @@ export default function TeamleadPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Модалка редактирования отчёта менеджера */}
+      {editingReport && (
+        <EditReportModal
+          report={editingReport}
+          teamType={
+            TEAMS.find(t => t.id === selectedManager?.team)?.type
+              || TEAMS.find(t => t.id === editingReport.manager_id)?.type
+              || 'standard'
+          }
+          onClose={() => setEditingReport(null)}
+          onSaved={(updated) => {
+            setTeamReports(prev => prev.map(r => r.id === updated.id ? { ...r, ...updated } : r))
+          }}
+        />
       )}
 
     </div>
