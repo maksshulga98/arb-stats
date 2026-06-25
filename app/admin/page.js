@@ -761,15 +761,11 @@ export default function AdminPage() {
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                       {teamAll.map(manager => {
                         const mRep    = managerReports(manager.id)
-                        const isKarinaTeam = team.type === 'karina'
-                        // Считаем обе метрики, чтобы вывести их обе на карточку.
-                        // value7 — основная по типу команды (по ней рисуется зона/цвет).
-                        const ip7     = getIPForPeriod(mRep, 0, 7)
-                        const cards7  = getCardsForPeriod(mRep, 0, 7)
-                        const value7  = isKarinaTeam ? cards7 : ip7
-                        const zKey    = getZoneKey(value7, team.type)
+                        // 06.2026: единая метрика для всех команд — РКО (ordered_ip).
+                        const value7  = getIPForPeriod(mRep, 0, 7)
+                        const zKey    = getZoneKey(value7, 'standard')
                         const z       = ZONE[zKey]
-                        const alert14 = !isKarinaTeam && isRedFor14Days(mRep, manager.created_at)
+                        const alert14 = isRedFor14Days(mRep, manager.created_at)
                         const isDeletePending = deleteConfirm === manager.id
                         // Тимлидов в админке не удаляем — только менеджеров
                         const canDelete = manager.role === 'manager'
@@ -814,15 +810,9 @@ export default function AdminPage() {
 
                             {!isDeletePending ? (
                               <>
-                                <div className="mb-3 space-y-0.5">
-                                  <div>
-                                    <span className={`text-3xl font-bold ${z.text}`}>{value7}</span>
-                                    <span className="text-gray-500 text-xs ml-1">{isKarinaTeam ? 'карт' : 'ИП'} / 7 дн</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-lg font-semibold text-gray-300">{isKarinaTeam ? ip7 : cards7}</span>
-                                    <span className="text-gray-500 text-xs ml-1">{isKarinaTeam ? 'ИП' : 'карт'} / 7 дн</span>
-                                  </div>
+                                <div className="mb-3">
+                                  <span className={`text-3xl font-bold ${z.text}`}>{value7}</span>
+                                  <span className="text-gray-500 text-xs ml-1">РКО / 7 дн</span>
                                 </div>
 
                                 <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>
@@ -915,25 +905,12 @@ export default function AdminPage() {
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                     <div>
-                      <p className="text-gray-500 text-xs mb-1">Отписанные</p>
-                      <p className="text-xl font-bold text-gray-200">{totalUnsubscribed}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-xs mb-1">Ответившие</p>
-                      <p className="text-xl font-bold text-gray-200">{totalReplied}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-xs mb-1">Написало людей</p>
+                      <p className="text-gray-500 text-xs mb-1">Написавшие</p>
                       <p className="text-xl font-bold text-gray-200">{totalPeopleWrote}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs mb-1">Заказали ИП</p>
+                      <p className="text-gray-500 text-xs mb-1">Заказали РКО</p>
                       <p className="text-xl font-bold text-blue-400">{totalOrdered}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-xs mb-1">Заказано дебетовых карт</p>
-                      <p className="text-xl font-bold text-purple-400">{totalOrderedCards}</p>
-
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs mb-1">ЦД ИП</p>
@@ -1013,31 +990,17 @@ export default function AdminPage() {
                       <thead>
                         <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Менеджер</th>
-                          {!isNikita && (
-                            <>
-                              <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Отписанные</th>
-                              <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответившие</th>
-                            </>
-                          )}
-                          {isNikita && (
-                            <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
-                          )}
-                          {isKarina ? (
-                            <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
-                          ) : (
-                            <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
-                          )}
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД дебетовые</th>
-                          {!isNikita && (
-                            <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Взято номеров</th>
-                          )}
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Взято номеров</th>
                         </tr>
                       </thead>
                       <tbody>
                         {rows.length === 0 ? (
                           <tr>
-                            <td colSpan={isNikita ? 5 : 7} className="text-center py-8 text-gray-600 text-sm">
+                            <td colSpan={6} className="text-center py-8 text-gray-600 text-sm">
                               Нет участников в команде
                             </td>
                           </tr>
@@ -1051,62 +1014,34 @@ export default function AdminPage() {
                                     {member.name || member.email}
                                     {member.role === 'teamlead' && <span className="ml-2 text-xs text-gray-600">(тимлид)</span>}
                                   </td>
-                                  {!isNikita && (
-                                    <>
-                                      <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.unsubscribed : '—'}</td>
-                                      <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.replied : '—'}</td>
-                                    </>
-                                  )}
-                                  {isNikita && (
-                                    <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
-                                  )}
-                                  {isKarina ? (
-                                    <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-purple-400">{report ? report.ordered_cards : '—'}</td>
-                                  ) : (
-                                    <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
-                                  )}
+                                  <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
+                                  <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
                                   <td className="px-3 sm:px-5 py-3 text-sm">
                                     <CdValue value={sd ? sd.ip : null} loading={sheetsLoading && sd === undefined} />
                                   </td>
                                   <td className="px-3 sm:px-5 py-3 text-sm">
                                     <CdValue value={sd ? sd.debit : null} loading={sheetsLoading && sd === undefined} color="text-purple-400" />
                                   </td>
-                                  {!isNikita && (
-                                    <td className="px-3 sm:px-5 py-3 text-sm">
-                                      <CdValue value={contactStats.byManagerId?.[member.id] ?? null} loading={contactsLoading} color="text-orange-400" />
-                                    </td>
-                                  )}
+                                  <td className="px-3 sm:px-5 py-3 text-sm">
+                                    <CdValue value={contactStats.byManagerId?.[member.id] ?? null} loading={contactsLoading} color="text-orange-400" />
+                                  </td>
                                 </tr>
                               )
                             })}
                             {(rows.some(r => r.report) || Object.values(sheetsData).some(v => v?.total)) && (
                               <tr style={{ borderTop: '2px solid #2a2a3e' }} className="bg-white/[0.02]">
                                 <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">Итого</td>
-                                {!isNikita && (
-                                  <>
-                                    <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.unsubscribed}</td>
-                                    <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.replied}</td>
-                                  </>
-                                )}
-                                {isNikita && (
-                                  <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
-                                )}
-                                {isKarina ? (
-                                  <td className="px-3 sm:px-5 py-3 text-sm font-bold text-purple-400">{totals.ordered_cards}</td>
-                                ) : (
-                                  <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
-                                )}
+                                <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
                                   {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0) + teamDeletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.ip || 0), 0)}
                                 </td>
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-purple-400">
                                   {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.debit || 0), 0) + teamDeletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.debit || 0), 0)}
                                 </td>
-                                {!isNikita && (
-                                  <td className="px-3 sm:px-5 py-3 text-sm font-bold text-orange-400">
-                                    {rows.reduce((s, { member }) => s + (contactStats.byManagerId?.[member.id] || 0), 0)}
-                                  </td>
-                                )}
+                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-orange-400">
+                                  {rows.reduce((s, { member }) => s + (contactStats.byManagerId?.[member.id] || 0), 0)}
+                                </td>
                               </tr>
                             )}
                           </>
@@ -1846,30 +1781,23 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* Zone summary strip */}
+            {/* Zone summary strip — единая метрика РКО (ordered_ip) для всех команд */}
             {(() => {
-              const isModalKarina = modalTeam?.type === 'karina'
-              const field = isModalKarina ? 'ordered_cards' : 'ordered_ip'
-              const unitLabel = isModalKarina ? 'карт' : 'ИП'
-              const val7  = isModalKarina
-                ? modalReports.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const start = new Date(now); start.setDate(start.getDate()-7); start.setHours(0,0,0,0); return d >= start && d <= now }).reduce((s, r) => s + (r[field] || 0), 0)
-                : getIPForPeriod(modalReports, 0, 7)
-              const val14 = isModalKarina
-                ? modalReports.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const end = new Date(now); end.setDate(end.getDate()-7); const start = new Date(now); start.setDate(start.getDate()-14); start.setHours(0,0,0,0); return d >= start && d <= end }).reduce((s, r) => s + (r[field] || 0), 0)
-                : getIPForPeriod(modalReports, 7, 14)
-              const zKey = getZoneKey(val7, modalTeam?.type)
-              const z    = ZONE[zKey]
+              const val7  = getIPForPeriod(modalReports, 0, 7)
+              const val14 = getIPForPeriod(modalReports, 7, 14)
+              const z7    = ZONE[getZoneKey(val7, 'standard')]
+              const z14   = ZONE[getZoneKey(val14, 'standard')]
               return (
                 <div className="px-6 pt-4 pb-2 flex gap-4">
-                  <div className={`flex-1 border rounded-xl px-4 py-3 ${z.card}`}>
+                  <div className={`flex-1 border rounded-xl px-4 py-3 ${z7.card}`}>
                     <p className="text-gray-500 text-xs mb-1">Последние 7 дней</p>
-                    <p className={`text-xl font-bold ${z.text}`}>{val7} {unitLabel}</p>
-                    <span className={`text-xs ${z.badge} inline-block px-2 py-0.5 rounded-md mt-1`}>{z.label}</span>
+                    <p className={`text-xl font-bold ${z7.text}`}>{val7} РКО</p>
+                    <span className={`text-xs ${z7.badge} inline-block px-2 py-0.5 rounded-md mt-1`}>{z7.label}</span>
                   </div>
-                  <div className={`flex-1 border rounded-xl px-4 py-3 ${ZONE[getZoneKey(val14, modalTeam?.type)].card}`}>
+                  <div className={`flex-1 border rounded-xl px-4 py-3 ${z14.card}`}>
                     <p className="text-gray-500 text-xs mb-1">Предыдущие 7 дней</p>
-                    <p className={`text-xl font-bold ${ZONE[getZoneKey(val14, modalTeam?.type)].text}`}>{val14} {unitLabel}</p>
-                    <span className={`text-xs ${ZONE[getZoneKey(val14, modalTeam?.type)].badge} inline-block px-2 py-0.5 rounded-md mt-1`}>{ZONE[getZoneKey(val14, modalTeam?.type)].label}</span>
+                    <p className={`text-xl font-bold ${z14.text}`}>{val14} РКО</p>
+                    <span className={`text-xs ${z14.badge} inline-block px-2 py-0.5 rounded-md mt-1`}>{z14.label}</span>
                   </div>
                 </div>
               )
@@ -1985,30 +1913,15 @@ export default function AdminPage() {
                 <thead>
                   <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                     <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
-                    {!modalIsNikita && (
-                      <>
-                        <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Отписанные</th>
-                        <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответившие</th>
-                      </>
-                    )}
-                    {modalIsNikita && (
-                      <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
-                    )}
-                    {modalIsKarina ? (
-                      <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
-                    ) : (
-                      <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
-                    )}
+                    <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
+                    <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
                     <th className="w-8" />
                   </tr>
                 </thead>
                 <tbody>
                   {modalReports.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={modalIsNikita ? 4 : 5}
-                        className="text-center py-12 text-gray-600 text-sm"
-                      >
+                      <td colSpan={4} className="text-center py-12 text-gray-600 text-sm">
                         Нет отчётов
                       </td>
                     </tr>
@@ -2022,20 +1935,8 @@ export default function AdminPage() {
                         <td className="py-2.5 text-sm text-gray-300">
                           {new Date(r.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         </td>
-                        {!modalIsNikita && (
-                          <>
-                            <td className="py-2.5 text-sm text-gray-300">{r.unsubscribed ?? '—'}</td>
-                            <td className="py-2.5 text-sm text-gray-300">{r.replied ?? '—'}</td>
-                          </>
-                        )}
-                        {modalIsNikita && (
-                          <td className="py-2.5 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
-                        )}
-                        {modalIsKarina ? (
-                          <td className="py-2.5 text-sm font-semibold text-purple-400">{r.ordered_cards ?? '—'}</td>
-                        ) : (
-                          <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
-                        )}
+                        <td className="py-2.5 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
+                        <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
                         <td className="py-2.5 pr-1 text-right">
                           <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition">
                             <button
@@ -2110,11 +2011,10 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Модалка редактирования отчёта менеджера */}
+      {/* Модалка редактирования отчёта менеджера (2 поля: написавшие + РКО) */}
       {editingReport && (
         <EditReportModal
           report={editingReport}
-          teamType={modalTeam?.type || 'standard'}
           onClose={() => setEditingReport(null)}
           onSaved={(updated) => {
             // Подменяем отчёт в общем списке

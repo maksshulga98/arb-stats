@@ -505,18 +505,16 @@ export default function TeamleadPage() {
   }
 
   // ── Personal report submit ──────────────────────────────────────────────────
+  // 06.2026: упростили до 2 полей — Написавшие (people_wrote) и Заказали РКО (ordered_ip).
+  // Тип команды больше не разделяет (раньше у Никиты было people_wrote вместо отп/отв).
   const handleSubmitReport = async (e) => {
     e.preventDefault()
     setSubmitting(true)
-    const teamType = TEAMS.find(t => t.id === profile?.team)?.type || 'standard'
-    const record = { manager_id: user.id, date: reportForm.date }
-    record.ordered_cards = parseInt(reportForm.ordered_cards) || 0
-    record.ordered_ip = parseInt(reportForm.ordered_ip) || 0
-    if (teamType === 'nikita') {
-      record.people_wrote = parseInt(reportForm.people_wrote) || 0
-    } else {
-      record.unsubscribed = parseInt(reportForm.unsubscribed) || 0
-      record.replied      = parseInt(reportForm.replied) || 0
+    const record = {
+      manager_id: user.id,
+      date: reportForm.date,
+      people_wrote: parseInt(reportForm.people_wrote) || 0,
+      ordered_ip: parseInt(reportForm.ordered_ip) || 0,
     }
     const { data: inserted, error } = await supabase.from('reports').insert([record]).select().single()
     if (!error) {
@@ -644,8 +642,8 @@ export default function TeamleadPage() {
   }, [teamReports])
 
   const redManagers = useMemo(
-    () => isKarina ? [] : managers.filter(m => isRedFor14Days(teamReportsByManager.get(m.id) || [], m.created_at)),
-    [isKarina, managers, teamReportsByManager]
+    () => managers.filter(m => isRedFor14Days(teamReportsByManager.get(m.id) || [], m.created_at)),
+    [managers, teamReportsByManager]
   )
 
   // Missing report notifications
@@ -658,9 +656,8 @@ export default function TeamleadPage() {
     return <div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-400">Загрузка...</div>
   }
 
-  const myWeekValue = isKarina
-    ? myReports.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const start = new Date(now); start.setDate(start.getDate()-7); start.setHours(0,0,0,0); return d >= start && d <= now }).reduce((s, r) => s + (r.ordered_cards || 0), 0)
-    : getIPLast7Days(myReports)
+  // 06.2026: основная метрика теперь у всех команд одна — РКО (ordered_ip).
+  const myWeekValue = getIPLast7Days(myReports)
   const myZone    = getPersonalZone(myWeekValue, teamInfo?.type)
 
   const mgr7Reps  = (id) => teamReportsByManager.get(id) || []
@@ -871,7 +868,7 @@ export default function TeamleadPage() {
               <div className={`${myZone.bg} border ${myZone.border} rounded-2xl p-4 mb-4 flex items-center justify-between`}>
                 <div>
                   <p className="text-gray-400 text-xs mb-1">Мои результаты за последние 7 дней</p>
-                  <p className={`text-2xl font-bold ${myZone.text}`}>{myWeekValue} <span className="text-sm font-normal">{isKarina ? 'карт' : 'ИП'}</span></p>
+                  <p className={`text-2xl font-bold ${myZone.text}`}>{myWeekValue} <span className="text-sm font-normal">РКО</span></p>
                 </div>
                 <span className={`px-3 py-1.5 rounded-xl text-xs font-semibold ${myZone.badge}`}>{myZone.label}</span>
               </div>
@@ -895,34 +892,13 @@ export default function TeamleadPage() {
                         <input type="date" value={reportForm.date} onChange={e => setReportForm({ ...reportForm, date: e.target.value })}
                           className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" required />
                       </div>
-                      {!isNikita && (
-                        <>
-                          <div>
-                            <label className="text-gray-400 text-xs mb-1.5 block">Отписанные</label>
-                            <input type="number" min="0" value={reportForm.unsubscribed} onChange={e => setReportForm({ ...reportForm, unsubscribed: e.target.value })}
-                              placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
-                          </div>
-                          <div>
-                            <label className="text-gray-400 text-xs mb-1.5 block">Ответившие</label>
-                            <input type="number" min="0" value={reportForm.replied} onChange={e => setReportForm({ ...reportForm, replied: e.target.value })}
-                              placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
-                          </div>
-                        </>
-                      )}
-                      {isNikita && (
-                        <div>
-                          <label className="text-gray-400 text-xs mb-1.5 block">Написало людей</label>
-                          <input type="number" min="0" value={reportForm.people_wrote} onChange={e => setReportForm({ ...reportForm, people_wrote: e.target.value })}
-                            placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
-                        </div>
-                      )}
                       <div>
-                        <label className="text-gray-400 text-xs mb-1.5 block">Заказано карт</label>
-                        <input type="number" min="0" value={reportForm.ordered_cards} onChange={e => setReportForm({ ...reportForm, ordered_cards: e.target.value })}
+                        <label className="text-gray-400 text-xs mb-1.5 block">Написавшие</label>
+                        <input type="number" min="0" value={reportForm.people_wrote} onChange={e => setReportForm({ ...reportForm, people_wrote: e.target.value })}
                           placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
                       </div>
                       <div>
-                        <label className="text-gray-400 text-xs mb-1.5 block">Заказали ИП</label>
+                        <label className="text-gray-400 text-xs mb-1.5 block">Заказали РКО</label>
                         <input type="number" min="0" value={reportForm.ordered_ip} onChange={e => setReportForm({ ...reportForm, ordered_ip: e.target.value })}
                           placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
                       </div>
@@ -945,39 +921,19 @@ export default function TeamleadPage() {
                   <thead>
                     <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
-                      {!isNikita && (
-                        <>
-                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Отписанные</th>
-                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответившие</th>
-                        </>
-                      )}
-                      {isNikita && <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>}
-                      {isKarina ? (
-                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
-                      ) : (
-                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
-                      )}
+                      <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
+                      <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
                       <th className="w-10" />
                     </tr>
                   </thead>
                   <tbody>
                     {myReports.length === 0 ? (
-                      <tr><td colSpan={isNikita ? 4 : 5} className="text-center py-12 text-gray-600 text-sm">Нет данных — добавьте первый отчёт</td></tr>
+                      <tr><td colSpan={4} className="text-center py-12 text-gray-600 text-sm">Нет данных — добавьте первый отчёт</td></tr>
                     ) : (showAllMyReports ? myReports : myReports.slice(0, 5)).map(r => (
                       <tr key={r.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] group">
                         <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{new Date(r.date).toLocaleDateString('ru-RU')}</td>
-                        {!isNikita && (
-                          <>
-                            <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.unsubscribed ?? '—'}</td>
-                            <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.replied ?? '—'}</td>
-                          </>
-                        )}
-                        {isNikita && <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>}
-                        {isKarina ? (
-                          <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-purple-400">{r.ordered_cards ?? '—'}</td>
-                        ) : (
-                          <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
-                        )}
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
                         <td className="pr-4 py-3 text-right">
                           <button
                             onClick={() => handleDeleteReport(r.id, true)}
@@ -1036,12 +992,11 @@ export default function TeamleadPage() {
                     const mRep    = mgr7Reps(manager.id)
                     // Обе метрики на карточке, основная определяется типом команды
                     // (по ней — цвет зоны и порог в isRedFor14Days).
-                    const ip7     = getIPLast7Days(mRep)
-                    const cards7  = getCardsLast7Days(mRep)
-                    const value7  = isKarina ? cards7 : ip7
-                    const zKey    = getZoneKey(value7, teamInfo?.type)
+                    // 06.2026: единая метрика для всех команд — РКО (ordered_ip).
+                    const value7  = getIPLast7Days(mRep)
+                    const zKey    = getZoneKey(value7, 'standard')
                     const z       = ZONE[zKey]
-                    const alert14 = !isKarina && isRedFor14Days(mRep, manager.created_at)
+                    const alert14 = isRedFor14Days(mRep, manager.created_at)
                     const isDeletePending = deleteConfirm === manager.id
 
                     return (
@@ -1082,11 +1037,7 @@ export default function TeamleadPage() {
                             <div className="mb-3 space-y-0.5">
                               <div>
                                 <span className={`text-2xl font-bold ${z.text}`}>{value7}</span>
-                                <span className="text-gray-500 text-xs ml-1">{isKarina ? 'карт' : 'ИП'} / 7 дн</span>
-                              </div>
-                              <div>
-                                <span className="text-base font-semibold text-gray-300">{isKarina ? ip7 : cards7}</span>
-                                <span className="text-gray-500 text-xs ml-1">{isKarina ? 'ИП' : 'карт'} / 7 дн</span>
+                                <span className="text-gray-500 text-xs ml-1">РКО / 7 дн</span>
                               </div>
                             </div>
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>{z.label}</span>
@@ -1211,23 +1162,14 @@ export default function TeamleadPage() {
                     {rows.filter(r => r.report).length} из {rows.length} сдали отчёт
                   </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div>
-                    <p className="text-gray-500 text-xs mb-1">Отписанные</p>
-                    <p className="text-xl font-bold text-gray-200">{totals.unsubscribed}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-xs mb-1">Ответившие</p>
-                    <p className="text-xl font-bold text-gray-200">{totals.replied}</p>
-                  </div>
-                  <div>
-
-                    <p className="text-gray-500 text-xs mb-1">Написало людей</p>
+                    <p className="text-gray-500 text-xs mb-1">Написавшие</p>
                     <p className="text-xl font-bold text-gray-200">{totals.people_wrote}</p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs mb-1">{isKarina ? 'Заказано карт' : 'Заказали ИП'}</p>
-                    <p className={`text-xl font-bold ${isKarina ? 'text-purple-400' : 'text-blue-400'}`}>{isKarina ? totals.ordered_cards : totals.ordered_ip}</p>
+                    <p className="text-gray-500 text-xs mb-1">Заказали РКО</p>
+                    <p className="text-xl font-bold text-blue-400">{totals.ordered_ip}</p>
                   </div>
                   <div>
                     <p className="text-gray-500 text-xs mb-1">ЦД ИП</p>
@@ -1255,20 +1197,8 @@ export default function TeamleadPage() {
                     <thead>
                       <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Менеджер</th>
-                        {!isNikita && (
-                          <>
-                            <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Отписанные</th>
-                            <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответившие</th>
-                          </>
-                        )}
-                        {isNikita && (
-                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>
-                        )}
-                        {isKarina ? (
-                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
-                        ) : (
-                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
-                        )}
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД дебетовые</th>
                       </tr>
@@ -1282,20 +1212,8 @@ export default function TeamleadPage() {
                               {member.name || member.email}
                               {member.role === 'teamlead' && <span className="ml-2 text-xs text-gray-600">(тимлид)</span>}
                             </td>
-                            {!isNikita && (
-                              <>
-                                <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.unsubscribed : '—'}</td>
-                                <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.replied : '—'}</td>
-                              </>
-                            )}
-                            {isNikita && (
-                              <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
-                            )}
-                            {isKarina ? (
-                              <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-purple-400">{report ? report.ordered_cards : '—'}</td>
-                            ) : (
-                              <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
-                            )}
+                            <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
+                            <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
                             <td className="px-3 sm:px-5 py-3 text-sm">
                               <CdValue value={sd ? sd.ip : null} loading={sheetsLoading && sd === undefined} />
                             </td>
@@ -1308,20 +1226,8 @@ export default function TeamleadPage() {
                       {(rows.some(r => r.report) || Object.values(sheetsData).some(v => v?.total)) && (
                         <tr style={{ borderTop: '2px solid #2a2a3e' }} className="bg-white/[0.02]">
                           <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">Итого</td>
-                          {!isNikita && (
-                            <>
-                              <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.unsubscribed}</td>
-                              <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.replied}</td>
-                            </>
-                          )}
-                          {isNikita && (
-                            <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
-                          )}
-                          {isKarina ? (
-                            <td className="px-3 sm:px-5 py-3 text-sm font-bold text-purple-400">{totals.ordered_cards}</td>
-                          ) : (
-                            <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
-                          )}
+                          <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
+                          <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
                           <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
                             {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0) + deletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.ip || 0), 0)}
                           </td>
@@ -2054,25 +1960,18 @@ export default function TeamleadPage() {
               )}
             </div>
 
-            {/* Zone summary */}
+            {/* Zone summary — единая метрика РКО (ordered_ip) для всех команд */}
             {(() => {
-              const field = modalIsKarina ? 'ordered_cards' : 'ordered_ip'
-              const unitLabel = modalIsKarina ? 'карт' : 'ИП'
-              const modalTeamType = TEAMS.find(t => t.id === selectedManager?.team)?.type
-              const val7  = modalIsKarina
-                ? modalReports.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const start = new Date(now); start.setDate(start.getDate()-7); start.setHours(0,0,0,0); return d >= start && d <= now }).reduce((s, r) => s + (r[field] || 0), 0)
-                : getIPForPeriod(modalReports, 0, 7)
-              const val14 = modalIsKarina
-                ? modalReports.filter(r => { const d = new Date(r.date); const now = new Date(); now.setHours(23,59,59,999); const end = new Date(now); end.setDate(end.getDate()-7); const start = new Date(now); start.setDate(start.getDate()-14); start.setHours(0,0,0,0); return d >= start && d <= end }).reduce((s, r) => s + (r[field] || 0), 0)
-                : getIPForPeriod(modalReports, 7, 14)
+              const val7  = getIPForPeriod(modalReports, 0, 7)
+              const val14 = getIPForPeriod(modalReports, 7, 14)
               return (
                 <div className="px-6 pt-4 pb-2 flex gap-3">
                   {[{ val: val7, label: 'Последние 7 дней' }, { val: val14, label: 'Предыдущие 7 дней' }].map(({ val, label }) => {
-                    const z = ZONE[getZoneKey(val, modalTeamType)]
+                    const z = ZONE[getZoneKey(val, 'standard')]
                     return (
                       <div key={label} className={`flex-1 border rounded-xl px-4 py-3 ${z.card}`}>
                         <p className="text-gray-500 text-xs mb-1">{label}</p>
-                        <p className={`text-xl font-bold ${z.text}`}>{val} {unitLabel}</p>
+                        <p className={`text-xl font-bold ${z.text}`}>{val} РКО</p>
                         <span className={`text-xs ${z.badge} inline-block px-2 py-0.5 rounded-md mt-1`}>{z.label}</span>
                       </div>
                     )
@@ -2086,39 +1985,19 @@ export default function TeamleadPage() {
                 <thead>
                   <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                     <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
-                    {!modalIsNikita && (
-                      <>
-                        <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Отписанные</th>
-                        <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Ответившие</th>
-                      </>
-                    )}
-                    {modalIsNikita && <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Написало людей</th>}
-                    {modalIsKarina ? (
-                      <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказано карт</th>
-                    ) : (
-                      <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали ИП</th>
-                    )}
+                    <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
+                    <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
                     <th className="w-8" />
                   </tr>
                 </thead>
                 <tbody>
                   {modalReports.length === 0 ? (
-                    <tr><td colSpan={modalIsNikita ? 4 : 5} className="text-center py-10 text-gray-600 text-sm">Нет отчётов</td></tr>
+                    <tr><td colSpan={4} className="text-center py-10 text-gray-600 text-sm">Нет отчётов</td></tr>
                   ) : modalReports.map(r => (
                     <tr key={r.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] group">
                       <td className="py-2.5 text-sm text-gray-300">{new Date(r.date).toLocaleDateString('ru-RU')}</td>
-                      {!modalIsNikita && (
-                        <>
-                          <td className="py-2.5 text-sm text-gray-300">{r.unsubscribed ?? '—'}</td>
-                          <td className="py-2.5 text-sm text-gray-300">{r.replied ?? '—'}</td>
-                        </>
-                      )}
-                      {modalIsNikita && <td className="py-2.5 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>}
-                      {modalIsKarina ? (
-                        <td className="py-2.5 text-sm font-semibold text-purple-400">{r.ordered_cards ?? '—'}</td>
-                      ) : (
-                        <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
-                      )}
+                      <td className="py-2.5 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
+                      <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
                       <td className="py-2.5 pr-1 text-right">
                         <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition">
                           <button
@@ -2278,15 +2157,10 @@ export default function TeamleadPage() {
         </div>
       )}
 
-      {/* Модалка редактирования отчёта менеджера */}
+      {/* Модалка редактирования отчёта менеджера (2 поля: написавшие + РКО) */}
       {editingReport && (
         <EditReportModal
           report={editingReport}
-          teamType={
-            TEAMS.find(t => t.id === selectedManager?.team)?.type
-              || TEAMS.find(t => t.id === editingReport.manager_id)?.type
-              || 'standard'
-          }
           onClose={() => setEditingReport(null)}
           onSaved={(updated) => {
             setTeamReports(prev => prev.map(r => r.id === updated.id ? { ...r, ...updated } : r))

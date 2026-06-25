@@ -5,20 +5,20 @@ import { authFetch } from '../lib/supabase'
 // Модалка для редактирования цифр в отчёте менеджера.
 // Подключена в admin/page.js и teamlead/page.js.
 //
+// 06.2026: упрощено до 2 полей — Написавшие и Заказали РКО.
+// Старые поля (unsubscribed, replied, ordered_cards) остаются в БД,
+// но в UI не показываются и не редактируются.
+//   "Написавшие"     → people_wrote
+//   "Заказали РКО"   → ordered_ip
+//
 // props:
 //   report      — текущий объект отчёта (см. таблицу reports)
-//   teamType    — 'standard' | 'karina' | 'nikita' (определяет какие поля показывать)
 //   onClose()   — закрыть модалку
 //   onSaved(updatedReport) — после успешного PUT (родитель обновит local state)
-export default function EditReportModal({ report, teamType, onClose, onSaved }) {
-  const isNikita = teamType === 'nikita'
-
+export default function EditReportModal({ report, onClose, onSaved }) {
   const [form, setForm] = useState({
-    ordered_ip: report.ordered_ip ?? 0,
-    ordered_cards: report.ordered_cards ?? 0,
-    unsubscribed: report.unsubscribed ?? 0,
-    replied: report.replied ?? 0,
     people_wrote: report.people_wrote ?? 0,
+    ordered_ip: report.ordered_ip ?? 0,
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -26,17 +26,13 @@ export default function EditReportModal({ report, teamType, onClose, onSaved }) 
   // Если меняется report (нажали редактировать другой) — сбрасываем форму
   useEffect(() => {
     setForm({
-      ordered_ip: report.ordered_ip ?? 0,
-      ordered_cards: report.ordered_cards ?? 0,
-      unsubscribed: report.unsubscribed ?? 0,
-      replied: report.replied ?? 0,
       people_wrote: report.people_wrote ?? 0,
+      ordered_ip: report.ordered_ip ?? 0,
     })
     setError(null)
   }, [report.id])
 
   function setField(name, value) {
-    // Принимаем только цифры; пусто = 0
     const cleaned = value.replace(/\D/g, '')
     setForm(f => ({ ...f, [name]: cleaned === '' ? 0 : Number(cleaned) }))
   }
@@ -46,17 +42,13 @@ export default function EditReportModal({ report, teamType, onClose, onSaved }) 
     setSubmitting(true)
     setError(null)
     try {
-      const payload = {
-        ordered_ip: form.ordered_ip,
-        ordered_cards: form.ordered_cards,
-        unsubscribed: form.unsubscribed,
-        replied: form.replied,
-        people_wrote: form.people_wrote,
-      }
       const res = await authFetch(`/api/reports/${report.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          people_wrote: form.people_wrote,
+          ordered_ip: form.ordered_ip,
+        }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Ошибка'); return }
@@ -87,61 +79,24 @@ export default function EditReportModal({ report, teamType, onClose, onSaved }) 
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Для всех команд: ИП и Карты */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-gray-400 text-xs mb-1.5 block">Заказали ИП</label>
-              <input
-                type="text" inputMode="numeric" pattern="\d*"
-                value={form.ordered_ip}
-                onChange={e => setField('ordered_ip', e.target.value)}
-                className="w-full bg-gray-900 text-white px-3 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
-              />
-            </div>
-            <div>
-              <label className="text-gray-400 text-xs mb-1.5 block">Заказали карты</label>
-              <input
-                type="text" inputMode="numeric" pattern="\d*"
-                value={form.ordered_cards}
-                onChange={e => setField('ordered_cards', e.target.value)}
-                className="w-full bg-gray-900 text-white px-3 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
-              />
-            </div>
+          <div>
+            <label className="text-gray-400 text-xs mb-1.5 block">Написавшие</label>
+            <input
+              type="text" inputMode="numeric" pattern="\d*"
+              value={form.people_wrote}
+              onChange={e => setField('people_wrote', e.target.value)}
+              className="w-full bg-gray-900 text-white px-3 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
+            />
           </div>
-
-          {/* Для Никиты — людей написали (вместо отписанные/ответили) */}
-          {isNikita ? (
-            <div>
-              <label className="text-gray-400 text-xs mb-1.5 block">Людей написали</label>
-              <input
-                type="text" inputMode="numeric" pattern="\d*"
-                value={form.people_wrote}
-                onChange={e => setField('people_wrote', e.target.value)}
-                className="w-full bg-gray-900 text-white px-3 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
-              />
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-gray-400 text-xs mb-1.5 block">Отписавшиеся</label>
-                <input
-                  type="text" inputMode="numeric" pattern="\d*"
-                  value={form.unsubscribed}
-                  onChange={e => setField('unsubscribed', e.target.value)}
-                  className="w-full bg-gray-900 text-white px-3 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
-                />
-              </div>
-              <div>
-                <label className="text-gray-400 text-xs mb-1.5 block">Ответившие</label>
-                <input
-                  type="text" inputMode="numeric" pattern="\d*"
-                  value={form.replied}
-                  onChange={e => setField('replied', e.target.value)}
-                  className="w-full bg-gray-900 text-white px-3 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
-                />
-              </div>
-            </div>
-          )}
+          <div>
+            <label className="text-gray-400 text-xs mb-1.5 block">Заказали РКО</label>
+            <input
+              type="text" inputMode="numeric" pattern="\d*"
+              value={form.ordered_ip}
+              onChange={e => setField('ordered_ip', e.target.value)}
+              className="w-full bg-gray-900 text-white px-3 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
+            />
+          </div>
 
           {error && <p className="text-red-400 text-sm">{error}</p>}
 

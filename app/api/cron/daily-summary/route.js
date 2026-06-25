@@ -1,9 +1,12 @@
 // Ежедневная сводка по командам в Telegram.
 // Cron: 18:00 UTC = 21:00 МСК (vercel.json).
 //
-// Метрики на менеджера: отписанные, ответившие, заказали ИП, заказали карты,
-// ЦД ИП (из Google Sheets), ЦД дебетовые (из Google Sheets), взято номеров
-// (из contact_distributions). Плюс итоги за день, за месяц и сравнение со вчера.
+// 06.2026: формат отчётов упрощён до 2 полей — написавшие (people_wrote)
+// и заказали РКО (ordered_ip). Старые отписанные/ответившие/карты остаются
+// в БД но в сводку не идут.
+// Метрики на менеджера: написавшие, заказали РКО, ЦД ИП (из Google Sheets),
+// ЦД дебетовые (из Google Sheets), взято номеров (из contact_distributions).
+// Плюс итоги за день, за месяц и сравнение со вчера.
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -147,23 +150,24 @@ export async function GET(request) {
     }
 
     // 2) reports — сегодня, вчера и весь месяц (для итога за месяц)
+    // 06.2026: только 2 поля — people_wrote (Написавшие) и ordered_ip (Заказали РКО).
+    // Старые колонки в БД остаются, но в сводку не идут.
     const { data: allReports, error: rErr } = await supabase
       .from('reports')
-      .select('manager_id, date, unsubscribed, replied, ordered_ip, ordered_cards, people_wrote')
+      .select('manager_id, date, ordered_ip, people_wrote')
       .gte('date', monthStart)
       .lte('date', today)
     if (rErr) throw new Error(`reports: ${rErr.message}`)
 
-    const repsTodayByMgr = new Map()   // id → {ip, cards, unsub, repl, wrote}
+    const repsTodayByMgr = new Map()   // id → {ip, wrote}
     const repsYestByMgr  = new Map()
     const repsMonthByMgr = new Map()
     for (const r of (allReports || [])) {
-      const entry = { ip: r.ordered_ip||0, cards: r.ordered_cards||0, unsub: r.unsubscribed||0, repl: r.replied||0, wrote: r.people_wrote||0 }
+      const entry = { ip: r.ordered_ip||0, wrote: r.people_wrote||0 }
       if (r.date === today) repsTodayByMgr.set(r.manager_id, entry)
       if (r.date === yesterday) repsYestByMgr.set(r.manager_id, entry)
-      // Месячная сумма — аккумулируем
-      const m = repsMonthByMgr.get(r.manager_id) || { ip:0, cards:0, unsub:0, repl:0, wrote:0 }
-      m.ip+=entry.ip; m.cards+=entry.cards; m.unsub+=entry.unsub; m.repl+=entry.repl; m.wrote+=entry.wrote
+      const m = repsMonthByMgr.get(r.manager_id) || { ip:0, wrote:0 }
+      m.ip+=entry.ip; m.wrote+=entry.wrote
       repsMonthByMgr.set(r.manager_id, m)
     }
 
@@ -208,33 +212,31 @@ export async function GET(request) {
       : `📊 <b>Сводка за ${fmtDateHuman(today)}</b>`)
     lines.push('')
 
-    let totIpDay=0,totIpYest=0,totCardsDay=0,totCardsYest=0,totCdIpDay=0,totCdCardsDay=0,totNumDay=0
-    let totIpMonth=0,totCardsMonth=0,totCdIpMonth=0,totCdCardsMonth=0,totNumMonth=0
+    // 06.2026: метрики упрощены до 2 — Написавшие (wrote) и Заказали РКО (ip).
+    let totIpDay=0,totIpYest=0,totWroteDay=0,totCdIpDay=0,totCdCardsDay=0,totNumDay=0
+    let totIpMonth=0,totWroteMonth=0,totCdIpMonth=0,totCdCardsMonth=0,totNumMonth=0
     const missing = []
 
     for (const team of TEAMS) {
       const teamMgrs = mgrsByTeam.get(team.id) || []
       if (teamMgrs.length === 0) continue
-      const isNikita = team.type === 'nikita'
-      const isKarina = team.type === 'karina'
 
-      // Команда: суммы за сегодня (для заголовка + цвет зоны)
-      let ipDay=0,cardsDay=0,ipYestTeam=0,cardsYestTeam=0
+      // Команда: суммы за сегодня + вчера для дельты
+      let ipDay=0,wroteDay=0,ipYestTeam=0
       for (const m of teamMgrs) {
-        const t = repsTodayByMgr.get(m.id) || { ip:0, cards:0 }
-        const y = repsYestByMgr.get(m.id)  || { ip:0, cards:0 }
-        ipDay+=t.ip; cardsDay+=t.cards; ipYestTeam+=y.ip; cardsYestTeam+=y.cards
+        const t = repsTodayByMgr.get(m.id) || { ip:0, wrote:0 }
+        const y = repsYestByMgr.get(m.id)  || { ip:0, wrote:0 }
+        ipDay+=t.ip; wroteDay+=t.wrote; ipYestTeam+=y.ip
       }
-      totIpDay+=ipDay; totCardsDay+=cardsDay; totIpYest+=ipYestTeam; totCardsYest+=cardsYestTeam
+      totIpDay+=ipDay; totWroteDay+=wroteDay; totIpYest+=ipYestTeam
 
-      const mainValue = isKarina ? cardsDay : ipDay
-      const emoji = zoneEmoji(mainValue, team.type)
-      lines.push(`${emoji} <b>Команда ${escapeHtml(team.name)}</b> — ${ipDay} ИП (${fmtSigned(ipDay-ipYestTeam)}), ${cardsDay} карт (${fmtSigned(cardsDay-cardsYestTeam)})`)
+      const emoji = zoneEmoji(ipDay, 'standard')
+      lines.push(`${emoji} <b>Команда ${escapeHtml(team.name)}</b> — ${ipDay} РКО (${fmtSigned(ipDay-ipYestTeam)}), ${wroteDay} написавших`)
 
-      // Сортируем по основной метрике убыв
+      // Сортируем по РКО убыв
       const sorted = [...teamMgrs].sort((a, b) => {
-        const va = (repsTodayByMgr.get(a.id) || { ip:0, cards:0 })[isKarina?'cards':'ip']
-        const vb = (repsTodayByMgr.get(b.id) || { ip:0, cards:0 })[isKarina?'cards':'ip']
+        const va = (repsTodayByMgr.get(a.id) || { ip:0 }).ip
+        const vb = (repsTodayByMgr.get(b.id) || { ip:0 }).ip
         return (vb - va) || a.name.localeCompare(b.name, 'ru')
       })
 
@@ -242,28 +244,21 @@ export async function GET(request) {
         const t = repsTodayByMgr.get(m.id)
         const sheetT = cdToday[m.name] || { ip:0, debit:0 }
         const nT = numbersToday.get(m.id) || 0
-        // Месячные данные собираем тут же — пригодятся для тотала
-        const monthRep = repsMonthByMgr.get(m.id) || { ip:0, cards:0 }
+        const monthRep = repsMonthByMgr.get(m.id) || { ip:0, wrote:0 }
         const sheetM = cdMonth[m.name] || { ip:0, debit:0 }
         const nM = numbersMonth.get(m.id) || 0
-        totIpMonth+=monthRep.ip; totCardsMonth+=monthRep.cards
+        totIpMonth+=monthRep.ip; totWroteMonth+=monthRep.wrote
         totCdIpMonth+=sheetM.ip; totCdCardsMonth+=sheetM.debit; totNumMonth+=nM
         if (t) { totCdIpDay+=sheetT.ip; totCdCardsDay+=sheetT.debit; totNumDay+=nT }
 
         if (!t) {
-          // Не сдал отчёт — пишем серую строку без цифр reports, но с ЦД/номерами если есть
           lines.push(`   ○ <i>${escapeHtml(m.name)}</i> — отчёт не сдан${sheetT.ip||sheetT.debit||nT ? ` (ЦД ИП ${sheetT.ip} · ЦД карт ${sheetT.debit} · ном ${nT})` : ''}`)
           missing.push({ name: m.name, team: team.name })
           continue
         }
 
-        // Никита: вместо отп/отв пишем "людей"
-        const firstPart = isNikita
-          ? `людей ${t.wrote}`
-          : `отп ${t.unsub} · отв ${t.repl}`
-        // Сама строка менеджера — в одну если короткая, иначе с переносом
         lines.push(`   • <b>${escapeHtml(m.name)}</b>`)
-        lines.push(`      ${firstPart} · ИП ${t.ip} · карт ${t.cards}`)
+        lines.push(`      написавших ${t.wrote} · РКО ${t.ip}`)
         lines.push(`      ЦД ИП ${sheetT.ip} · ЦД карт ${sheetT.debit} · ном ${nT}`)
       }
       lines.push('')
@@ -282,8 +277,8 @@ export async function GET(request) {
     }
 
     // Итоги
-    lines.push(`<b>ИТОГО за день:</b> ${totIpDay} ИП (${fmtSigned(totIpDay-totIpYest)}), ${totCardsDay} карт (${fmtSigned(totCardsDay-totCardsYest)}) / ${totCdIpDay} ЦД ИП, ${totCdCardsDay} ЦД карт, ${totNumDay} ном`)
-    lines.push(`<b>Итого за месяц (${escapeHtml(monthName)}):</b> ${totIpMonth} ИП заказ, ${totCardsMonth} карт заказ / ${totCdIpMonth} ЦД ИП, ${totCdCardsMonth} ЦД карт, ${totNumMonth} ном`)
+    lines.push(`<b>ИТОГО за день:</b> ${totIpDay} РКО (${fmtSigned(totIpDay-totIpYest)}), ${totWroteDay} написавших / ${totCdIpDay} ЦД ИП, ${totCdCardsDay} ЦД карт, ${totNumDay} ном`)
+    lines.push(`<b>Итого за месяц (${escapeHtml(monthName)}):</b> ${totIpMonth} РКО, ${totWroteMonth} написавших / ${totCdIpMonth} ЦД ИП, ${totCdCardsMonth} ЦД карт, ${totNumMonth} ном`)
 
     const text = lines.join('\n')
 
