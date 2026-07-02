@@ -291,8 +291,16 @@ export default function TeamleadPage() {
       const tgPromise = loadTgAccountsInit()
 
       const { data: p } = await profilePromise
-      if (!p || p.role !== 'teamlead') {
-        router.push(p?.role === 'admin' ? '/admin' : '/dashboard')
+      // Тимлид-кабинет доступен teamlead'у и admin'у (админ ведёт СВОЮ команду
+      // тут же — напр. Никита: role=admin, team=nikita). Менеджеров — в dashboard.
+      if (!p || !['teamlead', 'admin'].includes(p.role)) {
+        router.push('/dashboard')
+        return
+      }
+      // У admin'а без team (напр. владелец maks) команды нет — тимлид-кабинет
+      // ему не нужен, отправляем в админку.
+      if (p.role === 'admin' && !p.team) {
+        router.push('/admin')
         return
       }
       setProfile(p)
