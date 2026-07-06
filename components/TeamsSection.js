@@ -48,6 +48,10 @@ export default function TeamsSection({ allManagers }) {
   const [error, setError] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null) // slug команды
   const [deleting, setDeleting] = useState(false)
+  // Редактирование названия
+  const [editSlug, setEditSlug] = useState(null)   // slug редактируемой команды
+  const [editName, setEditName] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -141,6 +145,31 @@ export default function TeamsSection({ allManagers }) {
     }
   }
 
+  // Сохранить новое название команды (PATCH). slug не меняется.
+  async function handleSaveName(slug) {
+    const name = editName.trim()
+    if (name.length < 1) { alert('Введите название'); return }
+    setSavingEdit(true)
+    try {
+      const res = await authFetch(`/api/teams/${slug}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { alert(data.error || 'Не удалось переименовать'); return }
+      // Обновляем локально + перезагружаем чтобы имя обновилось везде (аналитика, сводка)
+      setTeams(prev => prev.map(t => t.slug === slug ? { ...t, name } : t))
+      setEditSlug(null); setEditName('')
+      window.location.reload()
+    } catch (err) {
+      console.error('rename team:', err)
+      alert('Ошибка сети')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
   const onlyManagers = (allManagers || []).filter(m => m.role === 'manager')
 
   return (
@@ -175,16 +204,49 @@ export default function TeamsSection({ allManagers }) {
               {teams.map(t => {
                 const cnt = memberCounts[t.slug] || 0
                 const isDeleting = deleteConfirm === t.slug
+                const isEditing = editSlug === t.slug
                 return (
                   <tr key={t.slug} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
-                    <td className="px-4 py-3 text-sm text-gray-200 font-medium">Команда {t.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-200 font-medium">
+                      {isEditing ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500">Команда</span>
+                          <input
+                            type="text" autoFocus maxLength={60}
+                            value={editName}
+                            onChange={e => setEditName(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSaveName(t.slug); if (e.key === 'Escape') { setEditSlug(null); setEditName('') } }}
+                            className="bg-gray-900 text-white px-2 py-1 rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 text-sm w-48"
+                          />
+                        </div>
+                      ) : (
+                        <>Команда {t.name}</>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-500 font-mono">{t.slug}</td>
                     <td className="px-4 py-3 text-sm text-gray-400">{t.type}</td>
                     <td className="px-4 py-3 text-sm">
                       <span className={cnt === 0 ? 'text-gray-600' : 'text-gray-300'}>{cnt}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {isDeleting ? (
+                      {isEditing ? (
+                        <div className="flex items-center gap-2 justify-end">
+                          <button
+                            onClick={() => handleSaveName(t.slug)}
+                            disabled={savingEdit}
+                            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs px-2 py-1 rounded-md font-semibold"
+                          >
+                            {savingEdit ? '...' : 'Сохранить'}
+                          </button>
+                          <button
+                            onClick={() => { setEditSlug(null); setEditName('') }}
+                            disabled={savingEdit}
+                            className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-md"
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      ) : isDeleting ? (
                         <div className="flex items-center gap-2 justify-end">
                           <span className="text-gray-400 text-xs">Удалить?</span>
                           <button
@@ -203,14 +265,23 @@ export default function TeamsSection({ allManagers }) {
                           </button>
                         </div>
                       ) : (
-                        <button
-                          onClick={() => setDeleteConfirm(t.slug)}
-                          disabled={cnt > 0}
-                          title={cnt > 0 ? 'Сначала переведи всех в другую команду' : 'Удалить команду'}
-                          className="text-gray-600 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
-                        >
-                          🗑
-                        </button>
+                        <div className="flex items-center gap-3 justify-end">
+                          <button
+                            onClick={() => { setEditSlug(t.slug); setEditName(t.name); setDeleteConfirm(null) }}
+                            title="Переименовать команду"
+                            className="text-gray-600 hover:text-blue-400 transition text-xs"
+                          >
+                            ✏
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirm(t.slug)}
+                            disabled={cnt > 0}
+                            title={cnt > 0 ? 'Сначала переведи всех в другую команду' : 'Удалить команду'}
+                            className="text-gray-600 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
+                          >
+                            🗑
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
