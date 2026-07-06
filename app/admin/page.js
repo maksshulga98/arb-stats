@@ -1205,7 +1205,15 @@ export default function AdminPage() {
 
         {/* ─── Salary tab ─── */}
         {activeTab === 'salary' && (() => {
-          const RATES = { MANAGER_IP: 1000, MANAGER_DEBIT: 300, TL_BONUS_IP: 150, TL_BONUS_DEBIT: 50 }
+          // Бонус тимлида за ЦД ИП менеджера: с июля 2026 — 300₽, раньше — 150₽.
+          // Ставка зависит от ВЫБРАННОГО месяца, чтобы прошлые расчёты не менялись.
+          const isJuly2026OrLater = salaryYear > 2026 || (salaryYear === 2026 && salaryMonth >= 6)
+          const RATES = {
+            MANAGER_IP: 1000,
+            MANAGER_DEBIT: 300,
+            TL_BONUS_IP: isJuly2026OrLater ? 300 : 150,
+            TL_BONUS_DEBIT: 50,
+          }
           const lastDay = new Date(salaryYear, salaryMonth + 1, 0).getDate()
           const dateFrom = `${salaryYear}-${String(salaryMonth + 1).padStart(2, '0')}-${salaryHalf === 1 ? '01' : '16'}`
           const dateTo   = `${salaryYear}-${String(salaryMonth + 1).padStart(2, '0')}-${salaryHalf === 1 ? '15' : String(lastDay).padStart(2, '0')}`
@@ -1331,7 +1339,10 @@ export default function AdminPage() {
                   </button>
                 </div>
                 {salaryCalculated && (
-                  <p className="text-gray-600 text-xs mt-3">Период: {dateFrom} — {dateTo}</p>
+                  <p className="text-gray-600 text-xs mt-3">
+                    Период: {dateFrom} — {dateTo}
+                    {' · '}Бонус ТЛ за ЦД ИП: {RATES.TL_BONUS_IP} ₽/шт
+                  </p>
                 )}
               </div>
 
