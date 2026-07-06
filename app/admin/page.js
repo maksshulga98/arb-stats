@@ -487,6 +487,29 @@ export default function AdminPage() {
     return m
   }, [managers])
 
+  // Сводка по всей компании для панели вверху "Аналитика команды".
+  // По каждой команде: кол-во людей (менеджеры + тимлид) и РКО за текущие
+  // 7 дней / предыдущие 7 дней. Плюс общие итоги по всем командам.
+  const companySummary = useMemo(() => {
+    const rows = TEAMS.map(team => {
+      const teamManagers = managersByTeam.get(team.id) || []
+      const teamTLs = team.id !== 'nikita' ? teamleads.filter(t => t.team === team.id) : []
+      const members = [...teamTLs, ...teamManagers]
+      let cur = 0, prev = 0
+      for (const m of members) {
+        const rep = reportsByManager.get(m.id) || []
+        cur  += getIPForPeriod(rep, 0, 7)
+        prev += getIPForPeriod(rep, 7, 14)
+      }
+      return { id: team.id, name: team.name, people: members.length, cur, prev }
+    })
+    const totals = rows.reduce((acc, r) => {
+      acc.people += r.people; acc.cur += r.cur; acc.prev += r.prev
+      return acc
+    }, { people: 0, cur: 0, prev: 0 })
+    return { rows, totals, teamCount: TEAMS.length }
+  }, [TEAMS, managersByTeam, teamleads, reportsByManager])
+
   // TG аккаунты по нормализованному имени
   const tgByName = useMemo(() => {
     const m = new Map()
@@ -791,6 +814,74 @@ export default function AdminPage() {
         {/* ─── Analytics tab ─── */}
         {activeTab === 'analytics' && (
           <div className="space-y-10">
+            {/* Сводка по всей компании (только админ-кабинет) */}
+            <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl p-5">
+              <h2 className="text-base font-semibold text-gray-200 mb-4">Сводка по компании</h2>
+
+              {/* Верхние счётчики */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+                <div>
+                  <p className="text-gray-500 text-xs mb-1">Команд</p>
+                  <p className="text-2xl font-bold text-gray-100">{companySummary.teamCount}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-xs mb-1">Людей в командах</p>
+                  <p className="text-2xl font-bold text-gray-100">{companySummary.totals.people}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-xs mb-1">РКО за 7 дней</p>
+                  <p className="text-2xl font-bold text-blue-400">{companySummary.totals.cur}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-xs mb-1">РКО за пред. 7 дней</p>
+                  <p className="text-2xl font-bold text-gray-300">{companySummary.totals.prev}</p>
+                </div>
+              </div>
+
+              {/* Разбивка по командам */}
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[420px]">
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                      <th className="text-left py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Команда</th>
+                      <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Людей</th>
+                      <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">РКО 7 дн</th>
+                      <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">РКО пред. 7 дн</th>
+                      <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Δ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {companySummary.rows.map(r => {
+                      const delta = r.cur - r.prev
+                      return (
+                        <tr key={r.id} style={{ borderTop: '1px solid #1a1a28' }}>
+                          <td className="py-2 text-sm text-gray-300">Команда {r.name}</td>
+                          <td className="py-2 text-sm text-gray-400 text-right">{r.people}</td>
+                          <td className="py-2 text-sm font-semibold text-blue-400 text-right">{r.cur}</td>
+                          <td className="py-2 text-sm text-gray-400 text-right">{r.prev}</td>
+                          <td className={`py-2 text-sm text-right font-medium ${delta > 0 ? 'text-green-400' : delta < 0 ? 'text-red-400' : 'text-gray-600'}`}>
+                            {delta > 0 ? `+${delta}` : delta}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                    <tr style={{ borderTop: '2px solid #2a2a3e' }} className="bg-white/[0.02]">
+                      <td className="py-2 text-sm font-semibold text-gray-200">Итого</td>
+                      <td className="py-2 text-sm font-semibold text-gray-200 text-right">{companySummary.totals.people}</td>
+                      <td className="py-2 text-sm font-bold text-blue-400 text-right">{companySummary.totals.cur}</td>
+                      <td className="py-2 text-sm font-semibold text-gray-300 text-right">{companySummary.totals.prev}</td>
+                      <td className={`py-2 text-sm text-right font-bold ${
+                        companySummary.totals.cur - companySummary.totals.prev > 0 ? 'text-green-400'
+                        : companySummary.totals.cur - companySummary.totals.prev < 0 ? 'text-red-400' : 'text-gray-600'
+                      }`}>
+                        {(() => { const d = companySummary.totals.cur - companySummary.totals.prev; return d > 0 ? `+${d}` : d })()}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             {TEAMS.map(team => {
               const teamManagers = managersByTeam.get(team.id) || []
               const teamTLs = team.id !== 'nikita' ? teamleads.filter(t => t.team === team.id) : []
