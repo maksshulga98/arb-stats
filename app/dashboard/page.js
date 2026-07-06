@@ -521,7 +521,7 @@ export default function DashboardPage() {
     ...(hasContactsAccess ? [{ id: 'contacts', label: 'Выдача номеров' }] : []),
     // { id: 'ip-link', label: 'Ссылка ИП' },  // временно скрыто — заменён на "Счёт ИП"
     { id: 'account-link', label: 'Счёт ИП' },
-    { id: 'add-cd', label: 'Добавить ЦД' },
+    // { id: 'add-cd', label: 'Добавить ЦД' },  // временно скрыто (07.2026) — код рендера ниже сохранён
   ]
 
   return (
