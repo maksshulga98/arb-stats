@@ -169,12 +169,14 @@ export async function PUT(request, { params }) {
       if (callerProfile.role !== 'admin') {
         return NextResponse.json({ error: 'Только админ может переносить менеджеров между командами' }, { status: 403 })
       }
-      // Допустимые команды соответствуют TEAMS в UI. null разрешён — означает «вне команды».
-      // 04.06.2026: команда Анастасии расформирована
-      // 11.06.2026: команда Карины расформирована
-      const ALLOWED_TEAMS = ['olya', 'nikita', null]
-      if (!ALLOWED_TEAMS.includes(team)) {
-        return NextResponse.json({ error: `Неизвестная команда: ${team}` }, { status: 400 })
+      // Валидируем по таблице teams (динамические команды), а не по хардкоду.
+      // null разрешён — означает «вне команды».
+      if (team !== null) {
+        const { data: teamRow } = await supabaseAdmin
+          .from('teams').select('slug').eq('slug', team).maybeSingle()
+        if (!teamRow) {
+          return NextResponse.json({ error: `Неизвестная команда: ${team}` }, { status: 400 })
+        }
       }
       // Перенос имеет смысл только для активных менеджеров. Тимлидов и админов
       // через эту функцию не двигаем (для них перенос — это смена обязанностей).
