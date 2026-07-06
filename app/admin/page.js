@@ -15,6 +15,24 @@ import WarningsList from '../../components/WarningsList'
 import TeamsSection from '../../components/TeamsSection'
 import EditReportModal from '../../components/EditReportModal'
 
+// Транслит названия команды → slug (дублирует lib/teams.js slugifyName,
+// чтобы не тянуть серверный модуль в клиентский бандл). "Пети" → "peti".
+const TEAM_TRANSLIT = {
+  а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'y',
+  к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',
+  х:'h',ц:'c',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya',
+}
+function slugifyTeamName(name) {
+  return String(name || '')
+    .toLowerCase()
+    .replace(/команды?|команду|команд|тимы?/gi, '')
+    .trim()
+    .split(/\s+/)[0]
+    .split('').map(c => TEAM_TRANSLIT[c] ?? c).join('')
+    .replace(/[^a-z0-9_-]/g, '')
+    .slice(0, 30)
+}
+
 // Fallback пока /api/teams ещё грузится — отображает что-то, чтобы не было flash'а
 // пустоты. После загрузки заменяется на актуальный список из БД (таблица teams).
 const STATIC_TEAMS_FALLBACK = [
@@ -158,6 +176,11 @@ export default function AdminPage() {
   const [editingTeam, setEditingTeam] = useState(false)
   const [newTeamValue, setNewTeamValue] = useState('')
   const [savingTeam, setSavingTeam] = useState(false)
+  // Создание новой команды с назначением этого менеджера тимлидом
+  const [creatingTeam, setCreatingTeam] = useState(false)
+  const [newTeamName, setNewTeamName] = useState('')
+  const [savingNewTeam, setSavingNewTeam] = useState(false)
+  const [newTeamError, setNewTeamError] = useState(null)
   const [showBell, setShowBell]           = useState(false)
   const [sheetsData, setSheetsData]       = useState({})
   const [sheetsLoading, setSheetsLoading] = useState(false)
@@ -215,8 +238,11 @@ export default function AdminPage() {
 
   useEffect(() => { checkAdmin() }, [])
   useEffect(() => { setSheetEditing(false); setSheetUrlInput('') }, [selectedManager?.id])
-  // Закрываем редактор команды при смене выбранного менеджера/закрытии модалки
-  useEffect(() => { setEditingTeam(false); setNewTeamValue('') }, [selectedManager?.id])
+  // Закрываем редакторы команды при смене выбранного менеджера/закрытии модалки
+  useEffect(() => {
+    setEditingTeam(false); setNewTeamValue('')
+    setCreatingTeam(false); setNewTeamName(''); setNewTeamError(null)
+  }, [selectedManager?.id])
 
   // Fetch Google Sheets ЦД data when daily tab is active
   useEffect(() => {
@@ -506,6 +532,37 @@ export default function AdminPage() {
       alert('Сетевая ошибка при переносе')
     } finally {
       setSavingTeam(false)
+    }
+  }
+
+  // ── Создать команду и назначить менеджера тимлидом ─────────────────────────
+  // POST /api/teams { name, slug, type:'standard', teamlead_id }. Бэкенд создаёт
+  // команду и промоутит менеджера в teamlead + team=slug одной операцией.
+  // slug генерируется транслитом из названия автоматически.
+  const handleCreateTeamForManager = async (managerId) => {
+    const name = newTeamName.trim()
+    if (name.length < 1) { setNewTeamError('Введите название команды'); return }
+    const slug = slugifyTeamName(name)
+    if (!slug) { setNewTeamError('Не удалось сгенерировать slug из названия — используйте латиницу/кириллицу'); return }
+
+    setSavingNewTeam(true)
+    setNewTeamError(null)
+    try {
+      const res = await authFetch('/api/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, slug, type: 'standard', teamlead_id: managerId }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setNewTeamError(data.error || 'Ошибка создания команды'); return }
+      // Команда создана + менеджер стал тимлидом. Перезагружаем, чтобы обновились
+      // TEAMS, аналитика и роль в списках (проще и надёжнее ручной синхронизации).
+      window.location.reload()
+    } catch (e) {
+      console.error('handleCreateTeamForManager:', e)
+      setNewTeamError('Сетевая ошибка')
+    } finally {
+      setSavingNewTeam(false)
     }
   }
 
@@ -1972,6 +2029,56 @@ export default function AdminPage() {
                   canDelete={true}
                   onLoaded={(monthCount) => setWarningCounts(prev => ({ ...prev, [selectedManager.id]: monthCount }))}
                 />
+              </div>
+            )}
+
+            {/* Создать команду и сделать этого менеджера тимлидом (только role=manager) */}
+            {selectedManager.role === 'manager' && (
+              <div style={{ borderTop: '1px solid #1f1f2e' }} className="px-6 py-4">
+                {creatingTeam ? (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-300 mb-1">Новая команда</p>
+                    <p className="text-gray-500 text-xs mb-3">
+                      {selectedManager.name || selectedManager.email} станет тимлидом. Название — как команда будет подписана в системе.
+                    </p>
+                    <input
+                      type="text" maxLength={60} autoFocus
+                      value={newTeamName}
+                      onChange={e => { setNewTeamName(e.target.value); setNewTeamError(null) }}
+                      placeholder="Пети"
+                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm mb-1"
+                    />
+                    {newTeamName.trim() && (
+                      <p className="text-gray-600 text-xs mb-2">
+                        Отобразится как «Команда {newTeamName.trim()}» · slug: <span className="font-mono">{slugifyTeamName(newTeamName) || '—'}</span>
+                      </p>
+                    )}
+                    {newTeamError && <p className="text-red-400 text-sm mb-2">{newTeamError}</p>}
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => handleCreateTeamForManager(selectedManager.id)}
+                        disabled={savingNewTeam}
+                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-semibold transition"
+                      >
+                        {savingNewTeam ? 'Создаём...' : 'Создать команду'}
+                      </button>
+                      <button
+                        onClick={() => { setCreatingTeam(false); setNewTeamName(''); setNewTeamError(null) }}
+                        disabled={savingNewTeam}
+                        className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm transition"
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setCreatingTeam(true); setNewTeamName(''); setNewTeamError(null) }}
+                    className="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1.5 transition"
+                  >
+                    + Создать команду (сделать тимлидом)
+                  </button>
+                )}
               </div>
             )}
 
