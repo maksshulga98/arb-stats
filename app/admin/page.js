@@ -77,6 +77,27 @@ function getCardsForPeriod(reports, daysStart, daysEnd) {
     .reduce((sum, r) => sum + (r.ordered_cards || 0), 0)
 }
 
+// Написавшие (people_wrote) за период N дней — для расчёта конверсии.
+function getWroteForPeriod(reports, daysStart, daysEnd) {
+  const now = new Date()
+  now.setHours(23, 59, 59, 999)
+  const end = new Date(now)
+  end.setDate(end.getDate() - daysStart)
+  const start = new Date(now)
+  start.setDate(start.getDate() - daysEnd)
+  start.setHours(0, 0, 0, 0)
+  return reports
+    .filter(r => { const d = new Date(r.date); return d >= start && d <= end })
+    .reduce((sum, r) => sum + (r.people_wrote || 0), 0)
+}
+
+// Конверсия = заказали РКО / написавшие * 100, до десятых (напр. "5.8%").
+// Если написавших 0 — делить нельзя, показываем "—".
+function convStr(orders, writers) {
+  if (!writers || writers <= 0) return '—'
+  return (orders / writers * 100).toFixed(1) + '%'
+}
+
 function getZoneKey(value, teamType) {
   if (teamType === 'karina') {
     if (value < 15) return 'red'
@@ -495,18 +516,19 @@ export default function AdminPage() {
       const teamManagers = managersByTeam.get(team.id) || []
       const teamTLs = team.id !== 'nikita' ? teamleads.filter(t => t.team === team.id) : []
       const members = [...teamTLs, ...teamManagers]
-      let cur = 0, prev = 0
+      let cur = 0, prev = 0, wroteCur = 0
       for (const m of members) {
         const rep = reportsByManager.get(m.id) || []
         cur  += getIPForPeriod(rep, 0, 7)
         prev += getIPForPeriod(rep, 7, 14)
+        wroteCur += getWroteForPeriod(rep, 0, 7)
       }
-      return { id: team.id, name: team.name, people: members.length, cur, prev }
+      return { id: team.id, name: team.name, people: members.length, cur, prev, wroteCur }
     })
     const totals = rows.reduce((acc, r) => {
-      acc.people += r.people; acc.cur += r.cur; acc.prev += r.prev
+      acc.people += r.people; acc.cur += r.cur; acc.prev += r.prev; acc.wroteCur += r.wroteCur
       return acc
-    }, { people: 0, cur: 0, prev: 0 })
+    }, { people: 0, cur: 0, prev: 0, wroteCur: 0 })
     return { rows, totals, teamCount: TEAMS.length }
   }, [TEAMS, managersByTeam, teamleads, reportsByManager])
 
@@ -819,7 +841,7 @@ export default function AdminPage() {
               <h2 className="text-base font-semibold text-gray-200 mb-4">Сводка по компании</h2>
 
               {/* Верхние счётчики */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-5">
                 <div>
                   <p className="text-gray-500 text-xs mb-1">Команд</p>
                   <p className="text-2xl font-bold text-gray-100">{companySummary.teamCount}</p>
@@ -836,11 +858,15 @@ export default function AdminPage() {
                   <p className="text-gray-500 text-xs mb-1">РКО за пред. 7 дней</p>
                   <p className="text-2xl font-bold text-gray-300">{companySummary.totals.prev}</p>
                 </div>
+                <div>
+                  <p className="text-gray-500 text-xs mb-1">Конверсия за 7 дней</p>
+                  <p className="text-2xl font-bold text-cyan-400">{convStr(companySummary.totals.cur, companySummary.totals.wroteCur)}</p>
+                </div>
               </div>
 
               {/* Разбивка по командам */}
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[420px]">
+                <table className="w-full min-w-[480px]">
                   <thead>
                     <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                       <th className="text-left py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Команда</th>
@@ -848,6 +874,7 @@ export default function AdminPage() {
                       <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">РКО 7 дн</th>
                       <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">РКО пред. 7 дн</th>
                       <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Δ</th>
+                      <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Конв. 7 дн</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -862,6 +889,7 @@ export default function AdminPage() {
                           <td className={`py-2 text-sm text-right font-medium ${delta > 0 ? 'text-green-400' : delta < 0 ? 'text-red-400' : 'text-gray-600'}`}>
                             {delta > 0 ? `+${delta}` : delta}
                           </td>
+                          <td className="py-2 text-sm text-right font-medium text-cyan-400">{convStr(r.cur, r.wroteCur)}</td>
                         </tr>
                       )
                     })}
@@ -876,6 +904,7 @@ export default function AdminPage() {
                       }`}>
                         {(() => { const d = companySummary.totals.cur - companySummary.totals.prev; return d > 0 ? `+${d}` : d })()}
                       </td>
+                      <td className="py-2 text-sm text-right font-bold text-cyan-400">{convStr(companySummary.totals.cur, companySummary.totals.wroteCur)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -911,6 +940,7 @@ export default function AdminPage() {
                         const mRep    = managerReports(manager.id)
                         // 06.2026: единая метрика для всех команд — РКО (ordered_ip).
                         const value7  = getIPForPeriod(mRep, 0, 7)
+                        const wrote7  = getWroteForPeriod(mRep, 0, 7)
                         const zKey    = getZoneKey(value7, 'standard')
                         const z       = ZONE[zKey]
                         const alert14 = isRedFor14Days(mRep, manager.created_at)
@@ -958,10 +988,13 @@ export default function AdminPage() {
 
                             {!isDeletePending ? (
                               <>
-                                <div className="mb-3">
+                                <div className="mb-2">
                                   <span className={`text-3xl font-bold ${z.text}`}>{value7}</span>
                                   <span className="text-gray-500 text-xs ml-1">РКО / 7 дн</span>
                                 </div>
+                                <p className="text-gray-500 text-xs mb-3">
+                                  Конверсия: <span className="text-cyan-400 font-medium">{convStr(value7, wrote7)}</span>
+                                </p>
 
                                 <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>
                                   {z.label}
@@ -1051,7 +1084,7 @@ export default function AdminPage() {
                     <h2 className="text-sm font-semibold text-gray-200">Сводка за период</h2>
                     <span className="text-gray-600 text-xs">{reportedCount} из {totalMembers} сдали отчёт</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Написавшие</p>
                       <p className="text-xl font-bold text-gray-200">{totalPeopleWrote}</p>
@@ -1061,11 +1094,16 @@ export default function AdminPage() {
                       <p className="text-xl font-bold text-blue-400">{totalOrdered}</p>
                     </div>
                     <div>
+                      <p className="text-gray-500 text-xs mb-1">Конверсия</p>
+                      <p className="text-xl font-bold text-cyan-400">{convStr(totalOrdered, totalPeopleWrote)}</p>
+                    </div>
+                    <div>
                       <p className="text-gray-500 text-xs mb-1">ЦД ИП</p>
                       <p className="text-xl font-bold text-emerald-400">
                         {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.ip || 0), 0)}
                       </p>
                     </div>
+                    {/* Скрыто 07.2026 — ЦД дебетовые и Выдано номеров (код сохранён)
                     <div>
                       <p className="text-gray-500 text-xs mb-1">ЦД дебетовые</p>
                       <p className="text-xl font-bold text-purple-400">
@@ -1078,6 +1116,7 @@ export default function AdminPage() {
                         {contactsLoading ? '...' : contactStats.total}
                       </p>
                     </div>
+                    */}
                   </div>
                 </div>
               )
@@ -1140,15 +1179,17 @@ export default function AdminPage() {
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Менеджер</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Конверсия</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
-                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД дебетовые</th>
-                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Взято номеров</th>
+                          {/* Скрыто 07.2026 (код сохранён):
+                          <th ...>ЦД дебетовые</th>
+                          <th ...>Взято номеров</th> */}
                         </tr>
                       </thead>
                       <tbody>
                         {rows.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="text-center py-8 text-gray-600 text-sm">
+                            <td colSpan={5} className="text-center py-8 text-gray-600 text-sm">
                               Нет участников в команде
                             </td>
                           </tr>
@@ -1164,15 +1205,15 @@ export default function AdminPage() {
                                   </td>
                                   <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
                                   <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
+                                  <td className="px-3 sm:px-5 py-3 text-sm text-cyan-400 font-medium">
+                                    {report ? convStr(report.ordered_ip, report.people_wrote) : '—'}
+                                  </td>
                                   <td className="px-3 sm:px-5 py-3 text-sm">
                                     <CdValue value={sd ? sd.ip : null} loading={sheetsLoading && sd === undefined} />
                                   </td>
-                                  <td className="px-3 sm:px-5 py-3 text-sm">
-                                    <CdValue value={sd ? sd.debit : null} loading={sheetsLoading && sd === undefined} color="text-purple-400" />
-                                  </td>
-                                  <td className="px-3 sm:px-5 py-3 text-sm">
-                                    <CdValue value={contactStats.byManagerId?.[member.id] ?? null} loading={contactsLoading} color="text-orange-400" />
-                                  </td>
+                                  {/* Скрыто 07.2026 (код сохранён):
+                                  <td><CdValue value={sd ? sd.debit : null} color="text-purple-400" /></td>
+                                  <td><CdValue value={contactStats.byManagerId?.[member.id] ?? null} color="text-orange-400" /></td> */}
                                 </tr>
                               )
                             })}
@@ -1181,15 +1222,11 @@ export default function AdminPage() {
                                 <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">Итого</td>
                                 <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-cyan-400">{convStr(totals.ordered_ip, totals.people_wrote)}</td>
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
                                   {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0) + teamDeletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.ip || 0), 0)}
                                 </td>
-                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-purple-400">
-                                  {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.debit || 0), 0) + teamDeletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.debit || 0), 0)}
-                                </td>
-                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-orange-400">
-                                  {rows.reduce((s, { member }) => s + (contactStats.byManagerId?.[member.id] || 0), 0)}
-                                </td>
+                                {/* Скрыто 07.2026 (код сохранён): ЦД дебетовые + Взято номеров */}
                               </tr>
                             )}
                           </>

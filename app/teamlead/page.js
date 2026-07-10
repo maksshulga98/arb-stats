@@ -45,6 +45,22 @@ function getIPForPeriod(reports, daysStart, daysEnd) {
 
 function getIPLast7Days(reports) { return getIPForPeriod(reports, 0, 7) }
 
+// Написавшие (people_wrote) за последние 7 дней — для конверсии на карточках.
+function getWroteLast7Days(reports) {
+  const now = new Date()
+  now.setHours(23, 59, 59, 999)
+  const start = new Date(now); start.setDate(start.getDate() - 7); start.setHours(0, 0, 0, 0)
+  return reports
+    .filter(r => { const d = new Date(r.date); return d >= start && d <= now })
+    .reduce((sum, r) => sum + (r.people_wrote || 0), 0)
+}
+
+// Конверсия = заказали РКО / написавшие * 100, до десятых. writers=0 → "—".
+function convStr(orders, writers) {
+  if (!writers || writers <= 0) return '—'
+  return (orders / writers * 100).toFixed(1) + '%'
+}
+
 // Аналог getIPLast7Days для дебетовых карт. На карточках менеджеров в
 // "Аналитика команды" показываем обе метрики рядом, чтобы тимлид видел и ИП,
 // и карты независимо от типа команды.
@@ -1002,6 +1018,7 @@ export default function TeamleadPage() {
                     // (по ней — цвет зоны и порог в isRedFor14Days).
                     // 06.2026: единая метрика для всех команд — РКО (ordered_ip).
                     const value7  = getIPLast7Days(mRep)
+                    const wrote7  = getWroteLast7Days(mRep)
                     const zKey    = getZoneKey(value7, 'standard')
                     const z       = ZONE[zKey]
                     const alert14 = isRedFor14Days(mRep, manager.created_at)
@@ -1046,6 +1063,10 @@ export default function TeamleadPage() {
                               <div>
                                 <span className={`text-2xl font-bold ${z.text}`}>{value7}</span>
                                 <span className="text-gray-500 text-xs ml-1">РКО / 7 дн</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 text-xs">Конверсия: </span>
+                                <span className="text-cyan-400 text-xs font-medium">{convStr(value7, wrote7)}</span>
                               </div>
                             </div>
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>{z.label}</span>
@@ -1180,17 +1201,23 @@ export default function TeamleadPage() {
                     <p className="text-xl font-bold text-blue-400">{totals.ordered_ip}</p>
                   </div>
                   <div>
+                    <p className="text-gray-500 text-xs mb-1">Конверсия</p>
+                    <p className="text-xl font-bold text-cyan-400">{convStr(totals.ordered_ip, totals.people_wrote)}</p>
+                  </div>
+                  <div>
                     <p className="text-gray-500 text-xs mb-1">ЦД ИП</p>
                     <p className="text-xl font-bold text-emerald-400">
                       {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.ip || 0), 0)}
                     </p>
                   </div>
+                  {/* Скрыто 07.2026 — ЦД дебетовые (код сохранён)
                   <div>
                     <p className="text-gray-500 text-xs mb-1">ЦД дебетовые</p>
                     <p className="text-xl font-bold text-purple-400">
                       {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.debit || 0), 0)}
                     </p>
                   </div>
+                  */}
                 </div>
               </div>
 
@@ -1207,8 +1234,9 @@ export default function TeamleadPage() {
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Менеджер</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Конверсия</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
-                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД дебетовые</th>
+                        {/* Скрыто 07.2026 (код сохранён): <th>ЦД дебетовые</th> */}
                       </tr>
                     </thead>
                     <tbody>
@@ -1222,12 +1250,11 @@ export default function TeamleadPage() {
                             </td>
                             <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
                             <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
+                            <td className="px-3 sm:px-5 py-3 text-sm text-cyan-400 font-medium">{report ? convStr(report.ordered_ip, report.people_wrote) : '—'}</td>
                             <td className="px-3 sm:px-5 py-3 text-sm">
                               <CdValue value={sd ? sd.ip : null} loading={sheetsLoading && sd === undefined} />
                             </td>
-                            <td className="px-3 sm:px-5 py-3 text-sm">
-                              <CdValue value={sd ? sd.debit : null} loading={sheetsLoading && sd === undefined} color="text-purple-400" />
-                            </td>
+                            {/* Скрыто 07.2026 (код сохранён): <td><CdValue value={sd?.debit} color="text-purple-400" /></td> */}
                           </tr>
                         )
                       })}
@@ -1236,12 +1263,11 @@ export default function TeamleadPage() {
                           <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">Итого</td>
                           <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
                           <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
+                          <td className="px-3 sm:px-5 py-3 text-sm font-bold text-cyan-400">{convStr(totals.ordered_ip, totals.people_wrote)}</td>
                           <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
                             {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0) + deletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.ip || 0), 0)}
                           </td>
-                          <td className="px-3 sm:px-5 py-3 text-sm font-bold text-purple-400">
-                            {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.debit || 0), 0) + deletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.debit || 0), 0)}
-                          </td>
+                          {/* Скрыто 07.2026 (код сохранён): ЦД дебетовые итог */}
                         </tr>
                       )}
                     </tbody>

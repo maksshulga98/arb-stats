@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "miniapp",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "/Users/maksimsulga/denga", "--filter", "@denga/miniapp", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "pakt-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/maksimsulga/prime-era-app", "run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "hr-deck",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "http-server", "/Users/maksimsulga/Desktop", "-p", "8765", "-c-1", "--cors"],
+      "port": 8765
+    },
+    {
+      "name": "training-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/maksimsulga/tochka-rosta-training", "run", "dev", "--", "-p", "3001"],
+      "port": 3001
+    }
+  ]
+}
