@@ -205,6 +205,11 @@ export default function AdminPage() {
   const [showBell, setShowBell]           = useState(false)
   const [sheetsData, setSheetsData]       = useState({})
   const [sheetsLoading, setSheetsLoading] = useState(false)
+  // ЦД (Google Sheets) для сводки по компании на вкладке "Аналитика":
+  // два окна — текущие 7 дней и предыдущие 7 дней. Ключ — имя менеджера → { ip }.
+  const [summaryCdCur, setSummaryCdCur]   = useState({})
+  const [summaryCdPrev, setSummaryCdPrev] = useState({})
+  const [summaryCdLoading, setSummaryCdLoading] = useState(false)
   const [contactStats, setContactStats]   = useState({ total: 0, byManager: [] })
   const [contactsLoading, setContactsLoading] = useState(false)
   const [deletedMembers, setDeletedMembers] = useState([])
@@ -278,6 +283,31 @@ export default function AdminPage() {
       .catch(() => setSheetsData({}))
       .finally(() => setSheetsLoading(false))
   }, [activeTab, dateFrom, dateTo, managers, deletedMembers])
+
+  // Fetch ЦД (Google Sheets) для сводки по компании на вкладке "Аналитика".
+  // Два окна дат подобраны так же, как отчётные getIPForPeriod(rep,0,7)/(7,14):
+  //   текущие 7 дней  = [сегодня-7 .. сегодня]
+  //   предыдущие 7 дн = [сегодня-14 .. сегодня-7]
+  useEffect(() => {
+    if (activeTab !== 'analytics' || managers.length === 0) return
+    const allMembers = [...managers, ...teamleads, ...deletedMembers]
+    const namesWithSheets = allMembers.filter(m => m.sheet_id || MANAGER_SHEETS[m.name]).map(m => m.name)
+    if (namesWithSheets.length === 0) { setSummaryCdCur({}); setSummaryCdPrev({}); return }
+    const ymd = (offsetDays) => {
+      const d = new Date()
+      d.setDate(d.getDate() - offsetDays)
+      return d.toISOString().split('T')[0]
+    }
+    const namesParam = encodeURIComponent(namesWithSheets.join(','))
+    setSummaryCdLoading(true)
+    Promise.all([
+      fetch(`/api/sheets?names=${namesParam}&dateFrom=${ymd(7)}&dateTo=${ymd(0)}`).then(r => r.json()),
+      fetch(`/api/sheets?names=${namesParam}&dateFrom=${ymd(14)}&dateTo=${ymd(7)}`).then(r => r.json()),
+    ])
+      .then(([cur, prev]) => { setSummaryCdCur(cur || {}); setSummaryCdPrev(prev || {}) })
+      .catch(() => { setSummaryCdCur({}); setSummaryCdPrev({}) })
+      .finally(() => setSummaryCdLoading(false))
+  }, [activeTab, managers, teamleads, deletedMembers])
 
   // Fetch contact distribution stats when daily tab is active
   useEffect(() => {
@@ -516,21 +546,24 @@ export default function AdminPage() {
       const teamManagers = managersByTeam.get(team.id) || []
       const teamTLs = team.id !== 'nikita' ? teamleads.filter(t => t.team === team.id) : []
       const members = [...teamTLs, ...teamManagers]
-      let cur = 0, prev = 0, wroteCur = 0
+      let cur = 0, prev = 0, wroteCur = 0, cdCur = 0, cdPrev = 0
       for (const m of members) {
         const rep = reportsByManager.get(m.id) || []
         cur  += getIPForPeriod(rep, 0, 7)
         prev += getIPForPeriod(rep, 7, 14)
         wroteCur += getWroteForPeriod(rep, 0, 7)
+        cdCur  += summaryCdCur[m.name]?.ip || 0
+        cdPrev += summaryCdPrev[m.name]?.ip || 0
       }
-      return { id: team.id, name: team.name, people: members.length, cur, prev, wroteCur }
+      return { id: team.id, name: team.name, people: members.length, cur, prev, wroteCur, cdCur, cdPrev }
     })
     const totals = rows.reduce((acc, r) => {
-      acc.people += r.people; acc.cur += r.cur; acc.prev += r.prev; acc.wroteCur += r.wroteCur
+      acc.people += r.people; acc.cur += r.cur; acc.prev += r.prev
+      acc.wroteCur += r.wroteCur; acc.cdCur += r.cdCur; acc.cdPrev += r.cdPrev
       return acc
-    }, { people: 0, cur: 0, prev: 0, wroteCur: 0 })
+    }, { people: 0, cur: 0, prev: 0, wroteCur: 0, cdCur: 0, cdPrev: 0 })
     return { rows, totals, teamCount: TEAMS.length }
-  }, [TEAMS, managersByTeam, teamleads, reportsByManager])
+  }, [TEAMS, managersByTeam, teamleads, reportsByManager, summaryCdCur, summaryCdPrev])
 
   // TG аккаунты по нормализованному имени
   const tgByName = useMemo(() => {
@@ -841,7 +874,7 @@ export default function AdminPage() {
               <h2 className="text-base font-semibold text-gray-200 mb-4">Сводка по компании</h2>
 
               {/* Верхние счётчики */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 mb-5">
                 <div>
                   <p className="text-gray-500 text-xs mb-1">Команд</p>
                   <p className="text-2xl font-bold text-gray-100">{companySummary.teamCount}</p>
@@ -859,6 +892,14 @@ export default function AdminPage() {
                   <p className="text-2xl font-bold text-gray-300">{companySummary.totals.prev}</p>
                 </div>
                 <div>
+                  <p className="text-gray-500 text-xs mb-1">ЦД за 7 дней</p>
+                  <p className="text-2xl font-bold text-emerald-400">{summaryCdLoading ? '...' : companySummary.totals.cdCur}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-xs mb-1">ЦД за пред. 7 дней</p>
+                  <p className="text-2xl font-bold text-gray-300">{summaryCdLoading ? '...' : companySummary.totals.cdPrev}</p>
+                </div>
+                <div>
                   <p className="text-gray-500 text-xs mb-1">Конверсия за 7 дней</p>
                   <p className="text-2xl font-bold text-cyan-400">{convStr(companySummary.totals.cur, companySummary.totals.wroteCur)}</p>
                 </div>
@@ -866,7 +907,7 @@ export default function AdminPage() {
 
               {/* Разбивка по командам */}
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[480px]">
+                <table className="w-full min-w-[620px]">
                   <thead>
                     <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                       <th className="text-left py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Команда</th>
@@ -874,6 +915,8 @@ export default function AdminPage() {
                       <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">РКО 7 дн</th>
                       <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">РКО пред. 7 дн</th>
                       <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Δ</th>
+                      <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД 7 дн</th>
+                      <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД пред. 7 дн</th>
                       <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Конв. 7 дн</th>
                     </tr>
                   </thead>
@@ -889,6 +932,8 @@ export default function AdminPage() {
                           <td className={`py-2 text-sm text-right font-medium ${delta > 0 ? 'text-green-400' : delta < 0 ? 'text-red-400' : 'text-gray-600'}`}>
                             {delta > 0 ? `+${delta}` : delta}
                           </td>
+                          <td className="py-2 text-sm text-right font-medium text-emerald-400">{summaryCdLoading ? '...' : r.cdCur}</td>
+                          <td className="py-2 text-sm text-right text-gray-400">{summaryCdLoading ? '...' : r.cdPrev}</td>
                           <td className="py-2 text-sm text-right font-medium text-cyan-400">{convStr(r.cur, r.wroteCur)}</td>
                         </tr>
                       )
@@ -904,6 +949,8 @@ export default function AdminPage() {
                       }`}>
                         {(() => { const d = companySummary.totals.cur - companySummary.totals.prev; return d > 0 ? `+${d}` : d })()}
                       </td>
+                      <td className="py-2 text-sm text-right font-bold text-emerald-400">{summaryCdLoading ? '...' : companySummary.totals.cdCur}</td>
+                      <td className="py-2 text-sm text-right font-semibold text-gray-300">{summaryCdLoading ? '...' : companySummary.totals.cdPrev}</td>
                       <td className="py-2 text-sm text-right font-bold text-cyan-400">{convStr(companySummary.totals.cur, companySummary.totals.wroteCur)}</td>
                     </tr>
                   </tbody>
