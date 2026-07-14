@@ -1,130 +1,170 @@
-// Автоматизация браузера: открыть «некрасивую» форму оформления, вставить
-// данные клиента, отправить и вытащить «красивую» ссылку (href кнопки
-// «Заполнить заявку на сайте банка») со страницы-результата.
+// Автоматизация браузера: открыть форму оформления, заполнить данными клиента,
+// отправить и вытащить «красивую» ссылку (href/redirect кнопки «Заполнить
+// заявку на сайте банка») со страницы-результата.
 //
-// Селекторы не зашиты жёстко: поля ищутся по подписи/placeholder/name/aria,
-// кнопки — по тексту. Это устойчивее к вёрстке партнёрки и не требует точных
-// CSS-селекторов. Тексты подписей/кнопок вынесены в FORM_MAP — при желании
-// финализируются под реальный DOM (см. runner/README.md).
+// Форма банков-маркета (оффер Альфа-РКО и аналоги) построена на shadcn/ui +
+// DaData-автокомплитах. Особенности, установленные по живой форме:
+//   • у инпутов НЕТ id/name → адресуемся по порядку полей + сверяем подписи;
+//   • «Наименование организации», «Юр.адрес», «Город» — combobox с подсказками
+//     role="option" в контейнере role="listbox";
+//   • выбор организации ПО ИНН автозаполняет название, ИНН и город;
+//   • «Юридический адрес» — отдельный автокомплит с выбором дома;
+//   • «Телефон» — маска +7 (___) ___-__-__.
+//
+// Профиль формы вынесен в FORM_PROFILE — под другой банк добавляется новый.
 
 import puppeteer from 'puppeteer-core'
 
-// Соответствие «поле задачи → варианты подписи/placeholder/name на странице».
-// Порядок вариантов = приоритет поиска.
-const FORM_MAP = {
-  organization_name: ['Наименование организации', 'организаци', 'название'],
-  inn:               ['ИНН', 'inn'],
-  legal_address:     ['Юридический адрес', 'адрес'],
-  city:              ['Город обслуживания', 'город'],
-  contact_person:    ['Контактное лицо', 'фио', 'имя'],
-  email:             ['Электронная почта', 'email', 'почта', 'e-mail'],
-  phone:             ['Телефон', 'phone', 'тел'],
+const FORM_PROFILE = {
+  // ожидаемый порядок и подписи полей (для fail-loud проверки, что форма не менялась)
+  labels: [
+    'Наименование организации', // 0 combobox — вводим ИНН, выбираем из подсказок
+    'ИНН',                       // 1 автозаполнится
+    'Юридический адрес',         // 2 combobox — вводим адрес, выбираем дом
+    'Город обслуживания',        // 3 автозаполнится из организации
+    'Контактное лицо',           // 4 текст
+    'Электронная почта',         // 5 текст
+    'Телефон',                   // 6 маска
+  ],
+  idx: { org: 0, inn: 1, address: 2, city: 3, contact: 4, email: 5, phone: 6 },
+  submitTexts: ['Отправить заявку', 'Отправить'],
+  resultLinkTexts: ['Заполнить заявку на сайте банка', 'на сайте банка', 'Перейти на сайт банка', 'на сайт банка'],
 }
 
-const SUBMIT_TEXTS = ['Отправить заявку', 'Отправить', 'Далее', 'Продолжить']
-const RESULT_LINK_TEXTS = ['Заполнить заявку на сайте банка', 'на сайте банка', 'Перейти на сайт банка']
+const sleep = (ms) => new Promise(r => setTimeout(r, ms))
+const norm = (s) => (s || '').toLowerCase().replace(/[^0-9a-zа-яё]+/gi, ' ').trim()
 
-// Найти input/textarea по списку подписей и записать значение так, чтобы
-// сработали React-обработчики (нативный setter + событие input).
-async function fillField(page, candidates, value) {
-  const ok = await page.evaluate((cands, val) => {
-    const norm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim()
-    const fields = Array.from(document.querySelectorAll('input, textarea'))
-      .filter(el => !['hidden', 'submit', 'button'].includes(el.type))
+async function getInputs(page) {
+  const inputs = await page.$$('form input, form textarea')
+  if (inputs.length < FORM_PROFILE.labels.length) {
+    throw new Error(`Ожидал ≥${FORM_PROFILE.labels.length} полей формы, нашёл ${inputs.length} — форма изменилась, нужно обновить профиль`)
+  }
+  return inputs
+}
 
-    const labelText = (el) => {
-      let t = ''
-      if (el.id) {
-        const lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`)
-        if (lab) t += ' ' + lab.textContent
+// Проверяем, что подписи полей совпадают с ожидаемыми (порядок не «поехал»).
+async function verifyForm(page) {
+  const labels = await page.evaluate(() => {
+    const form = document.querySelector('form')
+    const fields = Array.from(form.querySelectorAll('input, textarea'))
+    return fields.map(el => {
+      let label = '', p = el.parentElement
+      while (p && p !== form && !label) {
+        const prev = p.previousElementSibling
+        if (prev && prev.textContent.trim()) label = prev.textContent.trim()
+        p = p.parentElement
       }
-      const wrap = el.closest('label')
-      if (wrap) t += ' ' + wrap.textContent
-      // подпись в предыдущем соседе (частый паттерн: <label>..<input>)
-      const prev = el.previousElementSibling
-      if (prev && (prev.tagName === 'LABEL' || prev.tagName === 'SPAN' || prev.tagName === 'DIV')) {
-        t += ' ' + prev.textContent
-      }
-      t += ' ' + (el.placeholder || '') + ' ' + (el.name || '') + ' ' + (el.getAttribute('aria-label') || '')
-      return norm(t)
+      return label
+    })
+  })
+  FORM_PROFILE.labels.forEach((expected, i) => {
+    if (!norm(labels[i] || '').includes(norm(expected))) {
+      throw new Error(`Поле #${i}: ожидал "${expected}", на форме "${labels[i]}" — профиль формы устарел`)
     }
+  })
+}
 
-    for (const cand of cands) {
-      const c = norm(cand)
-      const target = fields.find(el => labelText(el).includes(c))
-      if (target) {
-        const proto = target.tagName === 'TEXTAREA'
-          ? window.HTMLTextAreaElement.prototype
-          : window.HTMLInputElement.prototype
-        const setter = Object.getOwnPropertyDescriptor(proto, 'value').set
-        target.focus()
-        setter.call(target, '')
-        target.dispatchEvent(new Event('input', { bubbles: true }))
-        setter.call(target, val)
-        target.dispatchEvent(new Event('input', { bubbles: true }))
-        target.dispatchEvent(new Event('change', { bubbles: true }))
-        target.blur()
-        target.dispatchEvent(new Event('blur', { bubbles: true }))
-        return true
-      }
+// Впечатать текст в поле (клавиатурой — чтобы сработали обработчики react-hook-form)
+async function typeInto(handle, text) {
+  await handle.click({ clickCount: 3 })          // выделить существующее
+  await handle.press('Backspace').catch(() => {})
+  await handle.type(String(text), { delay: 35 })
+}
+
+// Дождаться выпадающих подсказок и выбрать пункт, максимально совпадающий с wanted
+async function pickOption(page, wanted) {
+  await page.waitForSelector('[role="option"]', { timeout: 15000 })
+  await sleep(350)                                // дать списку дорисоваться
+  const options = await page.$$('[role="option"]')
+  const wTokens = norm(wanted).split(' ').filter(Boolean)
+  let best = options[0], bestScore = -1
+  for (const opt of options) {
+    const text = norm(await (await opt.getProperty('textContent')).jsonValue())
+    const score = wTokens.filter(tok => text.includes(tok)).length
+    if (score > bestScore) { bestScore = score; best = opt }
+  }
+  await best.click()
+  await sleep(300)
+}
+
+async function clickSubmit(page) {
+  const ok = await page.evaluate((texts) => {
+    const nrm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim()
+    let btn = document.querySelector('form button[type=submit]')
+    if (!btn) {
+      const all = Array.from(document.querySelectorAll('button'))
+      btn = all.find(b => texts.some(t => nrm(b.textContent).includes(nrm(t))))
     }
+    if (btn) { btn.click(); return true }
     return false
-  }, candidates, String(value))
-  return ok
+  }, FORM_PROFILE.submitTexts)
+  if (!ok) throw new Error('Не нашёл кнопку «Отправить заявку»')
 }
 
-// Телефон с маской: значение лучше «напечатать» с клавиатуры, иначе маска
-// его перетрёт. Фокусируем поле и вводим только цифры (без ведущей 7/8).
-async function fillPhone(page, candidates, phone) {
-  const digits = String(phone).replace(/\D/g, '').replace(/^[78]/, '')
-  const focused = await page.evaluate((cands) => {
-    const norm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim()
-    const fields = Array.from(document.querySelectorAll('input')).filter(el => el.type !== 'hidden')
-    const labelText = (el) =>
-      norm(`${el.placeholder || ''} ${el.name || ''} ${el.getAttribute('aria-label') || ''} ${el.closest('label')?.textContent || ''}`)
-    for (const cand of cands) {
-      const c = norm(cand)
-      const t = fields.find(el => el.type === 'tel' || labelText(el).includes(c))
-      if (t) { t.focus(); return true }
+// Дождаться страницы-результата и достать «красивую» ссылку
+async function getResultLink(page, browser) {
+  // Ждём появления кнопки/ссылки результата (Step 2)
+  await page.waitForFunction((texts) => {
+    const nrm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim()
+    return Array.from(document.querySelectorAll('a[href], button'))
+      .some(e => texts.some(t => nrm(e.textContent).includes(nrm(t))))
+  }, { timeout: 60000 }, FORM_PROFILE.resultLinkTexts)
+  await sleep(500)
+
+  // 1) Прямой href у <a> с нужным текстом
+  const direct = await page.evaluate((texts) => {
+    const nrm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim()
+    const links = Array.from(document.querySelectorAll('a[href]'))
+    for (const t of texts) {
+      const el = links.find(a => nrm(a.textContent).includes(nrm(t)))
+      if (el) return el.href
     }
-    return false
-  }, candidates)
-  if (!focused) return false
-  await page.keyboard.type(digits, { delay: 40 })
-  return true
-}
+    return null
+  }, FORM_PROFILE.resultLinkTexts)
+  if (direct) return direct
 
-async function clickByText(page, texts) {
-  const clicked = await page.evaluate((txts) => {
-    const norm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim()
-    const els = Array.from(document.querySelectorAll('button, a, input[type=submit], [role=button]'))
-    for (const t of txts) {
-      const c = norm(t)
-      const el = els.find(e => norm(e.textContent || e.value).includes(c))
+  // 2) Кнопка открывает ссылку по клику (новая вкладка / редирект) — кликаем и ловим URL
+  const newPagePromise = new Promise((resolve) => {
+    const onTarget = async (target) => {
+      if (target.type() === 'page') {
+        browser.off('targetcreated', onTarget)
+        try { resolve((await target.page())?.url() || target.url()) } catch { resolve(target.url()) }
+      }
+    }
+    browser.on('targetcreated', onTarget)
+    setTimeout(() => { browser.off('targetcreated', onTarget); resolve(null) }, 15000)
+  })
+  const navPromise = page.waitForNavigation({ timeout: 15000 }).then(() => page.url()).catch(() => null)
+
+  const clicked = await page.evaluate((texts) => {
+    const nrm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim()
+    const els = Array.from(document.querySelectorAll('a, button, [role=button]'))
+    for (const t of texts) {
+      const el = els.find(e => nrm(e.textContent).includes(nrm(t)))
       if (el) { el.click(); return true }
     }
     return false
-  }, texts)
-  return clicked
-}
+  }, FORM_PROFILE.resultLinkTexts)
 
-async function getLinkHref(page, texts) {
-  return page.evaluate((txts) => {
-    const norm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim()
-    const links = Array.from(document.querySelectorAll('a[href]'))
-    for (const t of txts) {
-      const c = norm(t)
-      const el = links.find(a => norm(a.textContent).includes(c))
-      if (el) return el.href
-    }
-    // запасной вариант: любая ссылка, ведущая на внешний банковский домен
-    const ext = links.map(a => a.href).find(h => /alfabank|sberbank|tinkoff|tbank|vtb|bank/i.test(h))
-    return ext || null
-  }, texts)
+  if (clicked) {
+    const url = await Promise.race([newPagePromise, navPromise])
+    if (url && !/banks-market\.com/.test(url)) return url
+    if (url) return url
+  }
+
+  // 3) Запасной вариант: любая внешняя банковская ссылка на странице
+  const ext = await page.evaluate(() => {
+    const links = Array.from(document.querySelectorAll('a[href]')).map(a => a.href)
+    return links.find(h => /alfabank|alfa|sberbank|sber|tinkoff|tbank|vtb|ozon|tochka|otkritie|bank/i.test(h)
+      && !/banks-market\.com\/(terms|privacy)/.test(h)) || null
+  })
+  if (ext) return ext
+
+  throw new Error('Страница-результат открылась, но ссылку кнопки вытащить не удалось (уточнить селектор на первом реальном прогоне)')
 }
 
 /**
- * Прогнать одну заявку в уже запущенном профиле Dolphin.
+ * Прогнать одну заявку в запущенном профиле Dolphin.
  * @param {string} browserWSEndpoint  из dolphin.startProfile
  * @param {object} job                строка bank_link_jobs
  * @returns {Promise<string>}         «красивая» ссылка
@@ -137,41 +177,47 @@ export async function runApplication(browserWSEndpoint, job) {
     page.setDefaultTimeout(45000)
 
     await page.goto(job.source_url, { waitUntil: 'networkidle2' })
+    await page.waitForSelector('form input', { timeout: 30000 })
+    await verifyForm(page)
 
-    // Заполняем все текстовые поля
-    const results = {}
-    for (const [field, candidates] of Object.entries(FORM_MAP)) {
-      if (field === 'phone') { results[field] = await fillPhone(page, candidates, job.phone); continue }
-      results[field] = await fillField(page, candidates, job[field])
+    const I = FORM_PROFILE.idx
+
+    // 1. Организация — вводим ИНН, выбираем единственную подсказку по ИНН.
+    //    Это автозаполняет название, ИНН и город.
+    let inputs = await getInputs(page)
+    await typeInto(inputs[I.org], job.inn)
+    await pickOption(page, job.inn)
+
+    // 2. Юридический адрес — вводим адрес клиента, выбираем совпадающий дом.
+    inputs = await getInputs(page)
+    await typeInto(inputs[I.address], job.legal_address)
+    await pickOption(page, job.legal_address)
+
+    // 3. Город — обычно уже автозаполнен. Если пуст — вписываем.
+    inputs = await getInputs(page)
+    const cityVal = await (await inputs[I.city].getProperty('value')).jsonValue()
+    if (!cityVal) {
+      await typeInto(inputs[I.city], job.city)
+      await pickOption(page, job.city).catch(() => {})
+      inputs = await getInputs(page)
     }
-    const missing = Object.entries(results).filter(([, ok]) => !ok).map(([f]) => f)
-    if (missing.length) {
-      throw new Error('Не нашёл поля формы: ' + missing.join(', ') + ' (нужно уточнить селекторы под реальный DOM)')
-    }
 
-    // Отправляем
-    const submitted = await clickByText(page, SUBMIT_TEXTS)
-    if (!submitted) throw new Error('Не нашёл кнопку отправки формы')
+    // 4-5. Контактное лицо и email
+    await typeInto(inputs[I.contact], job.contact_person)
+    await typeInto(inputs[I.email], job.email)
 
-    // Ждём страницу-результат: либо навигация, либо появление кнопки результата
-    await Promise.race([
-      page.waitForNavigation({ waitUntil: 'networkidle2' }).catch(() => {}),
-      page.waitForFunction(
-        (txts) => {
-          const norm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim()
-          return Array.from(document.querySelectorAll('a[href]'))
-            .some(a => txts.some(t => norm(a.textContent).includes(norm(t))))
-        },
-        { timeout: 45000 },
-        RESULT_LINK_TEXTS,
-      ),
-    ])
+    // 6. Телефон (маска): фокус + печать 10 цифр (без ведущей 7/8)
+    const digits = String(job.phone).replace(/\D/g, '').replace(/^[78]/, '')
+    await inputs[I.phone].click()
+    await page.keyboard.type(digits, { delay: 45 })
 
-    const link = await getLinkHref(page, RESULT_LINK_TEXTS)
-    if (!link) throw new Error('Страница-результат открылась, но ссылку кнопки не удалось вытащить')
+    // 7. Отправка
+    await clickSubmit(page)
+
+    // 8. Ссылка со страницы-результата
+    const link = await getResultLink(page, browser)
     return link
   } finally {
-    // Отключаемся, НЕ закрывая браузер Dolphin (его гасит stopProfile)
-    browser.disconnect()
+    browser.disconnect()  // не закрываем браузер Dolphin — его гасит stopProfile
   }
 }
