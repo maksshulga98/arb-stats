@@ -9,6 +9,7 @@ const CYR_MAP = { a:'а',b:'в',c:'с',e:'е',h:'н',k:'к',m:'м',o:'о',p:'р'
 const normName = s => (s||'').trim().replace(/\s+/g,' ').toLowerCase().replace(/[a-z]/g, c => CYR_MAP[c] || c)
 import { MANAGER_SHEETS, MONTHS_RU } from '../../lib/sheets-config'
 import AccountLinkSection from '../../components/AccountLinkSection'
+import BankLinkSection from '../../components/BankLinkSection'
 import TasksSection from '../../components/TasksSection'
 import WarningButton from '../../components/WarningButton'
 import WarningsList from '../../components/WarningsList'
@@ -714,6 +715,7 @@ export default function AdminPage() {
     { id: 'telegram',  label: 'Аккаунты Телеграмм' },
     // { id: 'ip-link',   label: 'Ссылка ИП' },  // временно скрыто — заменён на "Счёт ИП"
     { id: 'account-link', label: 'Счёт ИП' },
+    { id: 'bank-link', label: 'Заявка в банк' },
     // { id: 'add-cd',    label: 'Добавить ЦД' },  // временно скрыто (07.2026) — код рендера ниже сохранён
     { id: 'teams',     label: 'Команды' },
   ]
@@ -1749,6 +1751,15 @@ export default function AdminPage() {
         {/* ─── Счёт ИП (РКО, оффер 533) ─── */}
         {activeTab === 'account-link' && (
           <AccountLinkSection
+            scope="all"
+            showManagerColumn
+            managerNameById={Object.fromEntries(managers.map(m => [m.id, m.name]))}
+          />
+        )}
+
+        {/* ─── Заявка в банк (Dolphin-раннер) ─── */}
+        {activeTab === 'bank-link' && (
+          <BankLinkSection
             scope="all"
             showManagerColumn
             managerNameById={Object.fromEntries(managers.map(m => [m.id, m.name]))}

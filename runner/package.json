@@ -1,0 +1,15 @@
+{
+  "name": "arb-stats-bank-link-runner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Раннер авто-оформления банковских ссылок через Dolphin Anty + мобильный прокси. Опрашивает очередь bank_link_jobs в Supabase.",
+  "scripts": {
+    "start": "node worker.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5",
+    "puppeteer-core": "^23.0.0"
+  }
+}
