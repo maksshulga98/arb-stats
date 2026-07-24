@@ -19,6 +19,7 @@ export default function EditReportModal({ report, onClose, onSaved }) {
   const [form, setForm] = useState({
     people_wrote: report.people_wrote ?? 0,
     ordered_ip: report.ordered_ip ?? 0,
+    ordered_simka: report.ordered_simka ?? 0,
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -28,6 +29,7 @@ export default function EditReportModal({ report, onClose, onSaved }) {
     setForm({
       people_wrote: report.people_wrote ?? 0,
       ordered_ip: report.ordered_ip ?? 0,
+      ordered_simka: report.ordered_simka ?? 0,
     })
     setError(null)
   }, [report.id])
@@ -48,6 +50,7 @@ export default function EditReportModal({ report, onClose, onSaved }) {
         body: JSON.stringify({
           people_wrote: form.people_wrote,
           ordered_ip: form.ordered_ip,
+          ordered_simka: form.ordered_simka,
         }),
       })
       const data = await res.json()
@@ -94,6 +97,15 @@ export default function EditReportModal({ report, onClose, onSaved }) {
               type="text" inputMode="numeric" pattern="\d*"
               value={form.ordered_ip}
               onChange={e => setField('ordered_ip', e.target.value)}
+              className="w-full bg-gray-900 text-white px-3 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
+            />
+          </div>
+          <div>
+            <label className="text-gray-400 text-xs mb-1.5 block">Заказали Симка <span className="text-gray-600">(вне конверсии)</span></label>
+            <input
+              type="text" inputMode="numeric" pattern="\d*"
+              value={form.ordered_simka}
+              onChange={e => setField('ordered_simka', e.target.value)}
               className="w-full bg-gray-900 text-white px-3 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
             />
           </div>

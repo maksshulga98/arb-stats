@@ -75,6 +75,7 @@ export default function DashboardPage() {
     replied: '',
     ordered_ip: '',
     ordered_cards: '',
+    ordered_simka: '',
     people_wrote: '',
   })
   const router = useRouter()
@@ -444,6 +445,7 @@ export default function DashboardPage() {
       date: form.date,
       people_wrote: parseInt(form.people_wrote) || 0,
       ordered_ip: parseInt(form.ordered_ip) || 0,
+      ordered_simka: parseInt(form.ordered_simka) || 0,
     }
 
     const { data: inserted, error } = await supabase.from('reports').insert([record]).select().single()
@@ -451,7 +453,7 @@ export default function DashboardPage() {
       setShowForm(false)
       setForm({
         date: new Date().toISOString().split('T')[0],
-        unsubscribed: '', replied: '', ordered_ip: '', ordered_cards: '', people_wrote: '',
+        unsubscribed: '', replied: '', ordered_ip: '', ordered_cards: '', ordered_simka: '', people_wrote: '',
       })
       // Оптимистичное обновление — не делаем повторный запрос на сервер
       if (inserted) {
@@ -683,6 +685,17 @@ export default function DashboardPage() {
                       />
                     </div>
 
+                    <div>
+                      <label className="text-gray-400 text-xs mb-1.5 block">Заказали Симка <span className="text-gray-600">(доп-продукт, вне конверсии)</span></label>
+                      <input
+                        type="number" min="0"
+                        value={form.ordered_simka}
+                        onChange={e => setForm({ ...form, ordered_simka: e.target.value })}
+                        placeholder="0"
+                        className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                      />
+                    </div>
+
                   </div>
 
                   <div className="flex gap-3 mt-5">
@@ -716,12 +729,13 @@ export default function DashboardPage() {
                     <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
                     <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
                     <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
+                    <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали Симка</th>
                   </tr>
                 </thead>
                 <tbody>
                   {reports.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="text-center py-16 text-gray-600 text-sm">
+                      <td colSpan={4} className="text-center py-16 text-gray-600 text-sm">
                         Нет данных — добавьте первый отчёт
                       </td>
                     </tr>
@@ -737,6 +751,7 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
                         <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-amber-400">{r.ordered_simka ?? '—'}</td>
                       </tr>
                     ))
                   )}

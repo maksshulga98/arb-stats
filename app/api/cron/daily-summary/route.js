@@ -154,7 +154,7 @@ export async function GET(request) {
     // Старые колонки в БД остаются, но в сводку не идут.
     const { data: allReports, error: rErr } = await supabase
       .from('reports')
-      .select('manager_id, date, ordered_ip, people_wrote')
+      .select('manager_id, date, ordered_ip, ordered_simka, people_wrote')
       .gte('date', monthStart)
       .lte('date', today)
     if (rErr) throw new Error(`reports: ${rErr.message}`)
@@ -163,7 +163,7 @@ export async function GET(request) {
     const repsYestByMgr  = new Map()
     const repsMonthByMgr = new Map()
     for (const r of (allReports || [])) {
-      const entry = { ip: r.ordered_ip||0, wrote: r.people_wrote||0 }
+      const entry = { ip: r.ordered_ip||0, simka: r.ordered_simka||0, wrote: r.people_wrote||0 }
       if (r.date === today) repsTodayByMgr.set(r.manager_id, entry)
       if (r.date === yesterday) repsYestByMgr.set(r.manager_id, entry)
       const m = repsMonthByMgr.get(r.manager_id) || { ip:0, wrote:0 }
@@ -242,7 +242,7 @@ export async function GET(request) {
 
       for (const m of sorted) {
         const t = repsTodayByMgr.get(m.id)
-        const sheetT = cdToday[m.name] || { ip:0, debit:0 }
+        const sheetT = cdToday[m.name] || { ip:0, debit:0, simka:0 }
         const nT = numbersToday.get(m.id) || 0
         const monthRep = repsMonthByMgr.get(m.id) || { ip:0, wrote:0 }
         const sheetM = cdMonth[m.name] || { ip:0, debit:0 }
@@ -258,8 +258,8 @@ export async function GET(request) {
         }
 
         lines.push(`   • <b>${escapeHtml(m.name)}</b>`)
-        lines.push(`      написавших ${t.wrote} · РКО ${t.ip}`)
-        lines.push(`      ЦД ИП ${sheetT.ip} · ЦД карт ${sheetT.debit} · ном ${nT}`)
+        lines.push(`      написавших ${t.wrote} · РКО ${t.ip} · Симка ${t.simka}`)
+        lines.push(`      ЦД ИП ${sheetT.ip} · ЦД Симка ${sheetT.simka||0} · ном ${nT}`)
       }
       lines.push('')
     }

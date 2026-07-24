@@ -55,6 +55,16 @@ function getWroteLast7Days(reports) {
     .reduce((sum, r) => sum + (r.people_wrote || 0), 0)
 }
 
+// Заказали Симка (ordered_simka) за последние 7 дней — доп-продукт, вне конверсии.
+function getSimkaLast7Days(reports) {
+  const now = new Date()
+  now.setHours(23, 59, 59, 999)
+  const start = new Date(now); start.setDate(start.getDate() - 7); start.setHours(0, 0, 0, 0)
+  return reports
+    .filter(r => { const d = new Date(r.date); return d >= start && d <= now })
+    .reduce((sum, r) => sum + (r.ordered_simka || 0), 0)
+}
+
 // Конверсия = заказали РКО / написавшие * 100, до десятых. writers=0 → "—".
 function convStr(orders, writers) {
   if (!writers || writers <= 0) return '—'
@@ -187,7 +197,7 @@ export default function TeamleadPage() {
   const [submitting, setSubmitting] = useState(false)
   const [reportForm, setReportForm] = useState({
     date: new Date().toISOString().split('T')[0],
-    unsubscribed: '', replied: '', ordered_ip: '', ordered_cards: '', people_wrote: '',
+    unsubscribed: '', replied: '', ordered_ip: '', ordered_cards: '', ordered_simka: '', people_wrote: '',
   })
 
   // Team manager detail modal
@@ -539,11 +549,12 @@ export default function TeamleadPage() {
       date: reportForm.date,
       people_wrote: parseInt(reportForm.people_wrote) || 0,
       ordered_ip: parseInt(reportForm.ordered_ip) || 0,
+      ordered_simka: parseInt(reportForm.ordered_simka) || 0,
     }
     const { data: inserted, error } = await supabase.from('reports').insert([record]).select().single()
     if (!error) {
       setShowReportForm(false)
-      setReportForm({ date: new Date().toISOString().split('T')[0], unsubscribed: '', replied: '', ordered_ip: '', ordered_cards: '', people_wrote: '' })
+      setReportForm({ date: new Date().toISOString().split('T')[0], unsubscribed: '', replied: '', ordered_ip: '', ordered_cards: '', ordered_simka: '', people_wrote: '' })
       if (inserted) {
         setMyReports(prev => [inserted, ...prev].sort((a, b) => b.date.localeCompare(a.date)))
       } else {
@@ -926,6 +937,11 @@ export default function TeamleadPage() {
                         <input type="number" min="0" value={reportForm.ordered_ip} onChange={e => setReportForm({ ...reportForm, ordered_ip: e.target.value })}
                           placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
                       </div>
+                      <div>
+                        <label className="text-gray-400 text-xs mb-1.5 block">Заказали Симка <span className="text-gray-600">(вне конверсии)</span></label>
+                        <input type="number" min="0" value={reportForm.ordered_simka} onChange={e => setReportForm({ ...reportForm, ordered_simka: e.target.value })}
+                          placeholder="0" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                      </div>
                     </div>
                     <div className="flex gap-3 mt-4">
                       <button type="submit" disabled={submitting}
@@ -947,17 +963,19 @@ export default function TeamleadPage() {
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
+                      <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали Симка</th>
                       <th className="w-10" />
                     </tr>
                   </thead>
                   <tbody>
                     {myReports.length === 0 ? (
-                      <tr><td colSpan={4} className="text-center py-12 text-gray-600 text-sm">Нет данных — добавьте первый отчёт</td></tr>
+                      <tr><td colSpan={5} className="text-center py-12 text-gray-600 text-sm">Нет данных — добавьте первый отчёт</td></tr>
                     ) : (showAllMyReports ? myReports : myReports.slice(0, 5)).map(r => (
                       <tr key={r.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] group">
                         <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{new Date(r.date).toLocaleDateString('ru-RU')}</td>
                         <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
                         <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-amber-400">{r.ordered_simka ?? '—'}</td>
                         <td className="pr-4 py-3 text-right">
                           <button
                             onClick={() => handleDeleteReport(r.id, true)}
@@ -1019,6 +1037,7 @@ export default function TeamleadPage() {
                     // 06.2026: единая метрика для всех команд — РКО (ordered_ip).
                     const value7  = getIPLast7Days(mRep)
                     const wrote7  = getWroteLast7Days(mRep)
+                    const simka7  = getSimkaLast7Days(mRep)
                     const zKey    = getZoneKey(value7, 'standard')
                     const z       = ZONE[zKey]
                     const alert14 = isRedFor14Days(mRep, manager.created_at)
@@ -1067,6 +1086,10 @@ export default function TeamleadPage() {
                               <div>
                                 <span className="text-gray-500 text-xs">Конверсия: </span>
                                 <span className="text-cyan-400 text-xs font-medium">{convStr(value7, wrote7)}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 text-xs">Симка / 7 дн: </span>
+                                <span className="text-amber-400 text-xs font-medium">{simka7}</span>
                               </div>
                             </div>
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>{z.label}</span>
@@ -1138,6 +1161,7 @@ export default function TeamleadPage() {
               replied:       memberReports.reduce((s, r) => s + (r.replied || 0), 0),
               ordered_ip:    memberReports.reduce((s, r) => s + (r.ordered_ip || 0), 0),
               ordered_cards: memberReports.reduce((s, r) => s + (r.ordered_cards || 0), 0),
+              ordered_simka: memberReports.reduce((s, r) => s + (r.ordered_simka || 0), 0),
               people_wrote:  memberReports.reduce((s, r) => s + (r.people_wrote || 0), 0),
             } : null
             return { member, report }
@@ -1151,16 +1175,18 @@ export default function TeamleadPage() {
               acc.replied += r.replied || 0
               acc.ordered_ip += r.ordered_ip || 0
               acc.ordered_cards += r.ordered_cards || 0
+              acc.ordered_simka += r.ordered_simka || 0
               acc.people_wrote += r.people_wrote || 0
             })
             return acc
-          }, { unsubscribed: 0, replied: 0, ordered_ip: 0, ordered_cards: 0, people_wrote: 0 })
+          }, { unsubscribed: 0, replied: 0, ordered_ip: 0, ordered_cards: 0, ordered_simka: 0, people_wrote: 0 })
 
           const totals = {
             unsubscribed:  rows.reduce((s, r) => s + (r.report?.unsubscribed || 0), 0) + deletedTotals.unsubscribed,
             replied:       rows.reduce((s, r) => s + (r.report?.replied || 0), 0) + deletedTotals.replied,
             ordered_ip:    rows.reduce((s, r) => s + (r.report?.ordered_ip || 0), 0) + deletedTotals.ordered_ip,
             ordered_cards: rows.reduce((s, r) => s + (r.report?.ordered_cards || 0), 0) + deletedTotals.ordered_cards,
+            ordered_simka: rows.reduce((s, r) => s + (r.report?.ordered_simka || 0), 0) + deletedTotals.ordered_simka,
             people_wrote:  rows.reduce((s, r) => s + (r.report?.people_wrote || 0), 0) + deletedTotals.people_wrote,
           }
 
@@ -1191,7 +1217,7 @@ export default function TeamleadPage() {
                     {rows.filter(r => r.report).length} из {rows.length} сдали отчёт
                   </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                   <div>
                     <p className="text-gray-500 text-xs mb-1">Написавшие</p>
                     <p className="text-xl font-bold text-gray-200">{totals.people_wrote}</p>
@@ -1205,9 +1231,19 @@ export default function TeamleadPage() {
                     <p className="text-xl font-bold text-cyan-400">{convStr(totals.ordered_ip, totals.people_wrote)}</p>
                   </div>
                   <div>
+                    <p className="text-gray-500 text-xs mb-1">Заказали Симка</p>
+                    <p className="text-xl font-bold text-amber-400">{totals.ordered_simka}</p>
+                  </div>
+                  <div>
                     <p className="text-gray-500 text-xs mb-1">ЦД ИП</p>
                     <p className="text-xl font-bold text-emerald-400">
                       {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.ip || 0), 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">ЦД Симка</p>
+                    <p className="text-xl font-bold text-amber-400">
+                      {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.simka || 0), 0)}
                     </p>
                   </div>
                   {/* Скрыто 07.2026 — ЦД дебетовые (код сохранён)
@@ -1227,15 +1263,17 @@ export default function TeamleadPage() {
                   <span className="text-gray-600 text-sm">{teamMembers.length} чел.</span>
                 </div>
 
-                <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden">
-                  <table className="w-full">
+                <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
+                  <table className="w-full min-w-[640px]">
                     <thead>
                       <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Менеджер</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Конверсия</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали Симка</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД Симка</th>
                         {/* Скрыто 07.2026 (код сохранён): <th>ЦД дебетовые</th> */}
                       </tr>
                     </thead>
@@ -1251,8 +1289,12 @@ export default function TeamleadPage() {
                             <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
                             <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
                             <td className="px-3 sm:px-5 py-3 text-sm text-cyan-400 font-medium">{report ? convStr(report.ordered_ip, report.people_wrote) : '—'}</td>
+                            <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-amber-400">{report ? (report.ordered_simka || 0) : '—'}</td>
                             <td className="px-3 sm:px-5 py-3 text-sm">
                               <CdValue value={sd ? sd.ip : null} loading={sheetsLoading && sd === undefined} />
+                            </td>
+                            <td className="px-3 sm:px-5 py-3 text-sm">
+                              <CdValue value={sd ? sd.simka : null} loading={sheetsLoading && sd === undefined} color="text-amber-400" />
                             </td>
                             {/* Скрыто 07.2026 (код сохранён): <td><CdValue value={sd?.debit} color="text-purple-400" /></td> */}
                           </tr>
@@ -1264,8 +1306,12 @@ export default function TeamleadPage() {
                           <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
                           <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
                           <td className="px-3 sm:px-5 py-3 text-sm font-bold text-cyan-400">{convStr(totals.ordered_ip, totals.people_wrote)}</td>
+                          <td className="px-3 sm:px-5 py-3 text-sm font-bold text-amber-400">{totals.ordered_simka}</td>
                           <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
                             {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0) + deletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.ip || 0), 0)}
+                          </td>
+                          <td className="px-3 sm:px-5 py-3 text-sm font-bold text-amber-400">
+                            {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.simka || 0), 0) + deletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.simka || 0), 0)}
                           </td>
                           {/* Скрыто 07.2026 (код сохранён): ЦД дебетовые итог */}
                         </tr>
@@ -2021,17 +2067,19 @@ export default function TeamleadPage() {
                     <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
                     <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
                     <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
+                    <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали Симка</th>
                     <th className="w-8" />
                   </tr>
                 </thead>
                 <tbody>
                   {modalReports.length === 0 ? (
-                    <tr><td colSpan={4} className="text-center py-10 text-gray-600 text-sm">Нет отчётов</td></tr>
+                    <tr><td colSpan={5} className="text-center py-10 text-gray-600 text-sm">Нет отчётов</td></tr>
                   ) : modalReports.map(r => (
                     <tr key={r.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] group">
                       <td className="py-2.5 text-sm text-gray-300">{new Date(r.date).toLocaleDateString('ru-RU')}</td>
                       <td className="py-2.5 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
                       <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                      <td className="py-2.5 text-sm font-semibold text-amber-400">{r.ordered_simka ?? '—'}</td>
                       <td className="py-2.5 pr-1 text-right">
                         <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition">
                           <button

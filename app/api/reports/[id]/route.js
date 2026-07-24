@@ -37,7 +37,7 @@ async function authenticate(request) {
 }
 
 // Поля которые можно править + правила валидации
-const EDITABLE_FIELDS = ['ordered_ip', 'ordered_cards', 'unsubscribed', 'replied', 'people_wrote']
+const EDITABLE_FIELDS = ['ordered_ip', 'ordered_cards', 'unsubscribed', 'replied', 'people_wrote', 'ordered_simka']
 
 function parseIntSafe(v) {
   if (v === '' || v === null || v === undefined) return null

@@ -92,6 +92,20 @@ function getWroteForPeriod(reports, daysStart, daysEnd) {
     .reduce((sum, r) => sum + (r.people_wrote || 0), 0)
 }
 
+// Заказали Симка (ordered_simka) за период N дней — доп-продукт, вне конверсии.
+function getSimkaForPeriod(reports, daysStart, daysEnd) {
+  const now = new Date()
+  now.setHours(23, 59, 59, 999)
+  const end = new Date(now)
+  end.setDate(end.getDate() - daysStart)
+  const start = new Date(now)
+  start.setDate(start.getDate() - daysEnd)
+  start.setHours(0, 0, 0, 0)
+  return reports
+    .filter(r => { const d = new Date(r.date); return d >= start && d <= end })
+    .reduce((sum, r) => sum + (r.ordered_simka || 0), 0)
+}
+
 // Конверсия = заказали РКО / написавшие * 100, до десятых (напр. "5.8%").
 // Если написавших 0 — делить нельзя, показываем "—".
 function convStr(orders, writers) {
@@ -990,6 +1004,7 @@ export default function AdminPage() {
                         // 06.2026: единая метрика для всех команд — РКО (ordered_ip).
                         const value7  = getIPForPeriod(mRep, 0, 7)
                         const wrote7  = getWroteForPeriod(mRep, 0, 7)
+                        const simka7  = getSimkaForPeriod(mRep, 0, 7)
                         const zKey    = getZoneKey(value7, 'standard')
                         const z       = ZONE[zKey]
                         const alert14 = isRedFor14Days(mRep, manager.created_at)
@@ -1041,8 +1056,11 @@ export default function AdminPage() {
                                   <span className={`text-3xl font-bold ${z.text}`}>{value7}</span>
                                   <span className="text-gray-500 text-xs ml-1">РКО / 7 дн</span>
                                 </div>
-                                <p className="text-gray-500 text-xs mb-3">
+                                <p className="text-gray-500 text-xs mb-1">
                                   Конверсия: <span className="text-cyan-400 font-medium">{convStr(value7, wrote7)}</span>
+                                </p>
+                                <p className="text-gray-500 text-xs mb-3">
+                                  Симка / 7 дн: <span className="text-amber-400 font-medium">{simka7}</span>
                                 </p>
 
                                 <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>
@@ -1122,6 +1140,7 @@ export default function AdminPage() {
               const totalReplied      = dayReports.reduce((s, r) => s + (r.replied || 0), 0)
               const totalOrdered      = dayReports.reduce((s, r) => s + (r.ordered_ip || 0), 0)
               const totalOrderedCards = dayReports.reduce((s, r) => s + (r.ordered_cards || 0), 0)
+              const totalOrderedSimka = dayReports.reduce((s, r) => s + (r.ordered_simka || 0), 0)
               const totalPeopleWrote  = dayReports.reduce((s, r) => s + (r.people_wrote || 0), 0)
               const reported = new Set(dayReports.map(r => r.manager_id))
               const totalMembers = allMembers.length
@@ -1133,7 +1152,7 @@ export default function AdminPage() {
                     <h2 className="text-sm font-semibold text-gray-200">Сводка за период</h2>
                     <span className="text-gray-600 text-xs">{reportedCount} из {totalMembers} сдали отчёт</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Написавшие</p>
                       <p className="text-xl font-bold text-gray-200">{totalPeopleWrote}</p>
@@ -1147,9 +1166,19 @@ export default function AdminPage() {
                       <p className="text-xl font-bold text-cyan-400">{convStr(totalOrdered, totalPeopleWrote)}</p>
                     </div>
                     <div>
+                      <p className="text-gray-500 text-xs mb-1">Заказали Симка</p>
+                      <p className="text-xl font-bold text-amber-400">{totalOrderedSimka}</p>
+                    </div>
+                    <div>
                       <p className="text-gray-500 text-xs mb-1">ЦД ИП</p>
                       <p className="text-xl font-bold text-emerald-400">
                         {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.ip || 0), 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs mb-1">ЦД Симка</p>
+                      <p className="text-xl font-bold text-amber-400">
+                        {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.simka || 0), 0)}
                       </p>
                     </div>
                     {/* Скрыто 07.2026 — ЦД дебетовые и Выдано номеров (код сохранён)
@@ -1201,16 +1230,18 @@ export default function AdminPage() {
                   acc.replied += r.replied || 0
                   acc.ordered_ip += r.ordered_ip || 0
                   acc.ordered_cards += r.ordered_cards || 0
+                  acc.ordered_simka += r.ordered_simka || 0
                   acc.people_wrote += r.people_wrote || 0
                 })
                 return acc
-              }, { unsubscribed: 0, replied: 0, ordered_ip: 0, ordered_cards: 0, people_wrote: 0 })
+              }, { unsubscribed: 0, replied: 0, ordered_ip: 0, ordered_cards: 0, ordered_simka: 0, people_wrote: 0 })
 
               const totals = {
                 unsubscribed:  rows.reduce((s, r) => s + (r.report?.unsubscribed || 0), 0) + deletedTotals.unsubscribed,
                 replied:       rows.reduce((s, r) => s + (r.report?.replied || 0), 0) + deletedTotals.replied,
                 ordered_ip:    rows.reduce((s, r) => s + (r.report?.ordered_ip || 0), 0) + deletedTotals.ordered_ip,
                 ordered_cards: rows.reduce((s, r) => s + (r.report?.ordered_cards || 0), 0) + deletedTotals.ordered_cards,
+                ordered_simka: rows.reduce((s, r) => s + (r.report?.ordered_simka || 0), 0) + deletedTotals.ordered_simka,
                 people_wrote:  rows.reduce((s, r) => s + (r.report?.people_wrote || 0), 0) + deletedTotals.people_wrote,
               }
 
@@ -1222,14 +1253,16 @@ export default function AdminPage() {
                   </div>
 
                   <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
-                    <table className="w-full min-w-[480px]">
+                    <table className="w-full min-w-[640px]">
                       <thead>
                         <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Менеджер</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Конверсия</th>
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали Симка</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД Симка</th>
                           {/* Скрыто 07.2026 (код сохранён):
                           <th ...>ЦД дебетовые</th>
                           <th ...>Взято номеров</th> */}
@@ -1238,7 +1271,7 @@ export default function AdminPage() {
                       <tbody>
                         {rows.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="text-center py-8 text-gray-600 text-sm">
+                            <td colSpan={7} className="text-center py-8 text-gray-600 text-sm">
                               Нет участников в команде
                             </td>
                           </tr>
@@ -1257,8 +1290,12 @@ export default function AdminPage() {
                                   <td className="px-3 sm:px-5 py-3 text-sm text-cyan-400 font-medium">
                                     {report ? convStr(report.ordered_ip, report.people_wrote) : '—'}
                                   </td>
+                                  <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-amber-400">{report ? (report.ordered_simka || 0) : '—'}</td>
                                   <td className="px-3 sm:px-5 py-3 text-sm">
                                     <CdValue value={sd ? sd.ip : null} loading={sheetsLoading && sd === undefined} />
+                                  </td>
+                                  <td className="px-3 sm:px-5 py-3 text-sm">
+                                    <CdValue value={sd ? sd.simka : null} loading={sheetsLoading && sd === undefined} color="text-amber-400" />
                                   </td>
                                   {/* Скрыто 07.2026 (код сохранён):
                                   <td><CdValue value={sd ? sd.debit : null} color="text-purple-400" /></td>
@@ -1272,8 +1309,12 @@ export default function AdminPage() {
                                 <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-cyan-400">{convStr(totals.ordered_ip, totals.people_wrote)}</td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-amber-400">{totals.ordered_simka}</td>
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
                                   {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0) + teamDeletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.ip || 0), 0)}
+                                </td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-amber-400">
+                                  {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.simka || 0), 0) + teamDeletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.simka || 0), 0)}
                                 </td>
                                 {/* Скрыто 07.2026 (код сохранён): ЦД дебетовые + Взято номеров */}
                               </tr>
@@ -2169,13 +2210,14 @@ export default function AdminPage() {
                     <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
                     <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
                     <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
+                    <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали Симка</th>
                     <th className="w-8" />
                   </tr>
                 </thead>
                 <tbody>
                   {modalReports.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="text-center py-12 text-gray-600 text-sm">
+                      <td colSpan={5} className="text-center py-12 text-gray-600 text-sm">
                         Нет отчётов
                       </td>
                     </tr>
@@ -2191,6 +2233,7 @@ export default function AdminPage() {
                         </td>
                         <td className="py-2.5 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
                         <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
+                        <td className="py-2.5 text-sm font-semibold text-amber-400">{r.ordered_simka ?? '—'}</td>
                         <td className="py-2.5 pr-1 text-right">
                           <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition">
                             <button
