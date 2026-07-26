@@ -108,8 +108,8 @@ export async function PUT(request, { params }) {
       .select('*')
       .single()
     // Устойчивость: если колонки ordered_simka ещё нет в БД (миграция не накатана),
-    // не роняем правку — повторяем без неё.
-    if (upErr && upErr.code === '42703' && 'ordered_simka' in updates) {
+    // не роняем правку — повторяем без неё. PostgREST отдаёт PGRST204, SQL — 42703.
+    if (upErr && (upErr.code === 'PGRST204' || upErr.code === '42703') && 'ordered_simka' in updates) {
       const { ordered_simka, ...rest } = updates
       ;({ data: updated, error: upErr } = await supabaseAdmin
         .from('reports').update(rest).eq('id', id).select('*').single())
