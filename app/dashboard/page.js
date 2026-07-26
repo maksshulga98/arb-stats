@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase, authFetch } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getMissingReportAlerts } from '../../lib/notifications'
+import { insertReport } from '../../lib/reports'
 
 // Fallback map (slug → { name, type }) пока /api/teams грузится. После загрузки
 // заменяется на актуальный список из БД (таблица teams).
@@ -448,7 +449,7 @@ export default function DashboardPage() {
       ordered_simka: parseInt(form.ordered_simka) || 0,
     }
 
-    const { data: inserted, error } = await supabase.from('reports').insert([record]).select().single()
+    const { data: inserted, error } = await insertReport(supabase, record)
     if (!error) {
       setShowForm(false)
       setForm({

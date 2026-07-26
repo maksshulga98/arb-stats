@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase, authFetch } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getMissingReportAlerts } from '../../lib/notifications'
+import { insertReport } from '../../lib/reports'
 
 // Normalize latin lookalikes to cyrillic for name comparison
 const CYR_MAP = { a:'а',b:'в',c:'с',e:'е',h:'н',k:'к',m:'м',o:'о',p:'р',t:'т',x:'х',y:'у' }
@@ -551,7 +552,7 @@ export default function TeamleadPage() {
       ordered_ip: parseInt(reportForm.ordered_ip) || 0,
       ordered_simka: parseInt(reportForm.ordered_simka) || 0,
     }
-    const { data: inserted, error } = await supabase.from('reports').insert([record]).select().single()
+    const { data: inserted, error } = await insertReport(supabase, record)
     if (!error) {
       setShowReportForm(false)
       setReportForm({ date: new Date().toISOString().split('T')[0], unsubscribed: '', replied: '', ordered_ip: '', ordered_cards: '', ordered_simka: '', people_wrote: '' })

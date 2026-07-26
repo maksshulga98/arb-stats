@@ -101,12 +101,19 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Нет полей для обновления' }, { status: 400 })
     }
 
-    const { data: updated, error: upErr } = await supabaseAdmin
+    let { data: updated, error: upErr } = await supabaseAdmin
       .from('reports')
       .update(updates)
       .eq('id', id)
       .select('*')
       .single()
+    // Устойчивость: если колонки ordered_simka ещё нет в БД (миграция не накатана),
+    // не роняем правку — повторяем без неё.
+    if (upErr && upErr.code === '42703' && 'ordered_simka' in updates) {
+      const { ordered_simka, ...rest } = updates
+      ;({ data: updated, error: upErr } = await supabaseAdmin
+        .from('reports').update(rest).eq('id', id).select('*').single())
+    }
     if (upErr) {
       console.error('PUT /api/reports/[id] error:', upErr)
       return NextResponse.json({ error: upErr.message }, { status: 500 })
