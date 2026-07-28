@@ -180,6 +180,12 @@ export async function runApplication(browserWSEndpoint, job) {
     await page.waitForSelector('form input', { timeout: 30000 })
     await verifyForm(page)
 
+    // Отключаем автозаполнение Chrome — иначе он показывает попап «Сохранить адрес?»
+    // (это UI браузера, Puppeteer по нему кликнуть не может) и мешает вводу.
+    await page.evaluate(() => {
+      document.querySelectorAll('form, input, textarea').forEach(el => el.setAttribute('autocomplete', 'off'))
+    })
+
     const I = FORM_PROFILE.idx
 
     // 1. Организация — вводим ИНН, выбираем единственную подсказку по ИНН.
@@ -211,8 +217,23 @@ export async function runApplication(browserWSEndpoint, job) {
     await inputs[I.phone].click()
     await page.keyboard.type(digits, { delay: 45 })
 
+    // Зафиксировать телефон: react-hook-form валидирует по blur/submit, поэтому
+    // без blur поле считается «не заполнено». Диспатчим события и уводим фокус.
+    await page.evaluate(() => {
+      const el = document.activeElement
+      if (el) {
+        el.dispatchEvent(new Event('input', { bubbles: true }))
+        el.dispatchEvent(new Event('change', { bubbles: true }))
+        el.blur()
+        el.dispatchEvent(new Event('blur', { bubbles: true }))
+      }
+    })
+    await sleep(400)
+
     // 7. Отправка
     await clickSubmit(page)
+    await sleep(600)
+    await page.keyboard.press('Escape').catch(() => {})  // закрыть попап Chrome, если всплыл
 
     // 8. Ссылка со страницы-результата
     const link = await getResultLink(page, browser)

@@ -30,19 +30,38 @@ async function remote(path, { method = 'GET', body } = {}) {
   return json
 }
 
-async function local(path) {
-  // Local API в свежих версиях Dolphin тоже принимает Bearer-токен — передаём,
-  // если задан. На старых версиях лишний заголовок не мешает.
-  const res = await fetch(LOCAL_BASE + path, {
-    headers: TOKEN ? { 'Authorization': 'Bearer ' + TOKEN } : {},
+// Local API авторизуется ОДИН раз через login-with-token: кладёт remote JWT внутрь
+// Local API, после чего /start и /stop не требуют заголовка (в OpenAPI у них
+// security:[]). Это официальный порядок из спека Dolphin — Bearer в заголовке
+// сам по себе Local API не авторизует (отдаёт "invalid session token").
+let _localLoggedIn = false
+async function localLogin() {
+  const res = await fetch(LOCAL_BASE + '/auth/login-with-token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: TOKEN }),
   })
-  const text = await res.text()
-  let json
-  try { json = text ? JSON.parse(text) : {} } catch { json = { raw: text } }
-  if (!res.ok) {
-    throw new Error(`Dolphin local ${path} → ${res.status}: ${text.slice(0, 300)}`)
+  const j = await res.json().catch(() => ({}))
+  if (!res.ok || !j.success) {
+    throw new Error(`Dolphin login-with-token → ${res.status}: ${JSON.stringify(j).slice(0, 200)}. Открыт ли десктоп Dolphin и залогинен ли аккаунт токена?`)
   }
-  return json
+  _localLoggedIn = true
+}
+
+async function local(path, { method = 'GET', timeoutMs = 30000 } = {}) {
+  if (!_localLoggedIn) await localLogin()
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const res = await fetch(LOCAL_BASE + path, { method, signal: ctrl.signal })
+    const text = await res.text()
+    let json
+    try { json = text ? JSON.parse(text) : {} } catch { json = { raw: text } }
+    if (!res.ok) throw new Error(`Dolphin local ${path} → ${res.status}: ${text.slice(0, 300)}`)
+    return json
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /**
@@ -70,23 +89,40 @@ export async function getFingerprint({ platform = 'windows', browserVersion = '1
 export async function createProfile({ name, proxy, platform = 'windows', browserVersion = '126' }) {
   const fp = await getFingerprint({ platform, browserVersion })
 
+  // Маппинг под реальную схему создания профиля (OpenAPI Dolphin):
+  //   cpu/memory — { mode:'manual', value:<число> }; screen — resolution 'WxH';
+  //   webglInfo — { mode:'manual', vendor, renderer }. fingerprint отдаёт userAgent,
+  //   hardwareConcurrency (ядра), deviceMemory (ГБ), webgl.unmaskedVendor/Renderer.
+  const uaValue = fp.userAgent || fp.useragent?.value || ''
+  const screenRes = fp.screen?.width ? `${fp.screen.width}x${fp.screen.height}` : '1920x1080'
+
   const payload = {
     name,
     tags: ['auto-bank-link'],
     platform,
     browserType: 'anty',
     mainWebsite: '',
-    useragent: { mode: 'manual', value: fp.useragent?.value || fp.userAgent || fp.useragent },
-    webrtc:  { mode: 'altered' },
+    // Отключаем автозаполнение/сохранение адресов и паролей Chrome — попапы
+    // «Сохранить адрес?» это UI браузера, автоматизацией их не закрыть.
+    args: [
+      '--disable-features=AutofillEnableAccountWalletStorage,AutofillServerCommunication',
+      '--disable-save-password-bubble',
+    ],
+    useragent: { mode: 'manual', value: uaValue },
+    webrtc:  { mode: 'altered', ipAddress: '' },
     canvas:  { mode: 'real' },
     webgl:   { mode: 'real' },
-    webglInfo: fp.webgl ? { mode: 'manual', ...fp.webgl } : { mode: 'off' },
+    webglInfo: {
+      mode: 'manual',
+      vendor: fp.webgl?.unmaskedVendor || 'Google Inc. (NVIDIA)',
+      renderer: fp.webgl?.unmaskedRenderer || 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)',
+    },
     timezone: { mode: 'auto' },   // берётся из IP прокси
     locale:   { mode: 'auto' },
     geolocation: { mode: 'auto' },
-    cpu:    fp.cpu    ? { mode: 'manual', value: fp.cpu.value } : { mode: 'real' },
-    memory: fp.memory ? { mode: 'manual', value: fp.memory.value } : { mode: 'real' },
-    screen: fp.screen ? { mode: 'manual', resolution: fp.screen.resolution } : { mode: 'real' },
+    cpu:    { mode: 'manual', value: fp.hardwareConcurrency || 8 },
+    memory: { mode: 'manual', value: fp.deviceMemory || 8 },
+    screen: { mode: 'manual', resolution: screenRes },
     proxy: {
       type: proxy.type || 'http',
       host: proxy.host,
@@ -114,7 +150,8 @@ export async function deleteProfile(id) {
  * Возвращает { port, wsEndpoint } для puppeteer.connect.
  */
 export async function startProfile(id, { headless = true } = {}) {
-  const res = await local(`/browser_profiles/${id}/start?automation=1${headless ? '&headless=1' : ''}`)
+  // Старт может занять до ~2 мин (скачивание data-dir + запуск Chromium) → большой таймаут.
+  const res = await local(`/browser_profiles/${id}/start?automation=1${headless ? '&headless=1' : ''}`, { timeoutMs: 150000 })
   const auto = res.automation || res
   const port = auto.port
   const wsEndpoint = auto.wsEndpoint || auto.ws || ''
