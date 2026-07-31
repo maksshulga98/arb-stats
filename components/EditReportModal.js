@@ -70,60 +70,60 @@ export default function EditReportModal({ report, onClose, onSaved }) {
   })
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-[60] flex items-center sm:items-center items-end justify-center p-0 sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-slate-900/40 z-[60] flex items-center sm:items-center items-end justify-center p-0 sm:p-4" onClick={onClose}>
       <div
-        style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
+        style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }}
         className="w-full max-w-md p-5 sm:p-6 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold">Редактировать отчёт за {dateLabel}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white text-lg">✕</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-900 text-lg">✕</button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="text-gray-400 text-xs mb-1.5 block">Написавшие</label>
+            <label className="text-gray-600 text-xs mb-1.5 block">Написавшие</label>
             <input
               type="text" inputMode="numeric" pattern="\d*"
               value={form.people_wrote}
               onChange={e => setField('people_wrote', e.target.value)}
-              className="w-full bg-gray-900 text-white px-3 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
+              className="w-full bg-white text-gray-900 px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm font-mono"
             />
           </div>
           <div>
-            <label className="text-gray-400 text-xs mb-1.5 block">Заказали РКО</label>
+            <label className="text-gray-600 text-xs mb-1.5 block">Заказали РКО</label>
             <input
               type="text" inputMode="numeric" pattern="\d*"
               value={form.ordered_ip}
               onChange={e => setField('ordered_ip', e.target.value)}
-              className="w-full bg-gray-900 text-white px-3 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
+              className="w-full bg-white text-gray-900 px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm font-mono"
             />
           </div>
           <div>
-            <label className="text-gray-400 text-xs mb-1.5 block">Заказали Симка <span className="text-gray-600">(вне конверсии)</span></label>
+            <label className="text-gray-600 text-xs mb-1.5 block">Заказали Симка <span className="text-gray-400">(вне конверсии)</span></label>
             <input
               type="text" inputMode="numeric" pattern="\d*"
               value={form.ordered_simka}
               onChange={e => setField('ordered_simka', e.target.value)}
-              className="w-full bg-gray-900 text-white px-3 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
+              className="w-full bg-white text-gray-900 px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm font-mono"
             />
           </div>
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && <p className="text-red-600 text-sm">{error}</p>}
 
           <div className="flex gap-2 pt-2">
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition"
+              className="flex-1 bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition"
             >
               {submitting ? '...' : 'Сохранить'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-lg text-sm bg-gray-800 hover:bg-gray-700 transition"
+              className="px-4 py-2.5 rounded-lg text-sm bg-slate-100 hover:bg-slate-200 transition"
             >
               Отмена
             </button>

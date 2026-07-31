@@ -20,6 +20,18 @@
       "port": 8765
     },
     {
+      "name": "team-finance",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/maksimsulga/team-finance", "run", "dev", "--", "-p", "3020"],
+      "port": 3020
+    },
+    {
+      "name": "arb-stats",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/maksimsulga/arb-stats", "run", "dev", "--", "-p", "3040"],
+      "port": 3040
+    },
+    {
       "name": "training-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "/Users/maksimsulga/tochka-rosta-training", "run", "dev", "--", "-p", "3001"],

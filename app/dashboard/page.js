@@ -27,29 +27,29 @@ function getLast7Days(reports, field = 'ordered_ip') {
 function getZone(value, teamType) {
   if (teamType === 'karina') {
     if (value < 15) return {
-      bg: 'bg-red-950/40', border: 'border-red-700',
-      text: 'text-red-400', badge: 'bg-red-900/60 text-red-300 border border-red-700', label: 'Красная зона'
+      bg: 'bg-red-50', border: 'border-red-300',
+      text: 'text-red-600', badge: 'bg-red-100 text-red-700 border border-red-300', label: 'Красная зона'
     }
     if (value <= 30) return {
-      bg: 'bg-yellow-950/40', border: 'border-yellow-600',
-      text: 'text-yellow-400', badge: 'bg-yellow-900/60 text-yellow-300 border border-yellow-600', label: 'Жёлтая зона'
+      bg: 'bg-amber-50', border: 'border-amber-400',
+      text: 'text-amber-600', badge: 'bg-amber-100 text-amber-700 border border-amber-400', label: 'Жёлтая зона'
     }
     return {
-      bg: 'bg-green-950/40', border: 'border-green-700',
-      text: 'text-green-400', badge: 'bg-green-900/60 text-green-300 border border-green-700', label: 'Зелёная зона'
+      bg: 'bg-emerald-50', border: 'border-emerald-300',
+      text: 'text-emerald-600', badge: 'bg-emerald-100 text-emerald-700 border border-emerald-300', label: 'Зелёная зона'
     }
   }
   if (value < 10) return {
-    bg: 'bg-red-950/40', border: 'border-red-700',
-    text: 'text-red-400', badge: 'bg-red-900/60 text-red-300 border border-red-700', label: 'Красная зона'
+    bg: 'bg-red-50', border: 'border-red-300',
+    text: 'text-red-600', badge: 'bg-red-100 text-red-700 border border-red-300', label: 'Красная зона'
   }
   if (value <= 15) return {
-    bg: 'bg-yellow-950/40', border: 'border-yellow-600',
-    text: 'text-yellow-400', badge: 'bg-yellow-900/60 text-yellow-300 border border-yellow-600', label: 'Жёлтая зона'
+    bg: 'bg-amber-50', border: 'border-amber-400',
+    text: 'text-amber-600', badge: 'bg-amber-100 text-amber-700 border border-amber-400', label: 'Жёлтая зона'
   }
   return {
-    bg: 'bg-green-950/40', border: 'border-green-700',
-    text: 'text-green-400', badge: 'bg-green-900/60 text-green-300 border border-green-700', label: 'Зелёная зона'
+    bg: 'bg-emerald-50', border: 'border-emerald-300',
+    text: 'text-emerald-600', badge: 'bg-emerald-100 text-emerald-700 border border-emerald-300', label: 'Зелёная зона'
   }
 }
 
@@ -499,7 +499,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-400">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-gray-600">
         Загрузка...
       </div>
     )
@@ -528,10 +528,10 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-slate-50 text-gray-900">
 
       {/* ── Header ── */}
-      <header style={{ backgroundColor: '#111118', borderBottom: '1px solid #1f1f2e' }} className="px-4 sm:px-6 py-3 sticky top-0 z-40">
+      <header style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e2e8f0' }} className="px-4 sm:px-6 py-3 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3 sm:gap-8">
             <span className="text-base font-bold tracking-tight">Arb Stats</span>
@@ -542,8 +542,8 @@ export default function DashboardPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm font-medium transition ${
                     activeTab === tab.id
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      ? 'bg-teal-600 text-white'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-slate-100'
                   }`}
                 >
                   {tab.label}
@@ -555,7 +555,7 @@ export default function DashboardPage() {
             <span className="text-gray-500 text-sm hidden sm:inline">{profile?.name || user?.email}</span>
             <button
               onClick={handleLogout}
-              className="text-gray-500 hover:text-white text-sm transition"
+              className="text-gray-500 hover:text-gray-900 text-sm transition"
             >
               Выйти
             </button>
@@ -570,29 +570,29 @@ export default function DashboardPage() {
         {warningMonthCount > 0 && (
           <div className={`rounded-2xl p-4 sm:p-5 mb-6 border ${
             warningMonthCount >= 3
-              ? 'bg-red-950/40 border-red-700'
+              ? 'bg-red-50 border-red-300'
               : warningMonthCount === 2
-                ? 'bg-yellow-950/40 border-yellow-700'
-                : 'bg-orange-950/40 border-orange-700'
+                ? 'bg-amber-50 border-amber-300'
+                : 'bg-orange-50 border-orange-300'
           }`}>
             <div className="flex items-start gap-3">
               <span className="text-xl flex-shrink-0">⚠</span>
               <div className="flex-1 min-w-0">
                 {warningMonthCount >= 3 ? (
                   <>
-                    <p className="text-red-300 font-semibold text-sm sm:text-base">
+                    <p className="text-red-700 font-semibold text-sm sm:text-base">
                       У тебя {warningMonthCount} предупреждения за этот месяц
                     </p>
-                    <p className="text-red-400 text-xs sm:text-sm mt-1">
+                    <p className="text-red-600 text-xs sm:text-sm mt-1">
                       Достигнут порог — вопрос об увольнении передан руководству.
                     </p>
                   </>
                 ) : (
                   <>
-                    <p className={`${warningMonthCount === 2 ? 'text-yellow-200' : 'text-orange-200'} font-semibold text-sm sm:text-base`}>
+                    <p className={`${warningMonthCount === 2 ? 'text-amber-800' : 'text-orange-800'} font-semibold text-sm sm:text-base`}>
                       У тебя {warningMonthCount} {warningMonthCount === 1 ? 'предупреждение' : 'предупреждения'} за этот месяц
                     </p>
-                    <p className={`${warningMonthCount === 2 ? 'text-yellow-300' : 'text-orange-300'} text-xs sm:text-sm mt-1`}>
+                    <p className={`${warningMonthCount === 2 ? 'text-amber-700' : 'text-orange-700'} text-xs sm:text-sm mt-1`}>
                       При 3-х предупреждениях за месяц — вопрос об увольнении.
                       {warningMonthCount === 2 && ' Осталось одно.'}
                     </p>
@@ -609,7 +609,7 @@ export default function DashboardPage() {
             {/* Zone indicator */}
             <div className={`${zone.bg} border ${zone.border} rounded-2xl p-4 sm:p-5 mb-6 flex items-center justify-between`}>
               <div>
-                <p className="text-gray-400 text-sm mb-1">Результаты за последние 7 дней</p>
+                <p className="text-gray-600 text-sm mb-1">Результаты за последние 7 дней</p>
                 <p className={`text-3xl font-bold ${zone.text}`}>
                   {weeklyValue} <span className="text-lg font-normal">РКО</span>
                 </p>
@@ -621,11 +621,11 @@ export default function DashboardPage() {
 
             {/* Missing report notification */}
             {myMissing.length > 0 && (
-              <div className="bg-orange-950/40 border border-orange-700 rounded-2xl p-4 sm:p-5 mb-6 flex items-start gap-3">
-                <span className="text-orange-400 text-lg leading-none mt-0.5">!</span>
+              <div className="bg-orange-50 border border-orange-300 rounded-2xl p-4 sm:p-5 mb-6 flex items-start gap-3">
+                <span className="text-orange-600 text-lg leading-none mt-0.5">!</span>
                 <div>
-                  <p className="text-orange-300 text-sm font-semibold">Вы не сдали отчёт</p>
-                  <p className="text-gray-400 text-xs mt-1">
+                  <p className="text-orange-700 text-sm font-semibold">Вы не сдали отчёт</p>
+                  <p className="text-gray-600 text-xs mt-1">
                     Нет отчёта за {myMissing[0].dateFormatted}. Добавьте отчёт, чтобы уведомление исчезло.
                   </p>
                 </div>
@@ -634,10 +634,10 @@ export default function DashboardPage() {
 
             {/* Header row */}
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-base font-semibold text-gray-200">Мои отчёты</h2>
+              <h2 className="text-base font-semibold text-gray-900">Мои отчёты</h2>
               <button
                 onClick={() => setShowForm(v => !v)}
-                className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold transition"
+                className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg text-sm font-semibold transition"
               >
                 + Добавить отчёт
               </button>
@@ -646,54 +646,54 @@ export default function DashboardPage() {
             {/* Form */}
             {showForm && (
               <div
-                style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
+                style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }}
                 className="rounded-2xl p-6 mb-6"
               >
-                <h3 className="text-sm font-semibold text-gray-300 mb-4">Новый отчёт</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">Новый отчёт</h3>
                 <form onSubmit={handleSubmit}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                     <div>
-                      <label className="text-gray-400 text-xs mb-1.5 block">Дата</label>
+                      <label className="text-gray-600 text-xs mb-1.5 block">Дата</label>
                       <input
                         type="date"
                         value={form.date}
                         onChange={e => setForm({ ...form, date: e.target.value })}
-                        className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                        className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="text-gray-400 text-xs mb-1.5 block">Написавшие</label>
+                      <label className="text-gray-600 text-xs mb-1.5 block">Написавшие</label>
                       <input
                         type="number" min="0"
                         value={form.people_wrote}
                         onChange={e => setForm({ ...form, people_wrote: e.target.value })}
                         placeholder="0"
-                        className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                        className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                       />
                     </div>
 
                     <div>
-                      <label className="text-gray-400 text-xs mb-1.5 block">Заказали РКО</label>
+                      <label className="text-gray-600 text-xs mb-1.5 block">Заказали РКО</label>
                       <input
                         type="number" min="0"
                         value={form.ordered_ip}
                         onChange={e => setForm({ ...form, ordered_ip: e.target.value })}
                         placeholder="0"
-                        className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                        className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                       />
                     </div>
 
                     <div>
-                      <label className="text-gray-400 text-xs mb-1.5 block">Заказали Симка <span className="text-gray-600">(доп-продукт, вне конверсии)</span></label>
+                      <label className="text-gray-600 text-xs mb-1.5 block">Заказали Симка <span className="text-gray-400">(доп-продукт, вне конверсии)</span></label>
                       <input
                         type="number" min="0"
                         value={form.ordered_simka}
                         onChange={e => setForm({ ...form, ordered_simka: e.target.value })}
                         placeholder="0"
-                        className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                        className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                       />
                     </div>
 
@@ -703,14 +703,14 @@ export default function DashboardPage() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-6 py-2 rounded-lg text-sm font-semibold transition"
+                      className="bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 px-6 py-2 rounded-lg text-sm font-semibold transition"
                     >
                       {submitting ? 'Сохраняем...' : 'Сохранить'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowForm(false)}
-                      className="bg-gray-800 hover:bg-gray-700 px-6 py-2 rounded-lg text-sm transition"
+                      className="bg-slate-100 hover:bg-slate-200 px-6 py-2 rounded-lg text-sm transition"
                     >
                       Отмена
                     </button>
@@ -721,12 +721,12 @@ export default function DashboardPage() {
 
             {/* Reports table */}
             <div
-              style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
+              style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }}
               className="rounded-2xl overflow-hidden overflow-x-auto"
             >
               <table className="w-full min-w-[400px]">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                  <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                     <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
                     <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
                     <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
@@ -736,7 +736,7 @@ export default function DashboardPage() {
                 <tbody>
                   {reports.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="text-center py-16 text-gray-600 text-sm">
+                      <td colSpan={4} className="text-center py-16 text-gray-400 text-sm">
                         Нет данных — добавьте первый отчёт
                       </td>
                     </tr>
@@ -744,15 +744,15 @@ export default function DashboardPage() {
                     reports.map(r => (
                       <tr
                         key={r.id}
-                        style={{ borderTop: '1px solid #1a1a28' }}
-                        className="hover:bg-white/[0.02] transition"
+                        style={{ borderTop: '1px solid #f1f5f9' }}
+                        className="hover:bg-slate-50 transition"
                       >
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">
                           {new Date(r.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         </td>
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
-                        <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
-                        <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-amber-400">{r.ordered_simka ?? '—'}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">{r.people_wrote ?? '—'}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-600">{r.ordered_ip ?? '—'}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-amber-600">{r.ordered_simka ?? '—'}</td>
                       </tr>
                     ))
                   )}
@@ -767,13 +767,13 @@ export default function DashboardPage() {
           <>
             {/* Кулдаун */}
             {cooldownLeft && (
-              <div className="bg-orange-950/40 border border-orange-700 rounded-2xl p-4 sm:p-5 mb-6 flex items-start gap-3">
-                <svg className="w-5 h-5 text-orange-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="bg-orange-50 border border-orange-300 rounded-2xl p-4 sm:p-5 mb-6 flex items-start gap-3">
+                <svg className="w-5 h-5 text-orange-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div>
-                  <p className="text-orange-300 text-sm font-semibold">Кулдаун активен</p>
-                  <p className="text-gray-400 text-xs mt-1">
+                  <p className="text-orange-700 text-sm font-semibold">Кулдаун активен</p>
+                  <p className="text-gray-600 text-xs mt-1">
                     Следующая выдача доступна через {formatTimeLeft(cooldownLeft)}
                   </p>
                 </div>
@@ -782,13 +782,13 @@ export default function DashboardPage() {
 
             {/* Запрос контактов */}
             <div
-              style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
+              style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }}
               className="rounded-2xl p-5 sm:p-6 mb-6"
             >
-              <h2 className="text-base font-semibold text-gray-200 mb-4">Получить контакты</h2>
+              <h2 className="text-base font-semibold text-gray-900 mb-4">Получить контакты</h2>
 
               <div className="mb-4">
-                <label className="text-gray-400 text-xs mb-2 block">Количество аккаунтов</label>
+                <label className="text-gray-600 text-xs mb-2 block">Количество аккаунтов</label>
                 <div className="flex gap-2">
                   {[1, 2, 3].map(n => (
                     <button
@@ -796,8 +796,8 @@ export default function DashboardPage() {
                       onClick={() => setAccountsCount(n)}
                       className={`px-5 py-2.5 rounded-lg text-sm font-medium transition ${
                         accountsCount === n
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                          ? 'bg-teal-600 text-white'
+                          : 'bg-slate-100 text-gray-600 hover:bg-slate-200 hover:text-gray-900'
                       }`}
                     >
                       {n} {n === 1 ? 'аккаунт' : n < 5 ? 'аккаунта' : 'аккаунтов'}
@@ -812,37 +812,37 @@ export default function DashboardPage() {
               <button
                 onClick={handleRequestContacts}
                 disabled={distributing || !!cooldownLeft}
-                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-2.5 rounded-lg text-sm font-semibold transition"
+                className="bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-2.5 rounded-lg text-sm font-semibold transition"
               >
                 {distributing ? 'Загрузка...' : 'Получить номера'}
               </button>
 
               {contactsError && (
-                <p className="text-red-400 text-sm mt-3">{contactsError}</p>
+                <p className="text-red-600 text-sm mt-3">{contactsError}</p>
               )}
             </div>
 
             {/* Результат выдачи */}
             {distributedContacts && (
               <div className="mb-6">
-                <h3 className="text-base font-semibold text-gray-200 mb-3">Ваши контакты</h3>
+                <h3 className="text-base font-semibold text-gray-900 mb-3">Ваши контакты</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {distributedContacts.map((group, idx) => (
                     <div
                       key={idx}
-                      style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
+                      style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }}
                       className="rounded-2xl p-4 sm:p-5"
                     >
                       <div className="flex justify-between items-center mb-3">
-                        <span className="text-sm font-semibold text-gray-300">
+                        <span className="text-sm font-semibold text-gray-700">
                           Аккаунт {idx + 1}
                         </span>
                         <button
                           onClick={() => handleCopy(group, idx)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                             copiedIdx === idx
-                              ? 'bg-green-900/60 text-green-300 border border-green-700'
-                              : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                              ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                              : 'bg-slate-100 text-gray-600 hover:bg-slate-200 hover:text-gray-900'
                           }`}
                         >
                           {copiedIdx === idx ? 'Скопировано!' : 'Копировать'}
@@ -851,8 +851,8 @@ export default function DashboardPage() {
                       <div className="space-y-0.5 max-h-[400px] overflow-y-auto">
                         {group.map((contact, cIdx) => (
                           <div key={cIdx} className="flex gap-2 text-xs">
-                            <span className="text-gray-600 w-5 text-right shrink-0">{cIdx + 1}.</span>
-                            <span className="text-gray-300 break-all">{contact}</span>
+                            <span className="text-gray-400 w-5 text-right shrink-0">{cIdx + 1}.</span>
+                            <span className="text-gray-700 break-all">{contact}</span>
                           </div>
                         ))}
                       </div>
@@ -864,21 +864,21 @@ export default function DashboardPage() {
 
             {/* История выдач */}
             <div>
-              <h3 className="text-base font-semibold text-gray-200 mb-3">История выдач</h3>
+              <h3 className="text-base font-semibold text-gray-900 mb-3">История выдач</h3>
               <div
-                style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
+                style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }}
                 className="rounded-2xl overflow-hidden"
               >
                 {contactsLoading ? (
-                  <div className="text-center py-12 text-gray-600 text-sm">Загрузка...</div>
+                  <div className="text-center py-12 text-gray-400 text-sm">Загрузка...</div>
                 ) : distributions.length === 0 ? (
-                  <div className="text-center py-12 text-gray-600 text-sm">
+                  <div className="text-center py-12 text-gray-400 text-sm">
                     Вы ещё не получали контакты
                   </div>
                 ) : (
                   <table className="w-full">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                      <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Аккаунтов</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Контактов</th>
@@ -897,18 +897,18 @@ export default function DashboardPage() {
                             <td colSpan={4} className="p-0">
                               <div>
                                 <div
-                                  style={{ borderTop: '1px solid #1a1a28' }}
-                                  className="flex items-center hover:bg-white/[0.02] transition cursor-pointer"
+                                  style={{ borderTop: '1px solid #f1f5f9' }}
+                                  className="flex items-center hover:bg-slate-50 transition cursor-pointer"
                                   onClick={() => setExpandedDistId(isExpanded ? null : dist.id)}
                                 >
-                                  <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">
+                                  <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">
                                     {new Date(dist.distributed_at).toLocaleDateString('ru-RU', {
                                       day: '2-digit', month: '2-digit', year: 'numeric',
                                       hour: '2-digit', minute: '2-digit',
                                     })}
                                   </td>
-                                  <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{dist.accounts_count}</td>
-                                  <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{totalContacts}</td>
+                                  <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">{dist.accounts_count}</td>
+                                  <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-600">{totalContacts}</td>
                                   <td className="px-3 sm:px-5 py-3 text-right">
                                     <span className="text-gray-500 text-xs">{isExpanded ? '▲' : '▼'}</span>
                                   </td>
@@ -917,15 +917,15 @@ export default function DashboardPage() {
                                   <div className="px-3 sm:px-5 pb-4 pt-1">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                       {dist.contacts.map((group, gIdx) => (
-                                        <div key={gIdx} className="bg-gray-900/50 rounded-lg p-3">
+                                        <div key={gIdx} className="bg-slate-100/70 rounded-lg p-3">
                                           <div className="flex justify-between items-center mb-2">
-                                            <span className="text-xs font-medium text-gray-400">Аккаунт {gIdx + 1}</span>
+                                            <span className="text-xs font-medium text-gray-600">Аккаунт {gIdx + 1}</span>
                                             <button
                                               onClick={(e) => { e.stopPropagation(); handleCopy(group, `hist-${dist.id}-${gIdx}`) }}
                                               className={`px-2 py-1 rounded text-xs transition ${
                                                 copiedIdx === `hist-${dist.id}-${gIdx}`
-                                                  ? 'bg-green-900/60 text-green-300'
-                                                  : 'bg-gray-800 text-gray-500 hover:text-white'
+                                                  ? 'bg-emerald-100 text-emerald-700'
+                                                  : 'bg-slate-100 text-gray-500 hover:text-gray-900'
                                               }`}
                                             >
                                               {copiedIdx === `hist-${dist.id}-${gIdx}` ? 'Скопировано!' : 'Копировать'}
@@ -933,7 +933,7 @@ export default function DashboardPage() {
                                           </div>
                                           <div className="space-y-0.5">
                                             {Array.isArray(group) && group.map((c, cIdx) => (
-                                              <div key={cIdx} className="text-xs text-gray-400 break-all">
+                                              <div key={cIdx} className="text-xs text-gray-600 break-all">
                                                 {cIdx + 1}. {c}
                                               </div>
                                             ))}
@@ -960,24 +960,24 @@ export default function DashboardPage() {
         {activeTab === 'ip-link' && (
           <>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-base font-semibold text-gray-200">Ссылка ИП</h2>
+              <h2 className="text-base font-semibold text-gray-900">Ссылка ИП</h2>
               <button
                 onClick={() => { setShowIpModal(true); setIpResult(null); setIpError(null); setIpForm({ fullName: '', inn: '', phone: '', email: '', city: '' }) }}
-                className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold transition"
+                className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg text-sm font-semibold transition"
               >
                 + Создать заявку
               </button>
             </div>
 
-            <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl overflow-hidden overflow-x-auto">
               {ipHistoryLoading ? (
-                <div className="text-center py-12 text-gray-600 text-sm">Загрузка...</div>
+                <div className="text-center py-12 text-gray-400 text-sm">Загрузка...</div>
               ) : ipHistory.length === 0 ? (
-                <div className="text-center py-12 text-gray-600 text-sm">Нет заявок — создайте первую</div>
+                <div className="text-center py-12 text-gray-400 text-sm">Нет заявок — создайте первую</div>
               ) : (
                 <table className="w-full min-w-[600px]">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ФИО</th>
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ИНН</th>
@@ -987,23 +987,23 @@ export default function DashboardPage() {
                   </thead>
                   <tbody>
                     {ipHistory.map(app => (
-                      <tr key={app.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">
+                      <tr key={app.id} style={{ borderTop: '1px solid #f1f5f9' }} className="hover:bg-slate-50 transition">
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">
                           {new Date(app.created_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </td>
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{app.full_name}</td>
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-400 font-mono">{app.inn}</td>
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{app.city}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">{app.full_name}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-600 font-mono">{app.inn}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">{app.city}</td>
                         <td className="px-3 sm:px-5 py-3 text-sm">
                           {app.status === 'error' ? (
-                            <span className="text-red-400 text-xs">Ошибка</span>
+                            <span className="text-red-600 text-xs">Ошибка</span>
                           ) : app.referral_link ? (
                             <button
                               onClick={() => handleCopyIpLink(app.referral_link, app.id)}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                                 copiedIpLink === app.id
-                                  ? 'bg-green-900/60 text-green-300 border border-green-700'
-                                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                                  : 'bg-slate-100 text-gray-600 hover:bg-slate-200 hover:text-gray-900'
                               }`}
                             >
                               {copiedIpLink === app.id ? 'Скопировано!' : 'Копировать'}
@@ -1023,24 +1023,24 @@ export default function DashboardPage() {
         {activeTab === 'account-link' && (
           <>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-base font-semibold text-gray-200">Счёт ИП</h2>
+              <h2 className="text-base font-semibold text-gray-900">Счёт ИП</h2>
               <button
                 onClick={() => { setShowAccountModal(true); setAccountResult(null); setAccountError(null); setAccountForm({ organizationName: '', inn: '', legalAddress: '', city: '', contactPerson: '', email: '', phone: '' }) }}
-                className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold transition"
+                className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg text-sm font-semibold transition"
               >
                 + Создать заявку
               </button>
             </div>
 
-            <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl overflow-hidden overflow-x-auto">
               {accountHistoryLoading ? (
-                <div className="text-center py-12 text-gray-600 text-sm">Загрузка...</div>
+                <div className="text-center py-12 text-gray-400 text-sm">Загрузка...</div>
               ) : accountHistory.length === 0 ? (
-                <div className="text-center py-12 text-gray-600 text-sm">Нет заявок — создайте первую</div>
+                <div className="text-center py-12 text-gray-400 text-sm">Нет заявок — создайте первую</div>
               ) : (
                 <table className="w-full min-w-[600px]">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Организация</th>
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ИНН</th>
@@ -1050,23 +1050,23 @@ export default function DashboardPage() {
                   </thead>
                   <tbody>
                     {accountHistory.map(app => (
-                      <tr key={app.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">
+                      <tr key={app.id} style={{ borderTop: '1px solid #f1f5f9' }} className="hover:bg-slate-50 transition">
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">
                           {new Date(app.created_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </td>
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{app.organization_name}</td>
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-400 font-mono">{app.inn}</td>
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{app.city}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">{app.organization_name}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-600 font-mono">{app.inn}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">{app.city}</td>
                         <td className="px-3 sm:px-5 py-3 text-sm">
                           {app.status === 'error' ? (
-                            <span className="text-red-400 text-xs" title={app.error_message}>Ошибка</span>
+                            <span className="text-red-600 text-xs" title={app.error_message}>Ошибка</span>
                           ) : app.referral_link ? (
                             <button
                               onClick={() => handleCopyAccountLink(app.referral_link, app.id)}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                                 copiedAccountLink === app.id
-                                  ? 'bg-green-900/60 text-green-300 border border-green-700'
-                                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                                  : 'bg-slate-100 text-gray-600 hover:bg-slate-200 hover:text-gray-900'
                               }`}
                             >
                               {copiedAccountLink === app.id ? 'Скопировано!' : 'Копировать'}
@@ -1084,12 +1084,12 @@ export default function DashboardPage() {
 
         {/* ── Вкладка "Добавить ЦД" ── */}
         {activeTab === 'add-cd' && (
-          <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl p-6 max-w-xl">
-            <h2 className="text-base font-semibold text-gray-200 mb-2">Добавить ЦД</h2>
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl p-6 max-w-xl">
+            <h2 className="text-base font-semibold text-gray-900 mb-2">Добавить ЦД</h2>
             <p className="text-gray-500 text-xs mb-5">Введите данные ЦД — они попадут в сводную таблицу ЦД за текущий месяц.</p>
             <button
               onClick={() => { setShowCdModal(true); setCdSuccess(false); setCdError(null) }}
-              className="bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-lg text-sm font-semibold transition"
+              className="bg-teal-600 text-white hover:bg-teal-700 px-5 py-2.5 rounded-lg text-sm font-semibold transition"
             >
               + Добавить ЦД
             </button>
@@ -1100,41 +1100,41 @@ export default function DashboardPage() {
 
       {/* ── Модалка "Добавить ЦД" ── */}
       {showCdModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowCdModal(false)}>
-          <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4" onClick={() => setShowCdModal(false)}>
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
             {cdSuccess ? (
-              <div className="bg-green-950/40 border border-green-700 rounded-xl p-5 text-center">
-                <p className="text-green-300 font-semibold text-sm">ЦД добавлен в таблицу</p>
+              <div className="bg-emerald-50 border border-emerald-300 rounded-xl p-5 text-center">
+                <p className="text-emerald-700 font-semibold text-sm">ЦД добавлен в таблицу</p>
               </div>
             ) : (
               <>
-                <h3 className="text-base font-semibold text-gray-200 mb-4">Добавить ЦД</h3>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Добавить ЦД</h3>
                 <form onSubmit={handleCdSubmit} className="space-y-3">
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">ФИО</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">ФИО</label>
                     <input type="text" required value={cdForm.fullName} onChange={e => setCdForm({ ...cdForm, fullName: e.target.value })}
-                      placeholder="Иванов Иван Иванович" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                      placeholder="Иванов Иван Иванович" className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm" />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">ИНН (12 цифр)</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">ИНН (12 цифр)</label>
                     <input type="text" value={cdForm.inn} onChange={e => setCdForm({ ...cdForm, inn: e.target.value })}
-                      placeholder="123456789012" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                      placeholder="123456789012" className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm" />
                   </div>
-                  <div className="text-center text-gray-600 text-xs">— или —</div>
+                  <div className="text-center text-gray-400 text-xs">— или —</div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Номер телефона</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Номер телефона</label>
                     <input type="tel" value={cdForm.phone} onChange={e => setCdForm({ ...cdForm, phone: e.target.value })}
-                      placeholder="+7 999 123 45 67" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                      placeholder="+7 999 123 45 67" className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm" />
                   </div>
-                  <p className="text-gray-600 text-xs">Достаточно заполнить ФИО и одно из: ИНН или телефон.</p>
-                  {cdError && <p className="text-red-400 text-sm">{cdError}</p>}
+                  <p className="text-gray-400 text-xs">Достаточно заполнить ФИО и одно из: ИНН или телефон.</p>
+                  {cdError && <p className="text-red-600 text-sm">{cdError}</p>}
                   <div className="flex gap-2 pt-2">
                     <button type="submit" disabled={cdSubmitting}
-                      className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition">
+                      className="flex-1 bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition">
                       {cdSubmitting ? 'Добавляем...' : 'Добавить'}
                     </button>
                     <button type="button" onClick={() => { setShowCdModal(false); setCdError(null) }}
-                      className="px-4 py-2.5 rounded-lg text-sm bg-gray-800 hover:bg-gray-700 transition">
+                      className="px-4 py-2.5 rounded-lg text-sm bg-slate-100 hover:bg-slate-200 transition">
                       Отмена
                     </button>
                   </div>
@@ -1147,23 +1147,23 @@ export default function DashboardPage() {
 
       {/* ── Модалка создания заявки ИП ── */}
       {showIpModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowIpModal(false)}>
-          <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4" onClick={() => setShowIpModal(false)}>
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Создать заявку ИП</h3>
-              <button onClick={() => setShowIpModal(false)} className="text-gray-500 hover:text-white text-lg">✕</button>
+              <button onClick={() => setShowIpModal(false)} className="text-gray-500 hover:text-gray-900 text-lg">✕</button>
             </div>
 
             {ipResult ? (
               <div>
-                <div className="bg-green-950/40 border border-green-700 rounded-lg p-4 mb-4">
-                  <p className="text-green-300 text-sm font-semibold mb-2">Ссылка создана!</p>
+                <div className="bg-emerald-50 border border-emerald-300 rounded-lg p-4 mb-4">
+                  <p className="text-emerald-700 text-sm font-semibold mb-2">Ссылка создана!</p>
                   <div className="flex items-center gap-2">
-                    <input readOnly value={ipResult.referralLink} className="flex-1 bg-gray-900 text-sm text-gray-300 px-3 py-2 rounded-lg border border-gray-700 truncate" />
+                    <input readOnly value={ipResult.referralLink} className="flex-1 bg-white text-sm text-gray-700 px-3 py-2 rounded-lg border border-gray-300 truncate" />
                     <button
                       onClick={() => handleCopyIpLink(ipResult.referralLink, 'modal')}
                       className={`px-3 py-2 rounded-lg text-xs font-medium transition shrink-0 ${
-                        copiedIpLink === 'modal' ? 'bg-green-900/60 text-green-300' : 'bg-blue-600 hover:bg-blue-500 text-white'
+                        copiedIpLink === 'modal' ? 'bg-emerald-100 text-emerald-700' : 'bg-teal-600 hover:bg-teal-700 text-white'
                       }`}
                     >
                       {copiedIpLink === 'modal' ? 'Скопировано!' : 'Копировать'}
@@ -1171,9 +1171,9 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 {ipResult._debug && (
-                  <pre className="text-xs text-gray-500 bg-gray-900 p-2 rounded mt-2 overflow-auto max-h-40">{JSON.stringify(ipResult._debug, null, 2)}</pre>
+                  <pre className="text-xs text-gray-500 bg-white p-2 rounded mt-2 overflow-auto max-h-40">{JSON.stringify(ipResult._debug, null, 2)}</pre>
                 )}
-                <button onClick={() => { setShowIpModal(false); setIpResult(null) }} className="w-full bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-lg text-sm transition">
+                <button onClick={() => { setShowIpModal(false); setIpResult(null) }} className="w-full bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-lg text-sm transition">
                   Закрыть
                 </button>
               </div>
@@ -1181,63 +1181,63 @@ export default function DashboardPage() {
               <form onSubmit={handleCreateIpLink}>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">ФИО</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">ФИО</label>
                     <input
                       type="text" required
                       value={ipForm.fullName}
                       onChange={e => setIpForm({ ...ipForm, fullName: e.target.value })}
                       placeholder="Иванов Иван Иванович"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">ИНН</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">ИНН</label>
                     <input
                       type="text" required maxLength={12}
                       value={ipForm.inn}
                       onChange={e => setIpForm({ ...ipForm, inn: e.target.value.replace(/\D/g, '') })}
                       placeholder="123456789012"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm font-mono"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Телефон</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Телефон</label>
                     <input
                       type="tel" required
                       value={ipForm.phone}
                       onChange={e => setIpForm({ ...ipForm, phone: e.target.value })}
                       placeholder="+7 999 123 45 67"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Email</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Email</label>
                     <input
                       type="email" required
                       value={ipForm.email}
                       onChange={e => setIpForm({ ...ipForm, email: e.target.value })}
                       placeholder="client@example.com"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Город</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Город</label>
                     <input
                       type="text" required
                       value={ipForm.city}
                       onChange={e => setIpForm({ ...ipForm, city: e.target.value })}
                       placeholder="Введите город"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                     />
                   </div>
                 </div>
 
-                {ipError && <p className="text-red-400 text-sm mt-3">{ipError}</p>}
+                {ipError && <p className="text-red-600 text-sm mt-3">{ipError}</p>}
 
                 <button
                   type="submit"
                   disabled={ipSubmitting}
-                  className="w-full mt-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-6 py-2.5 rounded-lg text-sm font-semibold transition"
+                  className="w-full mt-4 bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 px-6 py-2.5 rounded-lg text-sm font-semibold transition"
                 >
                   {ipSubmitting ? 'Создаём заявку...' : 'Получить ссылку'}
                 </button>
@@ -1249,30 +1249,30 @@ export default function DashboardPage() {
 
       {/* ── Модалка создания заявки Счёт ИП ── */}
       {showAccountModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowAccountModal(false)}>
-          <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4" onClick={() => setShowAccountModal(false)}>
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Создать заявку «Счёт ИП»</h3>
-              <button onClick={() => setShowAccountModal(false)} className="text-gray-500 hover:text-white text-lg">✕</button>
+              <button onClick={() => setShowAccountModal(false)} className="text-gray-500 hover:text-gray-900 text-lg">✕</button>
             </div>
 
             {accountResult ? (
               <div>
-                <div className="bg-green-950/40 border border-green-700 rounded-lg p-4 mb-4">
-                  <p className="text-green-300 text-sm font-semibold mb-2">Ссылка создана!</p>
+                <div className="bg-emerald-50 border border-emerald-300 rounded-lg p-4 mb-4">
+                  <p className="text-emerald-700 text-sm font-semibold mb-2">Ссылка создана!</p>
                   <div className="flex items-center gap-2">
-                    <input readOnly value={accountResult.referralLink} className="flex-1 bg-gray-900 text-sm text-gray-300 px-3 py-2 rounded-lg border border-gray-700 truncate" />
+                    <input readOnly value={accountResult.referralLink} className="flex-1 bg-white text-sm text-gray-700 px-3 py-2 rounded-lg border border-gray-300 truncate" />
                     <button
                       onClick={() => handleCopyAccountLink(accountResult.referralLink, 'modal')}
                       className={`px-3 py-2 rounded-lg text-xs font-medium transition shrink-0 ${
-                        copiedAccountLink === 'modal' ? 'bg-green-900/60 text-green-300' : 'bg-blue-600 hover:bg-blue-500 text-white'
+                        copiedAccountLink === 'modal' ? 'bg-emerald-100 text-emerald-700' : 'bg-teal-600 hover:bg-teal-700 text-white'
                       }`}
                     >
                       {copiedAccountLink === 'modal' ? 'Скопировано!' : 'Копировать'}
                     </button>
                   </div>
                 </div>
-                <button onClick={() => { setShowAccountModal(false); setAccountResult(null) }} className="w-full bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-lg text-sm transition">
+                <button onClick={() => { setShowAccountModal(false); setAccountResult(null) }} className="w-full bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-lg text-sm transition">
                   Закрыть
                 </button>
               </div>
@@ -1280,84 +1280,84 @@ export default function DashboardPage() {
               <form onSubmit={handleCreateAccountLink}>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Наименование организации</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Наименование организации</label>
                     <input
                       type="text" required
                       value={accountForm.organizationName}
                       onChange={e => setAccountForm({ ...accountForm, organizationName: e.target.value })}
                       placeholder="ИП Иванов Иван Иванович"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                     />
-                    <p className="text-gray-600 text-xs mt-1">Партнёр сам выберет нужного ИП по ИНН — если в реестре несколько ИП с одинаковым ФИО.</p>
+                    <p className="text-gray-400 text-xs mt-1">Партнёр сам выберет нужного ИП по ИНН — если в реестре несколько ИП с одинаковым ФИО.</p>
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">ИНН (10 для ООО, 12 для ИП)</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">ИНН (10 для ООО, 12 для ИП)</label>
                     <input
                       type="text" required maxLength={12}
                       value={accountForm.inn}
                       onChange={e => setAccountForm({ ...accountForm, inn: e.target.value.replace(/\D/g, '') })}
                       placeholder="123456789012"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm font-mono"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Юридический адрес</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Юридический адрес</label>
                     <input
                       type="text" required
                       value={accountForm.legalAddress}
                       onChange={e => setAccountForm({ ...accountForm, legalAddress: e.target.value })}
                       placeholder="г Москва, ул Тверская, д 1"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Город обслуживания</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Город обслуживания</label>
                     <input
                       type="text" required
                       value={accountForm.city}
                       onChange={e => setAccountForm({ ...accountForm, city: e.target.value })}
                       placeholder="Москва"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Контактное лицо</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Контактное лицо</label>
                     <input
                       type="text" required
                       value={accountForm.contactPerson}
                       onChange={e => setAccountForm({ ...accountForm, contactPerson: e.target.value })}
                       placeholder="Иванов И.И."
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Электронная почта</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Электронная почта</label>
                     <input
                       type="email" required
                       value={accountForm.email}
                       onChange={e => setAccountForm({ ...accountForm, email: e.target.value })}
                       placeholder="client@example.com"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Телефон</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Телефон</label>
                     <input
                       type="tel" required
                       value={accountForm.phone}
                       onChange={e => setAccountForm({ ...accountForm, phone: e.target.value })}
                       placeholder="+7 999 123 45 67"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
                     />
                   </div>
                 </div>
 
-                {accountError && <p className="text-red-400 text-sm mt-3">{accountError}</p>}
+                {accountError && <p className="text-red-600 text-sm mt-3">{accountError}</p>}
 
                 <button
                   type="submit"
                   disabled={accountSubmitting}
-                  className="w-full mt-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-6 py-2.5 rounded-lg text-sm font-semibold transition"
+                  className="w-full mt-4 bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 px-6 py-2.5 rounded-lg text-sm font-semibold transition"
                 >
                   {accountSubmitting ? 'Создаём заявку...' : 'Получить ссылку'}
                 </button>

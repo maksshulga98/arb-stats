@@ -43,24 +43,24 @@ export default function WarningsList({ managerId, canDelete, onLoaded }) {
     }
   }
 
-  if (loading) return <p className="text-gray-600 text-xs">Загрузка предупреждений...</p>
+  if (loading) return <p className="text-gray-400 text-xs">Загрузка предупреждений...</p>
 
   return (
     <div>
-      <p className="text-gray-400 text-xs mb-2">
+      <p className="text-gray-600 text-xs mb-2">
         Предупреждений за текущий месяц:{' '}
-        <span className={monthCount >= 3 ? 'text-red-400 font-semibold' : monthCount > 0 ? 'text-yellow-300' : 'text-gray-500'}>
+        <span className={monthCount >= 3 ? 'text-red-600 font-semibold' : monthCount > 0 ? 'text-amber-700' : 'text-gray-500'}>
           {monthCount}/3
         </span>
-        {monthCount >= 3 && <span className="text-red-400 ml-2">⚠ нужно увольнять</span>}
+        {monthCount >= 3 && <span className="text-red-600 ml-2">⚠ нужно увольнять</span>}
       </p>
 
       {warnings.length === 0 ? (
-        <p className="text-gray-600 text-xs">Предупреждений пока нет.</p>
+        <p className="text-gray-400 text-xs">Предупреждений пока нет.</p>
       ) : (
         <ul className="space-y-1 text-xs">
           {warnings.map(w => (
-            <li key={w.id} className="flex items-center gap-2 text-gray-400">
+            <li key={w.id} className="flex items-center gap-2 text-gray-600">
               <span>•</span>
               <span>
                 {new Date(w.issued_at).toLocaleString('ru-RU', {
@@ -69,12 +69,12 @@ export default function WarningsList({ managerId, canDelete, onLoaded }) {
                   timeZone: 'Europe/Moscow',
                 })}
               </span>
-              <span className="text-gray-600">— выдал {w.issued_by_name}</span>
+              <span className="text-gray-400">— выдал {w.issued_by_name}</span>
               {canDelete && (
                 <button
                   onClick={() => remove(w.id)}
                   disabled={deletingId === w.id}
-                  className="ml-auto text-gray-600 hover:text-red-400 text-[10px] underline disabled:opacity-50"
+                  className="ml-auto text-gray-400 hover:text-red-600 text-[10px] underline disabled:opacity-50"
                 >
                   {deletingId === w.id ? '...' : 'снять'}
                 </button>

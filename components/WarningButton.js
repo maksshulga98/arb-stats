@@ -40,10 +40,10 @@ export default function WarningButton({ managerId, monthCount, onIssued }) {
   }
 
   const color =
-    monthCount >= 3 ? 'text-red-400 bg-red-950/40 border-red-800'
-    : monthCount === 2 ? 'text-yellow-300 bg-yellow-950/40 border-yellow-800'
-    : monthCount === 1 ? 'text-orange-300 bg-orange-950/40 border-orange-800'
-    : 'text-gray-500 bg-gray-800/40 border-gray-700'
+    monthCount >= 3 ? 'text-red-600 bg-red-50 border-red-200'
+    : monthCount === 2 ? 'text-amber-700 bg-amber-50 border-amber-200'
+    : monthCount === 1 ? 'text-orange-700 bg-orange-50 border-orange-200'
+    : 'text-gray-500 bg-slate-100 border-gray-300'
 
   if (confirming) {
     return (
@@ -58,7 +58,7 @@ export default function WarningButton({ managerId, monthCount, onIssued }) {
         <button
           onClick={e => { e.stopPropagation(); setConfirming(false) }}
           disabled={submitting}
-          className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-md"
+          className="bg-slate-100 hover:bg-slate-200 text-gray-700 text-xs px-2 py-1 rounded-md"
         >
           Нет
         </button>

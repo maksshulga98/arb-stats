@@ -138,25 +138,25 @@ function isRedFor14Days(reports, createdAt) {
 
 const ZONE = {
   red: {
-    card:  'border-red-800 bg-red-950/25',
-    badge: 'bg-red-900/50 text-red-300 border border-red-800',
+    card:  'border-red-200 bg-red-50',
+    badge: 'bg-red-100 text-red-700 border border-red-200',
     label: 'Красная зона',
-    bar:   'bg-red-600',
-    text:  'text-red-400',
+    bar:   'bg-red-600 text-white',
+    text:  'text-red-600',
   },
   yellow: {
-    card:  'border-yellow-700 bg-yellow-950/25',
-    badge: 'bg-yellow-900/50 text-yellow-300 border border-yellow-700',
+    card:  'border-amber-300 bg-amber-50',
+    badge: 'bg-amber-100 text-amber-700 border border-amber-300',
     label: 'Жёлтая зона',
-    bar:   'bg-yellow-500',
-    text:  'text-yellow-400',
+    bar:   'bg-amber-500',
+    text:  'text-amber-600',
   },
   green: {
-    card:  'border-green-800 bg-green-950/25',
-    badge: 'bg-green-900/50 text-green-300 border border-green-800',
+    card:  'border-emerald-200 bg-emerald-50',
+    badge: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
     label: 'Зелёная зона',
-    bar:   'bg-green-500',
-    text:  'text-green-400',
+    bar:   'bg-emerald-500',
+    text:  'text-emerald-600',
   },
 }
 
@@ -179,10 +179,10 @@ function CloseIcon() {
   )
 }
 
-function CdValue({ value, loading, color = 'text-emerald-400' }) {
-  if (loading) return <span className="text-gray-600">...</span>
-  if (value === null || value === undefined) return <span className="text-gray-600">—</span>
-  if (value === 0) return <span className="text-gray-600">0</span>
+function CdValue({ value, loading, color = 'text-emerald-600' }) {
+  if (loading) return <span className="text-gray-400">...</span>
+  if (value === null || value === undefined) return <span className="text-gray-400">—</span>
+  if (value === 0) return <span className="text-gray-400">0</span>
   return <span className={`font-semibold ${color}`}>{value}</span>
 }
 
@@ -710,7 +710,7 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-400">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-gray-600">
         Загрузка...
       </div>
     )
@@ -735,11 +735,11 @@ export default function AdminPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-slate-50 text-gray-900">
 
       {/* ── Header ── */}
       <header
-        style={{ backgroundColor: '#111118', borderBottom: '1px solid #1f1f2e' }}
+        style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e2e8f0' }}
         className="px-4 sm:px-6 py-3 sticky top-0 z-40"
       >
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
@@ -750,7 +750,7 @@ export default function AdminPage() {
               <div className="relative" ref={bellRef}>
                 <button
                   onClick={() => setShowBell(v => !v)}
-                  className="relative p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition"
+                  className="relative p-2 rounded-lg hover:bg-slate-100 text-gray-600 hover:text-gray-900 transition"
                 >
                   <BellIcon />
                   {totalNotifications > 0 && (
@@ -762,7 +762,7 @@ export default function AdminPage() {
               </div>
               <button
                 onClick={handleLogout}
-                className="text-gray-500 hover:text-white text-sm transition"
+                className="text-gray-500 hover:text-gray-900 text-sm transition"
               >
                 Выйти
               </button>
@@ -775,8 +775,8 @@ export default function AdminPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-teal-600 text-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-slate-100'
                 }`}
               >
                 {tab.label}
@@ -789,7 +789,7 @@ export default function AdminPage() {
             <div className="relative" ref={bellRef}>
               <button
                 onClick={() => setShowBell(v => !v)}
-                className="relative p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition"
+                className="relative p-2 rounded-lg hover:bg-slate-100 text-gray-600 hover:text-gray-900 transition"
               >
                 <BellIcon />
                 {redManagers.length > 0 && (
@@ -806,14 +806,14 @@ export default function AdminPage() {
                     onClick={() => setShowBell(false)}
                   />
                   <div
-                    style={{ backgroundColor: '#13131f', border: '1px solid #2a2a3e' }}
+                    style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1' }}
                     className="absolute right-0 top-12 rounded-2xl p-4 w-72 sm:w-80 z-50 shadow-2xl"
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-gray-200">Уведомления</h3>
+                      <h3 className="text-sm font-semibold text-gray-900">Уведомления</h3>
                       <button
                         onClick={() => setShowBell(false)}
-                        className="text-gray-500 hover:text-white transition"
+                        className="text-gray-500 hover:text-gray-900 transition"
                       >
                         <CloseIcon />
                       </button>
@@ -825,10 +825,10 @@ export default function AdminPage() {
                         {streakAlerts.map(m => (
                           <div
                             key={`streak-${m.id}`}
-                            className="bg-orange-950/40 border border-orange-700 rounded-xl p-3 cursor-pointer hover:bg-orange-950/60 transition"
+                            className="bg-orange-50 border border-orange-300 rounded-xl p-3 cursor-pointer hover:bg-orange-50 transition"
                             onClick={() => { setSelectedManager(managers.find(x => x.id === m.id)); setShowBell(false) }}
                           >
-                            <p className="text-orange-300 text-sm font-semibold">{m.name}</p>
+                            <p className="text-orange-700 text-sm font-semibold">{m.name}</p>
                             <p className="text-gray-500 text-xs mt-0.5">
                               {TEAMS.find(t => t.id === m.team)?.name ? `Команда ${TEAMS.find(t => t.id === m.team).name} · ` : ''}
                               Не сдавал отчёт {m.days} дн. подряд
@@ -838,10 +838,10 @@ export default function AdminPage() {
                         {missingAlerts.filter(m => !streakAlerts.find(s => s.id === m.id)).map(m => (
                           <div
                             key={`missing-${m.id}`}
-                            className="bg-yellow-950/40 border border-yellow-700 rounded-xl p-3 cursor-pointer hover:bg-yellow-950/60 transition"
+                            className="bg-amber-50 border border-amber-300 rounded-xl p-3 cursor-pointer hover:bg-amber-50 transition"
                             onClick={() => { setSelectedManager(managers.find(x => x.id === m.id)); setShowBell(false) }}
                           >
-                            <p className="text-yellow-300 text-sm font-semibold">{m.name}</p>
+                            <p className="text-amber-700 text-sm font-semibold">{m.name}</p>
                             <p className="text-gray-500 text-xs mt-0.5">
                               {TEAMS.find(t => t.id === m.team)?.name ? `Команда ${TEAMS.find(t => t.id === m.team).name} · ` : ''}
                               Не сдал отчёт за {m.dateFormatted}
@@ -851,10 +851,10 @@ export default function AdminPage() {
                         {redManagers.map(m => (
                           <div
                             key={`red-${m.id}`}
-                            className="bg-red-950/40 border border-red-800 rounded-xl p-3 cursor-pointer hover:bg-red-950/60 transition"
+                            className="bg-red-50 border border-red-200 rounded-xl p-3 cursor-pointer hover:bg-red-50 transition"
                             onClick={() => { setSelectedManager(m); setShowBell(false) }}
                           >
-                            <p className="text-red-300 text-sm font-semibold">{m.name || m.email}</p>
+                            <p className="text-red-700 text-sm font-semibold">{m.name || m.email}</p>
                             <p className="text-gray-500 text-xs mt-0.5">
                               {TEAMS.find(t => t.id === m.team)?.name ? `Команда ${TEAMS.find(t => t.id === m.team).name} · ` : ''}
                               14 дней в красной зоне
@@ -868,10 +868,10 @@ export default function AdminPage() {
               )}
             </div>
 
-            <span className="w-px h-5 bg-gray-800" />
+            <span className="w-px h-5 bg-slate-100" />
             <button
               onClick={handleLogout}
-              className="text-gray-500 hover:text-white text-sm transition"
+              className="text-gray-500 hover:text-gray-900 text-sm transition"
             >
               Выйти
             </button>
@@ -886,38 +886,38 @@ export default function AdminPage() {
         {activeTab === 'analytics' && (
           <div className="space-y-10">
             {/* Сводка по всей компании (только админ-кабинет) */}
-            <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl p-5">
-              <h2 className="text-base font-semibold text-gray-200 mb-4">Сводка по компании</h2>
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl p-5">
+              <h2 className="text-base font-semibold text-gray-900 mb-4">Сводка по компании</h2>
 
               {/* Верхние счётчики */}
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 mb-5">
                 <div>
                   <p className="text-gray-500 text-xs mb-1">Команд</p>
-                  <p className="text-2xl font-bold text-gray-100">{companySummary.teamCount}</p>
+                  <p className="text-2xl font-bold text-gray-900">{companySummary.teamCount}</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-xs mb-1">Людей в командах</p>
-                  <p className="text-2xl font-bold text-gray-100">{companySummary.totals.people}</p>
+                  <p className="text-2xl font-bold text-gray-900">{companySummary.totals.people}</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-xs mb-1">РКО за 7 дней</p>
-                  <p className="text-2xl font-bold text-blue-400">{companySummary.totals.cur}</p>
+                  <p className="text-2xl font-bold text-blue-600">{companySummary.totals.cur}</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-xs mb-1">РКО за пред. 7 дней</p>
-                  <p className="text-2xl font-bold text-gray-300">{companySummary.totals.prev}</p>
+                  <p className="text-2xl font-bold text-gray-700">{companySummary.totals.prev}</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-xs mb-1">ЦД за 7 дней</p>
-                  <p className="text-2xl font-bold text-emerald-400">{summaryCdLoading ? '...' : companySummary.totals.cdCur}</p>
+                  <p className="text-2xl font-bold text-emerald-600">{summaryCdLoading ? '...' : companySummary.totals.cdCur}</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-xs mb-1">ЦД за пред. 7 дней</p>
-                  <p className="text-2xl font-bold text-gray-300">{summaryCdLoading ? '...' : companySummary.totals.cdPrev}</p>
+                  <p className="text-2xl font-bold text-gray-700">{summaryCdLoading ? '...' : companySummary.totals.cdPrev}</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-xs mb-1">Конверсия за 7 дней</p>
-                  <p className="text-2xl font-bold text-cyan-400">{convStr(companySummary.totals.cur, companySummary.totals.wroteCur)}</p>
+                  <p className="text-2xl font-bold text-cyan-700">{convStr(companySummary.totals.cur, companySummary.totals.wroteCur)}</p>
                 </div>
               </div>
 
@@ -925,7 +925,7 @@ export default function AdminPage() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[620px]">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                       <th className="text-left py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Команда</th>
                       <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Людей</th>
                       <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">РКО 7 дн</th>
@@ -940,34 +940,34 @@ export default function AdminPage() {
                     {companySummary.rows.map(r => {
                       const delta = r.cur - r.prev
                       return (
-                        <tr key={r.id} style={{ borderTop: '1px solid #1a1a28' }}>
-                          <td className="py-2 text-sm text-gray-300">Команда {r.name}</td>
-                          <td className="py-2 text-sm text-gray-400 text-right">{r.people}</td>
-                          <td className="py-2 text-sm font-semibold text-blue-400 text-right">{r.cur}</td>
-                          <td className="py-2 text-sm text-gray-400 text-right">{r.prev}</td>
-                          <td className={`py-2 text-sm text-right font-medium ${delta > 0 ? 'text-green-400' : delta < 0 ? 'text-red-400' : 'text-gray-600'}`}>
+                        <tr key={r.id} style={{ borderTop: '1px solid #f1f5f9' }}>
+                          <td className="py-2 text-sm text-gray-700">Команда {r.name}</td>
+                          <td className="py-2 text-sm text-gray-600 text-right">{r.people}</td>
+                          <td className="py-2 text-sm font-semibold text-blue-600 text-right">{r.cur}</td>
+                          <td className="py-2 text-sm text-gray-600 text-right">{r.prev}</td>
+                          <td className={`py-2 text-sm text-right font-medium ${delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-red-600' : 'text-gray-400'}`}>
                             {delta > 0 ? `+${delta}` : delta}
                           </td>
-                          <td className="py-2 text-sm text-right font-medium text-emerald-400">{summaryCdLoading ? '...' : r.cdCur}</td>
-                          <td className="py-2 text-sm text-right text-gray-400">{summaryCdLoading ? '...' : r.cdPrev}</td>
-                          <td className="py-2 text-sm text-right font-medium text-cyan-400">{convStr(r.cur, r.wroteCur)}</td>
+                          <td className="py-2 text-sm text-right font-medium text-emerald-600">{summaryCdLoading ? '...' : r.cdCur}</td>
+                          <td className="py-2 text-sm text-right text-gray-600">{summaryCdLoading ? '...' : r.cdPrev}</td>
+                          <td className="py-2 text-sm text-right font-medium text-cyan-700">{convStr(r.cur, r.wroteCur)}</td>
                         </tr>
                       )
                     })}
-                    <tr style={{ borderTop: '2px solid #2a2a3e' }} className="bg-white/[0.02]">
-                      <td className="py-2 text-sm font-semibold text-gray-200">Итого</td>
-                      <td className="py-2 text-sm font-semibold text-gray-200 text-right">{companySummary.totals.people}</td>
-                      <td className="py-2 text-sm font-bold text-blue-400 text-right">{companySummary.totals.cur}</td>
-                      <td className="py-2 text-sm font-semibold text-gray-300 text-right">{companySummary.totals.prev}</td>
+                    <tr style={{ borderTop: '2px solid #cbd5e1' }} className="bg-slate-50">
+                      <td className="py-2 text-sm font-semibold text-gray-900">Итого</td>
+                      <td className="py-2 text-sm font-semibold text-gray-900 text-right">{companySummary.totals.people}</td>
+                      <td className="py-2 text-sm font-bold text-blue-600 text-right">{companySummary.totals.cur}</td>
+                      <td className="py-2 text-sm font-semibold text-gray-700 text-right">{companySummary.totals.prev}</td>
                       <td className={`py-2 text-sm text-right font-bold ${
-                        companySummary.totals.cur - companySummary.totals.prev > 0 ? 'text-green-400'
-                        : companySummary.totals.cur - companySummary.totals.prev < 0 ? 'text-red-400' : 'text-gray-600'
+                        companySummary.totals.cur - companySummary.totals.prev > 0 ? 'text-emerald-600'
+                        : companySummary.totals.cur - companySummary.totals.prev < 0 ? 'text-red-600' : 'text-gray-400'
                       }`}>
                         {(() => { const d = companySummary.totals.cur - companySummary.totals.prev; return d > 0 ? `+${d}` : d })()}
                       </td>
-                      <td className="py-2 text-sm text-right font-bold text-emerald-400">{summaryCdLoading ? '...' : companySummary.totals.cdCur}</td>
-                      <td className="py-2 text-sm text-right font-semibold text-gray-300">{summaryCdLoading ? '...' : companySummary.totals.cdPrev}</td>
-                      <td className="py-2 text-sm text-right font-bold text-cyan-400">{convStr(companySummary.totals.cur, companySummary.totals.wroteCur)}</td>
+                      <td className="py-2 text-sm text-right font-bold text-emerald-600">{summaryCdLoading ? '...' : companySummary.totals.cdCur}</td>
+                      <td className="py-2 text-sm text-right font-semibold text-gray-700">{summaryCdLoading ? '...' : companySummary.totals.cdPrev}</td>
+                      <td className="py-2 text-sm text-right font-bold text-cyan-700">{convStr(companySummary.totals.cur, companySummary.totals.wroteCur)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -982,18 +982,18 @@ export default function AdminPage() {
               return (
                 <section key={team.id}>
                   <div className="flex items-center gap-3 mb-4">
-                    <h2 className="text-base font-semibold text-gray-200">
+                    <h2 className="text-base font-semibold text-gray-900">
                       Команда {team.name}
                     </h2>
-                    <span className="text-gray-600 text-sm">
+                    <span className="text-gray-400 text-sm">
                       {teamAll.length} {teamAll.length === 1 ? 'менеджер' : 'менеджеров'}
                     </span>
                   </div>
 
                   {teamAll.length === 0 ? (
                     <div
-                      style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
-                      className="rounded-xl p-6 text-gray-600 text-sm"
+                      style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }}
+                      className="rounded-xl p-6 text-gray-400 text-sm"
                     >
                       Нет менеджеров — назначьте team в профиле пользователя
                     </div>
@@ -1020,16 +1020,16 @@ export default function AdminPage() {
                           >
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${(manager.sheet_id || MANAGER_SHEETS[manager.name]) ? 'bg-green-500' : 'bg-gray-600'}`}
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${(manager.sheet_id || MANAGER_SHEETS[manager.name]) ? 'bg-emerald-500' : 'bg-slate-300'}`}
                                   title={(manager.sheet_id || MANAGER_SHEETS[manager.name]) ? 'Таблица привязана' : 'Таблица не привязана'} />
-                              <span className="font-medium text-white text-sm leading-tight truncate">
+                              <span className="font-medium text-gray-900 text-sm leading-tight truncate">
                                 {manager.name || manager.email}
-                                {manager.role === 'teamlead' && <span className="text-xs text-blue-400 ml-1">(ТЛ)</span>}
+                                {manager.role === 'teamlead' && <span className="text-xs text-blue-600 ml-1">(ТЛ)</span>}
                               </span>
                               </div>
                               <div className="flex items-center gap-1 ml-1 flex-shrink-0">
                                 {alert14 && (
-                                  <span title="14 дней в красной зоне" className="text-red-400 text-base leading-none">⚠</span>
+                                  <span title="14 дней в красной зоне" className="text-red-600 text-base leading-none">⚠</span>
                                 )}
                                 {canDelete && !isDeletePending && (
                                   <WarningButton
@@ -1041,7 +1041,7 @@ export default function AdminPage() {
                                 {canDelete && !isDeletePending && (
                                   <button
                                     onClick={e => { e.stopPropagation(); setDeleteConfirm(manager.id) }}
-                                    className="text-gray-700 hover:text-red-400 transition opacity-0 group-hover:opacity-100 p-0.5"
+                                    className="text-gray-300 hover:text-red-600 transition opacity-0 group-hover:opacity-100 p-0.5"
                                     title="Удалить менеджера"
                                   >
                                     <TrashIcon />
@@ -1057,10 +1057,10 @@ export default function AdminPage() {
                                   <span className="text-gray-500 text-xs ml-1">РКО / 7 дн</span>
                                 </div>
                                 <p className="text-gray-500 text-xs mb-1">
-                                  Конверсия: <span className="text-cyan-400 font-medium">{convStr(value7, wrote7)}</span>
+                                  Конверсия: <span className="text-cyan-700 font-medium">{convStr(value7, wrote7)}</span>
                                 </p>
                                 <p className="text-gray-500 text-xs mb-3">
-                                  Симка / 7 дн: <span className="text-amber-400 font-medium">{simka7}</span>
+                                  Симка / 7 дн: <span className="text-amber-600 font-medium">{simka7}</span>
                                 </p>
 
                                 <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${z.badge}`}>
@@ -1071,8 +1071,8 @@ export default function AdminPage() {
                                   const accs = tgByName.get(mName) || []
                                   if (accs.length === 0) return null
                                   return (
-                                    <div className="mt-2 pt-2 border-t border-white/5">
-                                      <p className="text-gray-500 text-xs mb-1">TG аккаунтов: <span className="text-gray-300 font-medium">{accs.length}</span></p>
+                                    <div className="mt-2 pt-2 border-t border-slate-200">
+                                      <p className="text-gray-500 text-xs mb-1">TG аккаунтов: <span className="text-gray-700 font-medium">{accs.length}</span></p>
                                       {accs.map((a, i) => (
                                         <p key={i} className="text-gray-500 text-xs truncate">{a.phone}{a.tgLink ? ` · ${a.tgLink}` : ''}</p>
                                       ))}
@@ -1082,19 +1082,19 @@ export default function AdminPage() {
                               </>
                             ) : (
                               <div onClick={e => e.stopPropagation()}>
-                                <p className="text-gray-400 text-xs mb-3">Удалить менеджера? История отчётов сохранится в командной аналитике.</p>
+                                <p className="text-gray-600 text-xs mb-3">Удалить менеджера? История отчётов сохранится в командной аналитике.</p>
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => handleDeleteManager(manager.id)}
                                     disabled={deleting}
-                                    className="bg-red-600 hover:bg-red-500 disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                                    className="bg-red-600 text-white hover:bg-red-500 disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
                                   >
                                     {deleting ? '...' : 'Удалить'}
                                   </button>
                                   <button
                                     onClick={() => setDeleteConfirm(null)}
                                     disabled={deleting}
-                                    className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs transition"
+                                    className="bg-slate-100 hover:bg-slate-200 disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs transition"
                                   >
                                     Отмена
                                   </button>
@@ -1116,19 +1116,19 @@ export default function AdminPage() {
         {activeTab === 'daily' && (
           <div className="space-y-8">
             <div className="flex items-center gap-4 flex-wrap">
-              <label className="text-gray-400 text-sm">С:</label>
+              <label className="text-gray-600 text-sm">С:</label>
               <input
                 type="date"
                 value={dateFrom}
                 onChange={e => { setDateFrom(e.target.value); if (e.target.value > dateTo) setDateTo(e.target.value) }}
-                className="bg-gray-900 text-white px-4 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                className="bg-white text-gray-900 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
               />
-              <label className="text-gray-400 text-sm">По:</label>
+              <label className="text-gray-600 text-sm">По:</label>
               <input
                 type="date"
                 value={dateTo}
                 onChange={e => { setDateTo(e.target.value); if (e.target.value < dateFrom) setDateFrom(e.target.value) }}
-                className="bg-gray-900 text-white px-4 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                className="bg-white text-gray-900 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
               />
             </div>
 
@@ -1147,50 +1147,50 @@ export default function AdminPage() {
               const reportedCount = allMembers.filter(m => reported.has(m.id)).length
 
               return (
-                <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl p-5">
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl p-5">
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-semibold text-gray-200">Сводка за период</h2>
-                    <span className="text-gray-600 text-xs">{reportedCount} из {totalMembers} сдали отчёт</span>
+                    <h2 className="text-sm font-semibold text-gray-900">Сводка за период</h2>
+                    <span className="text-gray-400 text-xs">{reportedCount} из {totalMembers} сдали отчёт</span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Написавшие</p>
-                      <p className="text-xl font-bold text-gray-200">{totalPeopleWrote}</p>
+                      <p className="text-xl font-bold text-gray-900">{totalPeopleWrote}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Заказали РКО</p>
-                      <p className="text-xl font-bold text-blue-400">{totalOrdered}</p>
+                      <p className="text-xl font-bold text-blue-600">{totalOrdered}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Конверсия</p>
-                      <p className="text-xl font-bold text-cyan-400">{convStr(totalOrdered, totalPeopleWrote)}</p>
+                      <p className="text-xl font-bold text-cyan-700">{convStr(totalOrdered, totalPeopleWrote)}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Заказали Симка</p>
-                      <p className="text-xl font-bold text-amber-400">{totalOrderedSimka}</p>
+                      <p className="text-xl font-bold text-amber-600">{totalOrderedSimka}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs mb-1">ЦД ИП</p>
-                      <p className="text-xl font-bold text-emerald-400">
+                      <p className="text-xl font-bold text-emerald-600">
                         {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.ip || 0), 0)}
                       </p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs mb-1">ЦД Симка</p>
-                      <p className="text-xl font-bold text-amber-400">
+                      <p className="text-xl font-bold text-amber-600">
                         {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.simka || 0), 0)}
                       </p>
                     </div>
                     {/* Скрыто 07.2026 — ЦД дебетовые и Выдано номеров (код сохранён)
                     <div>
                       <p className="text-gray-500 text-xs mb-1">ЦД дебетовые</p>
-                      <p className="text-xl font-bold text-purple-400">
+                      <p className="text-xl font-bold text-purple-600">
                         {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.debit || 0), 0)}
                       </p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Выдано номеров</p>
-                      <p className="text-xl font-bold text-orange-400">
+                      <p className="text-xl font-bold text-orange-600">
                         {contactsLoading ? '...' : contactStats.total}
                       </p>
                     </div>
@@ -1248,14 +1248,14 @@ export default function AdminPage() {
               return (
                 <section key={team.id}>
                   <div className="flex items-center gap-3 mb-3">
-                    <h2 className="text-base font-semibold text-gray-200">Команда {team.name}</h2>
-                    <span className="text-gray-600 text-sm">{teamMembers.length} чел.</span>
+                    <h2 className="text-base font-semibold text-gray-900">Команда {team.name}</h2>
+                    <span className="text-gray-400 text-sm">{teamMembers.length} чел.</span>
                   </div>
 
-                  <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl overflow-hidden overflow-x-auto">
                     <table className="w-full min-w-[640px]">
                       <thead>
-                        <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                        <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Менеджер</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
@@ -1271,7 +1271,7 @@ export default function AdminPage() {
                       <tbody>
                         {rows.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="text-center py-8 text-gray-600 text-sm">
+                            <td colSpan={7} className="text-center py-8 text-gray-400 text-sm">
                               Нет участников в команде
                             </td>
                           </tr>
@@ -1280,40 +1280,40 @@ export default function AdminPage() {
                             {rows.map(({ member, report }) => {
                               const sd = sheetsData[member.name]
                               return (
-                                <tr key={member.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
-                                  <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">
+                                <tr key={member.id} style={{ borderTop: '1px solid #f1f5f9' }} className="hover:bg-slate-50 transition">
+                                  <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">
                                     {member.name || member.email}
-                                    {member.role === 'teamlead' && <span className="ml-2 text-xs text-gray-600">(тимлид)</span>}
+                                    {member.role === 'teamlead' && <span className="ml-2 text-xs text-gray-400">(тимлид)</span>}
                                   </td>
-                                  <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{report ? report.people_wrote : '—'}</td>
-                                  <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-400">{report ? report.ordered_ip : '—'}</td>
-                                  <td className="px-3 sm:px-5 py-3 text-sm text-cyan-400 font-medium">
+                                  <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">{report ? report.people_wrote : '—'}</td>
+                                  <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-blue-600">{report ? report.ordered_ip : '—'}</td>
+                                  <td className="px-3 sm:px-5 py-3 text-sm text-cyan-700 font-medium">
                                     {report ? convStr(report.ordered_ip, report.people_wrote) : '—'}
                                   </td>
-                                  <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-amber-400">{report ? (report.ordered_simka || 0) : '—'}</td>
+                                  <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-amber-600">{report ? (report.ordered_simka || 0) : '—'}</td>
                                   <td className="px-3 sm:px-5 py-3 text-sm">
                                     <CdValue value={sd ? sd.ip : null} loading={sheetsLoading && sd === undefined} />
                                   </td>
                                   <td className="px-3 sm:px-5 py-3 text-sm">
-                                    <CdValue value={sd ? sd.simka : null} loading={sheetsLoading && sd === undefined} color="text-amber-400" />
+                                    <CdValue value={sd ? sd.simka : null} loading={sheetsLoading && sd === undefined} color="text-amber-600" />
                                   </td>
                                   {/* Скрыто 07.2026 (код сохранён):
-                                  <td><CdValue value={sd ? sd.debit : null} color="text-purple-400" /></td>
-                                  <td><CdValue value={contactStats.byManagerId?.[member.id] ?? null} color="text-orange-400" /></td> */}
+                                  <td><CdValue value={sd ? sd.debit : null} color="text-purple-600" /></td>
+                                  <td><CdValue value={contactStats.byManagerId?.[member.id] ?? null} color="text-orange-600" /></td> */}
                                 </tr>
                               )
                             })}
                             {(rows.some(r => r.report) || Object.values(sheetsData).some(v => v?.total)) && (
-                              <tr style={{ borderTop: '2px solid #2a2a3e' }} className="bg-white/[0.02]">
-                                <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">Итого</td>
-                                <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-200">{totals.people_wrote}</td>
-                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-400">{totals.ordered_ip}</td>
-                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-cyan-400">{convStr(totals.ordered_ip, totals.people_wrote)}</td>
-                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-amber-400">{totals.ordered_simka}</td>
-                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
+                              <tr style={{ borderTop: '2px solid #cbd5e1' }} className="bg-slate-50">
+                                <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-900">Итого</td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-semibold text-gray-900">{totals.people_wrote}</td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-blue-600">{totals.ordered_ip}</td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-cyan-700">{convStr(totals.ordered_ip, totals.people_wrote)}</td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-amber-600">{totals.ordered_simka}</td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-600">
                                   {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0) + teamDeletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.ip || 0), 0)}
                                 </td>
-                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-amber-400">
+                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-amber-600">
                                   {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.simka || 0), 0) + teamDeletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.simka || 0), 0)}
                                 </td>
                                 {/* Скрыто 07.2026 (код сохранён): ЦД дебетовые + Взято номеров */}
@@ -1431,42 +1431,42 @@ export default function AdminPage() {
           return (
             <div className="space-y-6">
               {/* Period selector */}
-              <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl p-5">
+              <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl p-5">
                 <div className="flex flex-wrap items-end gap-3">
                   <div>
                     <label className="text-gray-500 text-xs mb-1.5 block">Месяц</label>
                     <select value={salaryMonth} onChange={e => { setSalaryMonth(+e.target.value); setSalaryCalculated(false) }}
-                      className="bg-gray-900 text-white px-3 py-2 rounded-lg border border-gray-700 text-sm focus:outline-none focus:border-blue-500">
+                      className="bg-white text-gray-900 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-teal-500">
                       {MONTHS_RU.map((m, i) => <option key={i} value={i}>{m}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="text-gray-500 text-xs mb-1.5 block">Год</label>
                     <select value={salaryYear} onChange={e => { setSalaryYear(+e.target.value); setSalaryCalculated(false) }}
-                      className="bg-gray-900 text-white px-3 py-2 rounded-lg border border-gray-700 text-sm focus:outline-none focus:border-blue-500">
+                      className="bg-white text-gray-900 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-teal-500">
                       {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="text-gray-500 text-xs mb-1.5 block">Период</label>
-                    <div className="flex rounded-lg overflow-hidden border border-gray-700">
+                    <div className="flex rounded-lg overflow-hidden border border-gray-300">
                       <button onClick={() => { setSalaryHalf(1); setSalaryCalculated(false) }}
-                        className={`px-4 py-2 text-sm font-medium transition ${salaryHalf === 1 ? 'bg-blue-600 text-white' : 'bg-gray-900 text-gray-400 hover:text-white'}`}>
+                        className={`px-4 py-2 text-sm font-medium transition ${salaryHalf === 1 ? 'bg-teal-600 text-white' : 'bg-white text-gray-600 hover:text-gray-900'}`}>
                         1 – 15
                       </button>
                       <button onClick={() => { setSalaryHalf(2); setSalaryCalculated(false) }}
-                        className={`px-4 py-2 text-sm font-medium transition ${salaryHalf === 2 ? 'bg-blue-600 text-white' : 'bg-gray-900 text-gray-400 hover:text-white'}`}>
+                        className={`px-4 py-2 text-sm font-medium transition ${salaryHalf === 2 ? 'bg-teal-600 text-white' : 'bg-white text-gray-600 hover:text-gray-900'}`}>
                         16 – {lastDay}
                       </button>
                     </div>
                   </div>
                   <button onClick={fetchSalaryData} disabled={salaryLoading}
-                    className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-6 py-2 rounded-lg text-sm font-semibold transition">
+                    className="bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 px-6 py-2 rounded-lg text-sm font-semibold transition">
                     {salaryLoading ? 'Загрузка...' : 'Рассчитать'}
                   </button>
                 </div>
                 {salaryCalculated && (
-                  <p className="text-gray-600 text-xs mt-3">
+                  <p className="text-gray-400 text-xs mt-3">
                     Период: {dateFrom} — {dateTo}
                     {' · '}Бонус ТЛ за ЦД ИП: {RATES.TL_BONUS_IP} ₽/шт
                   </p>
@@ -1475,19 +1475,19 @@ export default function AdminPage() {
 
               {/* Grand total card */}
               {salaryCalculated && (
-                <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl p-5">
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl p-5">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Всего ЦД ИП</p>
-                      <p className="text-xl font-bold text-emerald-400">{grandIp}</p>
+                      <p className="text-xl font-bold text-emerald-600">{grandIp}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Всего ЦД Карт</p>
-                      <p className="text-xl font-bold text-purple-400">{grandDebit}</p>
+                      <p className="text-xl font-bold text-purple-600">{grandDebit}</p>
                     </div>
                     <div className="col-span-2">
                       <p className="text-gray-500 text-xs mb-1">Итого к выплате</p>
-                      <p className="text-2xl font-bold text-white">{fmt(grandTotal)}</p>
+                      <p className="text-2xl font-bold text-gray-900">{fmt(grandTotal)}</p>
                     </div>
                   </div>
                 </div>
@@ -1501,14 +1501,14 @@ export default function AdminPage() {
                 return (
                   <section key={team.id}>
                     <div className="flex items-center gap-3 mb-3">
-                      <h2 className="text-base font-semibold text-gray-200">Команда {team.name}</h2>
-                      <span className="text-gray-600 text-sm">{fmt(subtotal)}</span>
+                      <h2 className="text-base font-semibold text-gray-900">Команда {team.name}</h2>
+                      <span className="text-gray-400 text-sm">{fmt(subtotal)}</span>
                     </div>
 
-                    <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
+                    <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl overflow-hidden overflow-x-auto">
                       <table className="w-full min-w-[700px]">
                         <thead>
-                          <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                          <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                             <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Имя</th>
                             <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
                             <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД Карта</th>
@@ -1521,24 +1521,24 @@ export default function AdminPage() {
                         </thead>
                         <tbody>
                           {memberRows.map(row => (
-                            <tr key={row.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
-                              <td className="px-3 sm:px-4 py-3 text-sm text-gray-300">
+                            <tr key={row.id} style={{ borderTop: '1px solid #f1f5f9' }} className="hover:bg-slate-50 transition">
+                              <td className="px-3 sm:px-4 py-3 text-sm text-gray-700">
                                 {row.name}
-                                {row.role === 'teamlead' && <span className="text-xs text-blue-400 ml-1">(ТЛ)</span>}
-                                {row.deleted && <span className="text-xs text-gray-600 ml-1">(удалён)</span>}
+                                {row.role === 'teamlead' && <span className="text-xs text-blue-600 ml-1">(ТЛ)</span>}
+                                {row.deleted && <span className="text-xs text-gray-400 ml-1">(удалён)</span>}
                               </td>
-                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-emerald-400 font-medium">{row.ip}</td>
-                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-purple-400 font-medium">{row.debit}</td>
-                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-gray-300">{fmt(row.ip * RATES.MANAGER_IP)}</td>
-                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-gray-300">{fmt(row.debit * RATES.MANAGER_DEBIT)}</td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-emerald-600 font-medium">{row.ip}</td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-purple-600 font-medium">{row.debit}</td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-gray-700">{fmt(row.ip * RATES.MANAGER_IP)}</td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-gray-700">{fmt(row.debit * RATES.MANAGER_DEBIT)}</td>
                               <td className="px-3 sm:px-4 py-3 text-sm text-right">
                                 {row.role === 'teamlead' ? (
-                                  <span className="text-yellow-400 font-medium">{fmt(row.teamBonus)}</span>
+                                  <span className="text-amber-600 font-medium">{fmt(row.teamBonus)}</span>
                                 ) : (
-                                  <span className="text-gray-700">—</span>
+                                  <span className="text-gray-300">—</span>
                                 )}
                               </td>
-                              <td className="px-3 sm:px-4 py-3 text-sm text-right font-bold text-white">{fmt(row.total)}</td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-right font-bold text-gray-900">{fmt(row.total)}</td>
                               <td className="px-3 sm:px-4 py-3 text-sm text-left min-w-[160px]">
                                 {paymentEditing[row.id] !== undefined ? (
                                   <input
@@ -1548,13 +1548,13 @@ export default function AdminPage() {
                                     onBlur={() => savePaymentInfo(row.id, paymentEditing[row.id])}
                                     onKeyDown={e => { if (e.key === 'Enter') savePaymentInfo(row.id, paymentEditing[row.id]); if (e.key === 'Escape') setPaymentEditing(prev => { const n = { ...prev }; delete n[row.id]; return n }) }}
                                     disabled={paymentSaving[row.id]}
-                                    className="w-full bg-black/30 border border-blue-500 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none"
+                                    className="w-full bg-slate-900/20 border border-teal-500 rounded px-2 py-1 text-xs text-gray-900 focus:outline-none"
                                     placeholder="Номер карты / телефон..."
                                   />
                                 ) : (
                                   <button
                                     onClick={() => setPaymentEditing(prev => ({ ...prev, [row.id]: row.paymentInfo }))}
-                                    className="text-left text-xs text-gray-500 hover:text-gray-300 transition w-full truncate"
+                                    className="text-left text-xs text-gray-500 hover:text-gray-700 transition w-full truncate"
                                     title={row.paymentInfo || 'Нажмите чтобы добавить реквизиты'}
                                   >
                                     {paymentSaving[row.id] ? '...' : (row.paymentInfo || '+ реквизиты')}
@@ -1564,12 +1564,12 @@ export default function AdminPage() {
                             </tr>
                           ))}
                           {/* Subtotal row */}
-                          <tr style={{ borderTop: '2px solid #2a2a3e' }} className="bg-white/[0.02]">
-                            <td className="px-3 sm:px-4 py-3 text-sm font-semibold text-gray-200">Итого</td>
-                            <td className="px-3 sm:px-4 py-3 text-sm text-right font-semibold text-emerald-400">{subtotalIp}</td>
-                            <td className="px-3 sm:px-4 py-3 text-sm text-right font-semibold text-purple-400">{subtotalDebit}</td>
+                          <tr style={{ borderTop: '2px solid #cbd5e1' }} className="bg-slate-50">
+                            <td className="px-3 sm:px-4 py-3 text-sm font-semibold text-gray-900">Итого</td>
+                            <td className="px-3 sm:px-4 py-3 text-sm text-right font-semibold text-emerald-600">{subtotalIp}</td>
+                            <td className="px-3 sm:px-4 py-3 text-sm text-right font-semibold text-purple-600">{subtotalDebit}</td>
                             <td colSpan="3" />
-                            <td className="px-3 sm:px-4 py-3 text-sm text-right font-bold text-white">{fmt(subtotal)}</td>
+                            <td className="px-3 sm:px-4 py-3 text-sm text-right font-bold text-gray-900">{fmt(subtotal)}</td>
                             <td />
                           </tr>
                         </tbody>
@@ -1580,7 +1580,7 @@ export default function AdminPage() {
               })}
 
               {salaryCalculated && grandTotal === 0 && (
-                <div className="text-center py-16 text-gray-600">
+                <div className="text-center py-16 text-gray-400">
                   <p className="text-lg mb-1">Нет данных за выбранный период</p>
                   <p className="text-sm">Проверьте, что у менеджеров привязаны Google Таблицы</p>
                 </div>
@@ -1655,34 +1655,34 @@ export default function AdminPage() {
             <div className="space-y-4">
               {/* Header */}
               <div className="flex items-center justify-between">
-                <h2 className="text-base font-semibold text-gray-200">Аккаунты Телеграмм</h2>
+                <h2 className="text-base font-semibold text-gray-900">Аккаунты Телеграмм</h2>
                 <button onClick={loadTgAccounts} disabled={tgLoading}
-                  className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm transition">
+                  className="bg-slate-100 hover:bg-slate-200 disabled:opacity-50 px-4 py-2 rounded-lg text-sm transition">
                   {tgLoading ? 'Загрузка...' : 'Обновить'}
                 </button>
               </div>
 
               {/* Code modal */}
               {tgCode && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setTgCode(null)}>
-                  <div onClick={e => e.stopPropagation()} style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
+                <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4" onClick={() => setTgCode(null)}>
+                  <div onClick={e => e.stopPropagation()} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }}
                     className="rounded-2xl p-6 max-w-sm w-full text-center">
                     {tgCode.error ? (
                       <>
-                        <p className="text-red-400 text-lg font-semibold mb-2">Ошибка</p>
-                        <p className="text-gray-400 text-sm">{tgCode.error}</p>
+                        <p className="text-red-600 text-lg font-semibold mb-2">Ошибка</p>
+                        <p className="text-gray-600 text-sm">{tgCode.error}</p>
                       </>
                     ) : (
                       <>
-                        <p className="text-gray-400 text-sm mb-1">Код для {tgCode.phone}</p>
-                        <p className="text-4xl font-bold text-white tracking-widest my-4">{tgCode.code}</p>
+                        <p className="text-gray-600 text-sm mb-1">Код для {tgCode.phone}</p>
+                        <p className="text-4xl font-bold text-gray-900 tracking-widest my-4">{tgCode.code}</p>
                         {tgCode.receivedAt && (
-                          <p className="text-gray-600 text-xs">Получено: {new Date(tgCode.receivedAt).toLocaleString('ru-RU')}</p>
+                          <p className="text-gray-400 text-xs">Получено: {new Date(tgCode.receivedAt).toLocaleString('ru-RU')}</p>
                         )}
                       </>
                     )}
                     <button onClick={() => setTgCode(null)}
-                      className="mt-4 bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">
+                      className="mt-4 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg text-sm transition">
                       Закрыть
                     </button>
                   </div>
@@ -1691,14 +1691,14 @@ export default function AdminPage() {
 
               {/* Table */}
               {tgLoading && tgAccounts.length === 0 ? (
-                <div className="text-center py-16 text-gray-600">Загрузка аккаунтов...</div>
+                <div className="text-center py-16 text-gray-400">Загрузка аккаунтов...</div>
               ) : tgAccounts.length === 0 ? (
-                <div className="text-center py-16 text-gray-600">Нет аккаунтов в таблице</div>
+                <div className="text-center py-16 text-gray-400">Нет аккаунтов в таблице</div>
               ) : (
-                <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl overflow-hidden overflow-x-auto">
                   <table className="w-full min-w-[800px]">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                      <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                         <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Телефон</th>
                         <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ТГ</th>
                         <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Почта</th>
@@ -1708,17 +1708,17 @@ export default function AdminPage() {
                     </thead>
                     <tbody>
                       {tgAccounts.map(acc => (
-                        <tr key={acc.rowIndex} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
-                          <td className="px-3 sm:px-4 py-3 text-sm text-gray-300 font-mono">{acc.phone}</td>
-                          <td className="px-3 sm:px-4 py-3 text-sm text-blue-400">{acc.tgLink}</td>
-                          <td className="px-3 sm:px-4 py-3 text-sm text-gray-400 text-xs">{acc.email}</td>
+                        <tr key={acc.rowIndex} style={{ borderTop: '1px solid #f1f5f9' }} className="hover:bg-slate-50 transition">
+                          <td className="px-3 sm:px-4 py-3 text-sm text-gray-700 font-mono">{acc.phone}</td>
+                          <td className="px-3 sm:px-4 py-3 text-sm text-blue-600">{acc.tgLink}</td>
+                          <td className="px-3 sm:px-4 py-3 text-sm text-gray-600 text-xs">{acc.email}</td>
                           <td className="px-3 sm:px-4 py-3 text-sm">
                             {tgAssignSelect[acc.rowIndex] !== undefined ? (
                               <div className="flex items-center gap-1">
                                 <select
                                   value={tgAssignSelect[acc.rowIndex]}
                                   onChange={e => setTgAssignSelect(prev => ({ ...prev, [acc.rowIndex]: e.target.value }))}
-                                  className="bg-black/30 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500"
+                                  className="bg-slate-900/20 border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-teal-500"
                                 >
                                   <option value="">— Свободен —</option>
                                   {allPeople.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
@@ -1726,21 +1726,21 @@ export default function AdminPage() {
                                 <button
                                   onClick={() => assignAccount(acc.rowIndex, tgAssignSelect[acc.rowIndex])}
                                   disabled={tgAssigning[acc.rowIndex]}
-                                  className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-2 py-1 rounded text-xs transition"
+                                  className="bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 px-2 py-1 rounded text-xs transition"
                                 >
                                   {tgAssigning[acc.rowIndex] ? '...' : 'OK'}
                                 </button>
                                 <button
                                   onClick={() => setTgAssignSelect(prev => { const n = { ...prev }; delete n[acc.rowIndex]; return n })}
-                                  className="text-gray-600 hover:text-gray-400 text-xs transition"
+                                  className="text-gray-400 hover:text-gray-600 text-xs transition"
                                 >
                                   Отмена
                                 </button>
                               </div>
                             ) : (
                               <div className="flex items-center gap-2">
-                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${acc.assignedTo ? 'bg-green-500' : 'bg-gray-600'}`} />
-                                <span className={acc.assignedTo ? 'text-gray-200' : 'text-gray-600'}>{acc.assignedTo || 'Свободен'}</span>
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${acc.assignedTo ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                                <span className={acc.assignedTo ? 'text-gray-900' : 'text-gray-400'}>{acc.assignedTo || 'Свободен'}</span>
                               </div>
                             )}
                           </td>
@@ -1749,13 +1749,13 @@ export default function AdminPage() {
                               <button
                                 onClick={() => fetchCode(acc)}
                                 disabled={tgCodeLoading[acc.rowIndex]}
-                                className="bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 disabled:opacity-50 px-2.5 py-1 rounded-lg text-xs font-medium transition"
+                                className="bg-purple-600 text-white/20 text-purple-600 hover:bg-purple-100 disabled:opacity-50 px-2.5 py-1 rounded-lg text-xs font-medium transition"
                               >
                                 {tgCodeLoading[acc.rowIndex] ? '...' : 'Код'}
                               </button>
                               <button
                                 onClick={() => setTgAssignSelect(prev => ({ ...prev, [acc.rowIndex]: acc.assignedTo || '' }))}
-                                className="bg-gray-800 hover:bg-gray-700 px-2.5 py-1 rounded-lg text-xs transition"
+                                className="bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg text-xs transition"
                               >
                                 {acc.assignedTo ? 'Изменить' : 'Назначить'}
                               </button>
@@ -1763,7 +1763,7 @@ export default function AdminPage() {
                                 <button
                                   onClick={() => assignAccount(acc.rowIndex, '')}
                                   disabled={tgAssigning[acc.rowIndex]}
-                                  className="text-red-400/70 hover:text-red-400 text-xs transition"
+                                  className="text-red-500/80 hover:text-red-600 text-xs transition"
                                 >
                                   Освободить
                                 </button>
@@ -1777,7 +1777,7 @@ export default function AdminPage() {
                 </div>
               )}
 
-              <div className="text-gray-700 text-xs">
+              <div className="text-gray-300 text-xs">
                 Всего: {tgAccounts.length} аккаунтов · Выдано: {tgAccounts.filter(a => a.assignedTo).length} · Свободно: {tgAccounts.filter(a => !a.assignedTo).length}
               </div>
             </div>
@@ -1811,24 +1811,24 @@ export default function AdminPage() {
         {activeTab === 'ip-link' && (
           <>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-base font-semibold text-gray-200">Ссылка ИП</h2>
+              <h2 className="text-base font-semibold text-gray-900">Ссылка ИП</h2>
               <button
                 onClick={() => { setShowIpModal(true); setIpResult(null); setIpError(null); setIpForm({ fullName: '', inn: '', phone: '', email: '', city: '' }) }}
-                className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold transition"
+                className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg text-sm font-semibold transition"
               >
                 + Создать заявку
               </button>
             </div>
 
-            <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl overflow-hidden overflow-x-auto">
               {ipHistoryLoading ? (
-                <div className="text-center py-12 text-gray-600 text-sm">Загрузка...</div>
+                <div className="text-center py-12 text-gray-400 text-sm">Загрузка...</div>
               ) : ipHistory.length === 0 ? (
-                <div className="text-center py-12 text-gray-600 text-sm">Нет заявок</div>
+                <div className="text-center py-12 text-gray-400 text-sm">Нет заявок</div>
               ) : (
                 <table className="w-full min-w-[600px]">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ФИО</th>
                       <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ИНН</th>
@@ -1838,23 +1838,23 @@ export default function AdminPage() {
                   </thead>
                   <tbody>
                     {ipHistory.map(app => (
-                      <tr key={app.id} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">
+                      <tr key={app.id} style={{ borderTop: '1px solid #f1f5f9' }} className="hover:bg-slate-50 transition">
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">
                           {new Date(app.created_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </td>
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{app.full_name}</td>
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-400 font-mono">{app.inn}</td>
-                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{app.city}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">{app.full_name}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-600 font-mono">{app.inn}</td>
+                        <td className="px-3 sm:px-5 py-3 text-sm text-gray-700">{app.city}</td>
                         <td className="px-3 sm:px-5 py-3 text-sm">
                           {app.status === 'error' ? (
-                            <span className="text-red-400 text-xs">Ошибка</span>
+                            <span className="text-red-600 text-xs">Ошибка</span>
                           ) : app.referral_link ? (
                             <button
                               onClick={() => handleCopyIpLink(app.referral_link, app.id)}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                                 copiedIpLink === app.id
-                                  ? 'bg-green-900/60 text-green-300 border border-green-700'
-                                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                                  : 'bg-slate-100 text-gray-600 hover:bg-slate-200 hover:text-gray-900'
                               }`}
                             >
                               {copiedIpLink === app.id ? 'Скопировано!' : 'Копировать'}
@@ -1872,12 +1872,12 @@ export default function AdminPage() {
 
         {/* ── Вкладка "Добавить ЦД" ── */}
         {activeTab === 'add-cd' && (
-          <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl p-6 max-w-xl">
-            <h2 className="text-base font-semibold text-gray-200 mb-2">Добавить ЦД</h2>
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl p-6 max-w-xl">
+            <h2 className="text-base font-semibold text-gray-900 mb-2">Добавить ЦД</h2>
             <p className="text-gray-500 text-xs mb-5">Введите данные ЦД — они попадут в сводную таблицу ЦД за текущий месяц.</p>
             <button
               onClick={() => { setShowCdModal(true); setCdSuccess(false); setCdError(null) }}
-              className="bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-lg text-sm font-semibold transition"
+              className="bg-teal-600 text-white hover:bg-teal-700 px-5 py-2.5 rounded-lg text-sm font-semibold transition"
             >
               + Добавить ЦД
             </button>
@@ -1893,41 +1893,41 @@ export default function AdminPage() {
 
       {/* ── Модалка "Добавить ЦД" ── */}
       {showCdModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowCdModal(false)}>
-          <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4" onClick={() => setShowCdModal(false)}>
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
             {cdSuccess ? (
-              <div className="bg-green-950/40 border border-green-700 rounded-xl p-5 text-center">
-                <p className="text-green-300 font-semibold text-sm">ЦД добавлен в таблицу</p>
+              <div className="bg-emerald-50 border border-emerald-300 rounded-xl p-5 text-center">
+                <p className="text-emerald-700 font-semibold text-sm">ЦД добавлен в таблицу</p>
               </div>
             ) : (
               <>
-                <h3 className="text-base font-semibold text-gray-200 mb-4">Добавить ЦД</h3>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Добавить ЦД</h3>
                 <form onSubmit={handleCdSubmit} className="space-y-3">
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">ФИО</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">ФИО</label>
                     <input type="text" required value={cdForm.fullName} onChange={e => setCdForm({ ...cdForm, fullName: e.target.value })}
-                      placeholder="Иванов Иван Иванович" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                      placeholder="Иванов Иван Иванович" className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm" />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">ИНН (12 цифр)</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">ИНН (12 цифр)</label>
                     <input type="text" value={cdForm.inn} onChange={e => setCdForm({ ...cdForm, inn: e.target.value })}
-                      placeholder="123456789012" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                      placeholder="123456789012" className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm" />
                   </div>
-                  <div className="text-center text-gray-600 text-xs">— или —</div>
+                  <div className="text-center text-gray-400 text-xs">— или —</div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Номер телефона</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Номер телефона</label>
                     <input type="tel" value={cdForm.phone} onChange={e => setCdForm({ ...cdForm, phone: e.target.value })}
-                      placeholder="+7 999 123 45 67" className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                      placeholder="+7 999 123 45 67" className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm" />
                   </div>
-                  <p className="text-gray-600 text-xs">Достаточно заполнить ФИО и одно из: ИНН или телефон.</p>
-                  {cdError && <p className="text-red-400 text-sm">{cdError}</p>}
+                  <p className="text-gray-400 text-xs">Достаточно заполнить ФИО и одно из: ИНН или телефон.</p>
+                  {cdError && <p className="text-red-600 text-sm">{cdError}</p>}
                   <div className="flex gap-2 pt-2">
                     <button type="submit" disabled={cdSubmitting}
-                      className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition">
+                      className="flex-1 bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition">
                       {cdSubmitting ? 'Добавляем...' : 'Добавить'}
                     </button>
                     <button type="button" onClick={() => { setShowCdModal(false); setCdError(null) }}
-                      className="px-4 py-2.5 rounded-lg text-sm bg-gray-800 hover:bg-gray-700 transition">
+                      className="px-4 py-2.5 rounded-lg text-sm bg-slate-100 hover:bg-slate-200 transition">
                       Отмена
                     </button>
                   </div>
@@ -1940,58 +1940,58 @@ export default function AdminPage() {
 
       {/* ── Модалка создания заявки ИП ── */}
       {showIpModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowIpModal(false)}>
-          <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4" onClick={() => setShowIpModal(false)}>
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Создать заявку ИП</h3>
-              <button onClick={() => setShowIpModal(false)} className="text-gray-500 hover:text-white text-lg">✕</button>
+              <button onClick={() => setShowIpModal(false)} className="text-gray-500 hover:text-gray-900 text-lg">✕</button>
             </div>
             {ipResult ? (
               <div>
-                <div className="bg-green-950/40 border border-green-700 rounded-lg p-4 mb-4">
-                  <p className="text-green-300 text-sm font-semibold mb-2">Ссылка создана!</p>
+                <div className="bg-emerald-50 border border-emerald-300 rounded-lg p-4 mb-4">
+                  <p className="text-emerald-700 text-sm font-semibold mb-2">Ссылка создана!</p>
                   <div className="flex items-center gap-2">
-                    <input readOnly value={ipResult.referralLink} className="flex-1 bg-gray-900 text-sm text-gray-300 px-3 py-2 rounded-lg border border-gray-700 truncate" />
+                    <input readOnly value={ipResult.referralLink} className="flex-1 bg-white text-sm text-gray-700 px-3 py-2 rounded-lg border border-gray-300 truncate" />
                     <button onClick={() => handleCopyIpLink(ipResult.referralLink, 'modal')}
-                      className={`px-3 py-2 rounded-lg text-xs font-medium transition shrink-0 ${copiedIpLink === 'modal' ? 'bg-green-900/60 text-green-300' : 'bg-blue-600 hover:bg-blue-500 text-white'}`}>
+                      className={`px-3 py-2 rounded-lg text-xs font-medium transition shrink-0 ${copiedIpLink === 'modal' ? 'bg-emerald-100 text-emerald-700' : 'bg-teal-600 hover:bg-teal-700 text-white'}`}>
                       {copiedIpLink === 'modal' ? 'Скопировано!' : 'Копировать'}
                     </button>
                   </div>
                 </div>
-                <button onClick={() => { setShowIpModal(false); setIpResult(null) }} className="w-full bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-lg text-sm transition">Закрыть</button>
+                <button onClick={() => { setShowIpModal(false); setIpResult(null) }} className="w-full bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-lg text-sm transition">Закрыть</button>
               </div>
             ) : (
               <form onSubmit={handleCreateIpLink}>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">ФИО</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">ФИО</label>
                     <input type="text" required value={ipForm.fullName} onChange={e => setIpForm({ ...ipForm, fullName: e.target.value })} placeholder="Иванов Иван Иванович"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm" />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">ИНН</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">ИНН</label>
                     <input type="text" required maxLength={12} value={ipForm.inn} onChange={e => setIpForm({ ...ipForm, inn: e.target.value.replace(/\D/g, '') })} placeholder="123456789012"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono" />
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm font-mono" />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Телефон</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Телефон</label>
                     <input type="tel" required value={ipForm.phone} onChange={e => setIpForm({ ...ipForm, phone: e.target.value })} placeholder="+7 999 123 45 67"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm" />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Email</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Email</label>
                     <input type="email" required value={ipForm.email} onChange={e => setIpForm({ ...ipForm, email: e.target.value })} placeholder="client@example.com"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm" />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Город</label>
+                    <label className="text-gray-600 text-xs mb-1.5 block">Город</label>
                     <input type="text" required value={ipForm.city} onChange={e => setIpForm({ ...ipForm, city: e.target.value })} placeholder="Введите город"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm" />
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm" />
                   </div>
                 </div>
-                {ipError && <p className="text-red-400 text-sm mt-3">{ipError}</p>}
+                {ipError && <p className="text-red-600 text-sm mt-3">{ipError}</p>}
                 <button type="submit" disabled={ipSubmitting}
-                  className="w-full mt-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-6 py-2.5 rounded-lg text-sm font-semibold transition">
+                  className="w-full mt-4 bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 px-6 py-2.5 rounded-lg text-sm font-semibold transition">
                   {ipSubmitting ? 'Создаём заявку...' : 'Получить ссылку'}
                 </button>
               </form>
@@ -2003,21 +2003,21 @@ export default function AdminPage() {
       {/* ── Manager Modal ── */}
       {selectedManager && (
         <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedManager(null)}
         >
           <div
-            style={{ backgroundColor: '#13131f', border: '1px solid #2a2a3e' }}
+            style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1' }}
             className="rounded-2xl w-full max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             {/* Modal header */}
             <div
-              style={{ borderBottom: '1px solid #1f1f2e' }}
+              style={{ borderBottom: '1px solid #e2e8f0' }}
               className="px-6 py-5 flex justify-between items-start"
             >
               <div className="min-w-0 flex-1">
-                <h2 className="text-lg font-bold text-white">{selectedManager.name || selectedManager.email}</h2>
+                <h2 className="text-lg font-bold text-gray-900">{selectedManager.name || selectedManager.email}</h2>
                 {/* Команда: при role=manager и НЕ в режиме редактирования — клик по имени команды
                     открывает выпадающий select для переноса в другую команду. */}
                 <div className="text-gray-500 text-sm mt-0.5 flex items-center gap-2 flex-wrap">
@@ -2028,8 +2028,8 @@ export default function AdminPage() {
                         value={newTeamValue}
                         onChange={e => setNewTeamValue(e.target.value)}
                         disabled={savingTeam}
-                        style={{ backgroundColor: '#1a1a28', border: '1px solid #2a2a3e' }}
-                        className="text-gray-200 text-xs rounded-md px-2 py-1"
+                        style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1' }}
+                        className="text-gray-900 text-xs rounded-md px-2 py-1"
                       >
                         {TEAMS.map(t => (
                           <option key={t.id} value={t.id}>{t.name}</option>
@@ -2038,14 +2038,14 @@ export default function AdminPage() {
                       <button
                         onClick={() => handleTransferTeam(selectedManager.id, newTeamValue)}
                         disabled={savingTeam || newTeamValue === selectedManager.team}
-                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 px-2.5 py-1 rounded-md text-xs text-white transition"
+                        className="bg-teal-600 hover:bg-teal-700 disabled:opacity-40 px-2.5 py-1 rounded-md text-xs text-white transition"
                       >
                         {savingTeam ? '...' : 'Перенести'}
                       </button>
                       <button
                         onClick={() => { setEditingTeam(false); setNewTeamValue('') }}
                         disabled={savingTeam}
-                        className="text-gray-500 hover:text-gray-300 text-xs transition"
+                        className="text-gray-500 hover:text-gray-700 text-xs transition"
                       >
                         Отмена
                       </button>
@@ -2056,7 +2056,7 @@ export default function AdminPage() {
                       {selectedManager.role === 'manager' && (
                         <button
                           onClick={() => { setEditingTeam(true); setNewTeamValue(selectedManager.team || '') }}
-                          className="text-blue-400 hover:text-blue-300 text-xs underline-offset-2 hover:underline transition"
+                          className="text-blue-600 hover:text-blue-700 text-xs underline-offset-2 hover:underline transition"
                           title="Перенести менеджера в другую команду"
                         >
                           сменить команду
@@ -2070,7 +2070,7 @@ export default function AdminPage() {
               </div>
               <button
                 onClick={() => setSelectedManager(null)}
-                className="text-gray-500 hover:text-white p-1 rounded-lg hover:bg-white/5 transition"
+                className="text-gray-500 hover:text-gray-900 p-1 rounded-lg hover:bg-slate-100 transition"
               >
                 <CloseIcon />
               </button>
@@ -2101,14 +2101,14 @@ export default function AdminPage() {
             {/* Sheet binding */}
             <div className="px-6 pt-2 pb-2">
               {sheetEditing ? (
-                <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 space-y-2">
-                  <p className="text-gray-400 text-xs font-medium">Ссылка на Google Таблицу</p>
+                <div className="bg-slate-100/70 border border-gray-200 rounded-xl p-3 space-y-2">
+                  <p className="text-gray-600 text-xs font-medium">Ссылка на Google Таблицу</p>
                   <input
                     type="text"
                     value={sheetUrlInput}
                     onChange={e => setSheetUrlInput(e.target.value)}
                     placeholder="https://docs.google.com/spreadsheets/d/..."
-                    className="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-slate-900/20 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-600 focus:outline-none focus:border-teal-500"
                   />
                   <div className="flex gap-2">
                     <button
@@ -2133,13 +2133,13 @@ export default function AdminPage() {
                         }
                       }}
                       disabled={sheetSaving}
-                      className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                      className="bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
                     >
                       {sheetSaving ? '...' : 'Сохранить'}
                     </button>
                     <button
                       onClick={() => { setSheetEditing(false); setSheetUrlInput('') }}
-                      className="bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg text-xs transition"
+                      className="bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs transition"
                     >
                       Отмена
                     </button>
@@ -2166,7 +2166,7 @@ export default function AdminPage() {
                           }
                         }}
                         disabled={sheetSaving}
-                        className="text-red-400 hover:text-red-300 text-xs transition ml-auto"
+                        className="text-red-600 hover:text-red-700 text-xs transition ml-auto"
                       >
                         Отвязать
                       </button>
@@ -2177,22 +2177,22 @@ export default function AdminPage() {
                 <div className="flex items-center gap-2">
                   {(selectedManager.sheet_id || MANAGER_SHEETS[selectedManager.name]) ? (
                     <>
-                      <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                      <span className="text-green-400 text-sm">Таблица привязана</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                      <span className="text-emerald-600 text-sm">Таблица привязана</span>
                       <button
                         onClick={() => { setSheetEditing(true); setSheetUrlInput(selectedManager.sheet_id ? `https://docs.google.com/spreadsheets/d/${selectedManager.sheet_id}/edit` : '') }}
-                        className="text-gray-500 hover:text-white text-xs ml-auto transition"
+                        className="text-gray-500 hover:text-gray-900 text-xs ml-auto transition"
                       >
                         Изменить
                       </button>
                     </>
                   ) : (
                     <>
-                      <span className="w-2 h-2 rounded-full bg-gray-600 flex-shrink-0" />
+                      <span className="w-2 h-2 rounded-full bg-slate-300 flex-shrink-0" />
                       <span className="text-gray-500 text-sm">Таблица не привязана</span>
                       <button
                         onClick={() => setSheetEditing(true)}
-                        className="text-blue-400 hover:text-blue-300 text-xs ml-auto transition"
+                        className="text-blue-600 hover:text-blue-700 text-xs ml-auto transition"
                       >
                         Привязать
                       </button>
@@ -2206,7 +2206,7 @@ export default function AdminPage() {
             <div className="flex-1 overflow-auto px-6 pb-6 mt-2">
               <table className="w-full">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
+                  <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                     <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Дата</th>
                     <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Написавшие</th>
                     <th className="text-left py-2.5 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали РКО</th>
@@ -2217,7 +2217,7 @@ export default function AdminPage() {
                 <tbody>
                   {modalReports.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-12 text-gray-600 text-sm">
+                      <td colSpan={5} className="text-center py-12 text-gray-400 text-sm">
                         Нет отчётов
                       </td>
                     </tr>
@@ -2225,20 +2225,20 @@ export default function AdminPage() {
                     modalReports.map(r => (
                       <tr
                         key={r.id}
-                        style={{ borderTop: '1px solid #1a1a28' }}
-                        className="hover:bg-white/[0.02] transition group"
+                        style={{ borderTop: '1px solid #f1f5f9' }}
+                        className="hover:bg-slate-50 transition group"
                       >
-                        <td className="py-2.5 text-sm text-gray-300">
+                        <td className="py-2.5 text-sm text-gray-700">
                           {new Date(r.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         </td>
-                        <td className="py-2.5 text-sm text-gray-300">{r.people_wrote ?? '—'}</td>
-                        <td className="py-2.5 text-sm font-semibold text-blue-400">{r.ordered_ip ?? '—'}</td>
-                        <td className="py-2.5 text-sm font-semibold text-amber-400">{r.ordered_simka ?? '—'}</td>
+                        <td className="py-2.5 text-sm text-gray-700">{r.people_wrote ?? '—'}</td>
+                        <td className="py-2.5 text-sm font-semibold text-blue-600">{r.ordered_ip ?? '—'}</td>
+                        <td className="py-2.5 text-sm font-semibold text-amber-600">{r.ordered_simka ?? '—'}</td>
                         <td className="py-2.5 pr-1 text-right">
                           <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition">
                             <button
                               onClick={() => setEditingReport(r)}
-                              className="text-gray-600 hover:text-blue-400 transition"
+                              className="text-gray-400 hover:text-blue-600 transition"
                               title="Редактировать цифры"
                             >
                               ✏
@@ -2246,7 +2246,7 @@ export default function AdminPage() {
                             <button
                               onClick={() => handleDeleteReport(r.id)}
                               disabled={deletingReport === r.id}
-                              className="text-gray-600 hover:text-red-400 transition disabled:opacity-30"
+                              className="text-gray-400 hover:text-red-600 transition disabled:opacity-30"
                               title="Удалить отчёт"
                             >
                               <TrashIcon />
@@ -2262,8 +2262,8 @@ export default function AdminPage() {
 
             {/* Секция предупреждений (только для role=manager) */}
             {selectedManager.role === 'manager' && (
-              <div style={{ borderTop: '1px solid #1f1f2e' }} className="px-6 py-4">
-                <h3 className="text-sm font-semibold text-gray-300 mb-2">Предупреждения</h3>
+              <div style={{ borderTop: '1px solid #e2e8f0' }} className="px-6 py-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Предупреждения</h3>
                 <WarningsList
                   managerId={selectedManager.id}
                   canDelete={true}
@@ -2274,10 +2274,10 @@ export default function AdminPage() {
 
             {/* Создать команду и сделать этого менеджера тимлидом (только role=manager) */}
             {selectedManager.role === 'manager' && (
-              <div style={{ borderTop: '1px solid #1f1f2e' }} className="px-6 py-4">
+              <div style={{ borderTop: '1px solid #e2e8f0' }} className="px-6 py-4">
                 {creatingTeam ? (
                   <div>
-                    <p className="text-sm font-semibold text-gray-300 mb-1">Новая команда</p>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Новая команда</p>
                     <p className="text-gray-500 text-xs mb-3">
                       {selectedManager.name || selectedManager.email} станет тимлидом. Название — как команда будет подписана в системе.
                     </p>
@@ -2286,26 +2286,26 @@ export default function AdminPage() {
                       value={newTeamName}
                       onChange={e => { setNewTeamName(e.target.value); setNewTeamError(null) }}
                       placeholder="Пети"
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm mb-1"
+                      className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm mb-1"
                     />
                     {newTeamName.trim() && (
-                      <p className="text-gray-600 text-xs mb-2">
+                      <p className="text-gray-400 text-xs mb-2">
                         Отобразится как «Команда {newTeamName.trim()}» · slug: <span className="font-mono">{slugifyTeamName(newTeamName) || '—'}</span>
                       </p>
                     )}
-                    {newTeamError && <p className="text-red-400 text-sm mb-2">{newTeamError}</p>}
+                    {newTeamError && <p className="text-red-600 text-sm mb-2">{newTeamError}</p>}
                     <div className="flex gap-2 mt-2">
                       <button
                         onClick={() => handleCreateTeamForManager(selectedManager.id)}
                         disabled={savingNewTeam}
-                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-semibold transition"
+                        className="bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-semibold transition"
                       >
                         {savingNewTeam ? 'Создаём...' : 'Создать команду'}
                       </button>
                       <button
                         onClick={() => { setCreatingTeam(false); setNewTeamName(''); setNewTeamError(null) }}
                         disabled={savingNewTeam}
-                        className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm transition"
+                        className="bg-slate-100 hover:bg-slate-200 disabled:opacity-50 px-4 py-2 rounded-lg text-sm transition"
                       >
                         Отмена
                       </button>
@@ -2314,7 +2314,7 @@ export default function AdminPage() {
                 ) : (
                   <button
                     onClick={() => { setCreatingTeam(true); setNewTeamName(''); setNewTeamError(null) }}
-                    className="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1.5 transition"
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1.5 transition"
                   >
                     + Создать команду (сделать тимлидом)
                   </button>
@@ -2324,21 +2324,21 @@ export default function AdminPage() {
 
             {/* Footer: удалить менеджера (только для role=manager) */}
             {selectedManager.role === 'manager' && (
-              <div style={{ borderTop: '1px solid #1f1f2e' }} className="px-6 py-4 flex justify-end">
+              <div style={{ borderTop: '1px solid #e2e8f0' }} className="px-6 py-4 flex justify-end">
                 {deleteConfirm === selectedManager.id ? (
                   <div className="flex items-center gap-3">
-                    <span className="text-gray-400 text-sm">Удалить менеджера?</span>
+                    <span className="text-gray-600 text-sm">Удалить менеджера?</span>
                     <button
                       onClick={() => handleDeleteManager(selectedManager.id)}
                       disabled={deleting}
-                      className="bg-red-600 hover:bg-red-500 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-semibold transition"
+                      className="bg-red-600 text-white hover:bg-red-500 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-semibold transition"
                     >
                       {deleting ? '...' : 'Да, удалить'}
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(null)}
                       disabled={deleting}
-                      className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm transition"
+                      className="bg-slate-100 hover:bg-slate-200 disabled:opacity-50 px-4 py-2 rounded-lg text-sm transition"
                     >
                       Отмена
                     </button>
@@ -2346,7 +2346,7 @@ export default function AdminPage() {
                 ) : (
                   <button
                     onClick={() => setDeleteConfirm(selectedManager.id)}
-                    className="text-gray-600 hover:text-red-400 text-sm flex items-center gap-1.5 transition"
+                    className="text-gray-400 hover:text-red-600 text-sm flex items-center gap-1.5 transition"
                   >
                     <TrashIcon />
                     Удалить менеджера
