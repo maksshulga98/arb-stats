@@ -13,6 +13,7 @@ import AccountLinkSection from '../../components/AccountLinkSection'
 import WarningButton from '../../components/WarningButton'
 import WarningsList from '../../components/WarningsList'
 import EditReportModal from '../../components/EditReportModal'
+import ManagerPotentialModal from '../../components/ManagerPotentialModal'
 
 // ── Team config ──────────────────────────────────────────────────────────────
 // Fallback пока /api/teams грузится. После загрузки заменяется на актуальный
@@ -90,6 +91,14 @@ function isRedFor14Days(reports, createdAt) {
     if (new Date(createdAt) > ago14) return false
   }
   return getIPForPeriod(reports, 0, 7) < 10 && getIPForPeriod(reports, 7, 14) < 10
+}
+
+// Заливка карточки по цвету из анкеты «потенциал» (приглушённая, чтобы не
+// перекрывала текст; зона по результативности остаётся на границе и в бейдже).
+const POTENTIAL_TINT = {
+  green:  'rgba(34,197,94,0.13)',
+  yellow: 'rgba(234,179,8,0.13)',
+  red:    'rgba(239,68,68,0.13)',
 }
 
 function getZoneKey(value, teamType) {
@@ -203,6 +212,9 @@ export default function TeamleadPage() {
 
   // Team manager detail modal
   const [selectedManager, setSelectedManager] = useState(null)
+  // Анкеты «потенциал менеджера» (managerId → строка) для заливки карточек
+  const [potentials, setPotentials] = useState({})
+  const [potentialManager, setPotentialManager] = useState(null)
   const [deletingReport, setDeletingReport]   = useState(null) // report id being deleted
 
   // Add manager modal
@@ -269,6 +281,21 @@ export default function TeamleadPage() {
   const router = useRouter()
 
   useEffect(() => { init() }, [])
+
+  // Анкеты «потенциал» своей команды — для заливки карточек менеджеров
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await authFetch('/api/manager-potential')
+        const data = await res.json()
+        if (res.ok && Array.isArray(data.potentials)) {
+          setPotentials(Object.fromEntries(data.potentials.map(p => [p.manager_id, p])))
+        }
+      } catch (e) {
+        console.error('potentials load failed:', e?.message || e)
+      }
+    })()
+  }, [])
 
   // Динамический список команд из БД (см. lib/teams.js). Запускается параллельно с init.
   useEffect(() => {
@@ -1043,10 +1070,12 @@ export default function TeamleadPage() {
                     const z       = ZONE[zKey]
                     const alert14 = isRedFor14Days(mRep, manager.created_at)
                     const isDeletePending = deleteConfirm === manager.id
+                    const tint    = POTENTIAL_TINT[potentials[manager.id]?.color]
 
                     return (
                       <div
                         key={manager.id}
+                        style={tint ? { backgroundColor: tint } : undefined}
                         className={`border rounded-2xl p-4 transition-all ${z.card} ${!isDeletePending ? 'cursor-pointer hover:scale-[1.02]' : ''}`}
                         onClick={() => !isDeletePending && setSelectedManager(manager)}
                       >
@@ -1903,6 +1932,24 @@ export default function TeamleadPage() {
               <div>
                 <h2 className="text-lg font-bold">{selectedManager.name}</h2>
                 <p className="text-gray-500 text-sm mt-0.5">{modalReports.length} отчётов</p>
+                {/* Анкета «потенциал»: цвет из неё закрашивает карточку в аналитике */}
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    onClick={() => setPotentialManager(selectedManager)}
+                    className="text-blue-400 hover:text-blue-300 text-sm underline-offset-2 hover:underline transition"
+                  >
+                    Заполнить данные
+                  </button>
+                  {potentials[selectedManager.id]?.color && (
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: {
+                        green: '#22c55e', yellow: '#eab308', red: '#ef4444',
+                      }[potentials[selectedManager.id].color] }}
+                      title="Цвет менеджера по анкете"
+                    />
+                  )}
+                </div>
               </div>
               <button onClick={() => setSelectedManager(null)} className="text-gray-500 hover:text-white p-1 rounded-lg hover:bg-white/5 transition"><CloseIcon /></button>
             </div>
@@ -2248,6 +2295,15 @@ export default function TeamleadPage() {
           onSaved={(updated) => {
             setTeamReports(prev => prev.map(r => r.id === updated.id ? { ...r, ...updated } : r))
           }}
+        />
+      )}
+
+      {/* Анкета «потенциал менеджера» + цвет-плашка */}
+      {potentialManager && (
+        <ManagerPotentialModal
+          manager={potentialManager}
+          onClose={() => setPotentialManager(null)}
+          onSaved={(p) => setPotentials(prev => ({ ...prev, [p.manager_id]: p }))}
         />
       )}
 

@@ -10,6 +10,7 @@ const normName = s => (s||'').trim().replace(/\s+/g,' ').toLowerCase().replace(/
 import { MANAGER_SHEETS, MONTHS_RU } from '../../lib/sheets-config'
 import AccountLinkSection from '../../components/AccountLinkSection'
 import BankLinkSection from '../../components/BankLinkSection'
+import ManagerPotentialModal from '../../components/ManagerPotentialModal'
 import TasksSection from '../../components/TasksSection'
 import WarningButton from '../../components/WarningButton'
 import WarningsList from '../../components/WarningsList'
@@ -113,6 +114,15 @@ function convStr(orders, writers) {
   return (orders / writers * 100).toFixed(1) + '%'
 }
 
+// Заливка карточки по цвету-плашке из анкеты «потенциал» (ставит руководитель).
+// Намеренно приглушённая — чтобы не перекрывала текст и не спорила с зоной
+// по результативности (та остаётся на границе карточки и в бейдже).
+const POTENTIAL_TINT = {
+  green:  'rgba(34,197,94,0.13)',
+  yellow: 'rgba(234,179,8,0.13)',
+  red:    'rgba(239,68,68,0.13)',
+}
+
 function getZoneKey(value, teamType) {
   if (teamType === 'karina') {
     if (value < 15) return 'red'
@@ -204,6 +214,10 @@ export default function AdminPage() {
   const [dateFrom, setDateFrom]          = useState(new Date().toISOString().split('T')[0])
   const [dateTo, setDateTo]              = useState(new Date().toISOString().split('T')[0])
   const [selectedManager, setSelectedManager] = useState(null)
+  // Анкеты «потенциал менеджера»: managerId → строка manager_potential.
+  // Нужны для заливки карточек в аналитике. potentialManager — чья анкета открыта.
+  const [potentials, setPotentials] = useState({})
+  const [potentialManager, setPotentialManager] = useState(null)
   const [deletingReport, setDeletingReport]   = useState(null)
   // Удаление менеджера: deleteConfirm — id того, по которому идёт подтверждение
   const [deleteConfirm, setDeleteConfirm] = useState(null)
@@ -278,6 +292,21 @@ export default function AdminPage() {
   const router  = useRouter()
 
   useEffect(() => { checkAdmin() }, [])
+
+  // Анкеты «потенциал» — для заливки карточек менеджеров в аналитике
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await authFetch('/api/manager-potential')
+        const data = await res.json()
+        if (res.ok && Array.isArray(data.potentials)) {
+          setPotentials(Object.fromEntries(data.potentials.map(p => [p.manager_id, p])))
+        }
+      } catch (e) {
+        console.error('potentials load failed:', e?.message || e)
+      }
+    })()
+  }, [])
   useEffect(() => { setSheetEditing(false); setSheetUrlInput('') }, [selectedManager?.id])
   // Закрываем редакторы команды при смене выбранного менеджера/закрытии модалки
   useEffect(() => {
@@ -1011,11 +1040,15 @@ export default function AdminPage() {
                         const isDeletePending = deleteConfirm === manager.id
                         // Тимлидов в админке не удаляем — только менеджеров
                         const canDelete = manager.role === 'manager'
+                        // Заливка по анкете «потенциал». Инлайн-стилем — чтобы
+                        // предсказуемо перекрыть фон зоны (границу зоны оставляем).
+                        const tint = POTENTIAL_TINT[potentials[manager.id]?.color]
 
                         return (
                           <div
                             key={manager.id}
                             onClick={() => !isDeletePending && setSelectedManager(manager)}
+                            style={tint ? { backgroundColor: tint } : undefined}
                             className={`group border rounded-2xl p-4 text-left transition-all ${z.card} ${!isDeletePending ? 'hover:scale-[1.02] hover:shadow-lg cursor-pointer' : ''}`}
                           >
                             <div className="flex justify-between items-start mb-3">
@@ -2067,6 +2100,25 @@ export default function AdminPage() {
                     </>
                   )}
                 </div>
+                {/* Анкета «потенциал» — субъективная оценка руководителя.
+                    Цвет из неё закрашивает карточку менеджера в аналитике. */}
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    onClick={() => setPotentialManager(selectedManager)}
+                    className="text-blue-400 hover:text-blue-300 text-sm underline-offset-2 hover:underline transition"
+                  >
+                    Заполнить данные
+                  </button>
+                  {potentials[selectedManager.id]?.color && (
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: {
+                        green: '#22c55e', yellow: '#eab308', red: '#ef4444',
+                      }[potentials[selectedManager.id].color] }}
+                      title="Цвет менеджера по анкете"
+                    />
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => setSelectedManager(null)}
@@ -2367,6 +2419,15 @@ export default function AdminPage() {
             // Подменяем отчёт в общем списке
             setReports(prev => prev.map(r => r.id === updated.id ? { ...r, ...updated } : r))
           }}
+        />
+      )}
+
+      {/* Анкета «потенциал менеджера» + цвет-плашка */}
+      {potentialManager && (
+        <ManagerPotentialModal
+          manager={potentialManager}
+          onClose={() => setPotentialManager(null)}
+          onSaved={(p) => setPotentials(prev => ({ ...prev, [p.manager_id]: p }))}
         />
       )}
 
