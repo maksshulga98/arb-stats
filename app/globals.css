@@ -1,11 +1,8 @@
 @import "tailwindcss";
 
-/* Светлая тема CRM (07.2026): белые карточки, светло-серый фон, бирюзовый акцент.
-   Тёмная схема ОС не должна перекрашивать интерфейс — поэтому блок
-   @media (prefers-color-scheme: dark) убран намеренно. */
 :root {
-  --background: #f8fafc;  /* slate-50 — фон страницы */
-  --foreground: #0f172a;  /* slate-900 — основной текст */
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
 @theme inline {
@@ -15,8 +12,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
-html {
-  color-scheme: light;  /* нативные контролы (date, select, скроллбар) — светлые */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
 }
 
 body {

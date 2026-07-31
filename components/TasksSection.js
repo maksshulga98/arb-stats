@@ -51,7 +51,7 @@ function displayName(adminOrTask) {
 function StatusDot({ task }) {
   if (task.status === 'done') return <span title="Выполнено">✅</span>
   const hoursLeft = (new Date(task.deadline).getTime() - Date.now()) / 3_600_000
-  if (hoursLeft <= 6) return <span title="Просрочено или <6ч" className="text-red-600">🔴</span>
+  if (hoursLeft <= 6) return <span title="Просрочено или <6ч" className="text-red-400">🔴</span>
   if (hoursLeft <= 24) return <span title="<24ч">🟡</span>
   if (hoursLeft <= 48) return <span title="<48ч">🟠</span>
   return <span title=">48ч" className="opacity-60">⚪</span>
@@ -252,10 +252,10 @@ export default function TasksSection({ currentUserId, admins }) {
           На десктопе — всё в один ряд */}
       <div className="mb-4">
         <div className="flex justify-between items-center mb-3 sm:mb-0 sm:hidden">
-          <h2 className="text-base font-semibold text-gray-900">Задачи</h2>
+          <h2 className="text-base font-semibold text-gray-200">Задачи</h2>
           <button
             onClick={openCreateModal}
-            className="bg-teal-600 text-white hover:bg-teal-700 active:bg-teal-800 px-4 py-2 rounded-lg text-sm font-semibold transition"
+            className="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 px-4 py-2 rounded-lg text-sm font-semibold transition"
           >
             + Задача
           </button>
@@ -263,7 +263,7 @@ export default function TasksSection({ currentUserId, admins }) {
 
         {/* Десктопная шапка (один ряд) */}
         <div className="hidden sm:flex justify-between items-center flex-wrap gap-3">
-          <h2 className="text-base font-semibold text-gray-900">Задачи</h2>
+          <h2 className="text-base font-semibold text-gray-200">Задачи</h2>
           <div className="flex gap-2 flex-wrap items-center">
             {filterBtns.map(f => (
               <button
@@ -271,8 +271,8 @@ export default function TasksSection({ currentUserId, admins }) {
                 onClick={() => setFilter(f.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                   filter === f.id
-                    ? 'bg-teal-600 text-white'
-                    : 'bg-slate-100 text-gray-600 hover:text-gray-900 hover:bg-slate-200'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
                 }`}
               >
                 {f.label} <span className="opacity-60">{f.count}</span>
@@ -280,7 +280,7 @@ export default function TasksSection({ currentUserId, admins }) {
             ))}
             <button
               onClick={openCreateModal}
-              className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg text-sm font-semibold transition ml-2"
+              className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold transition ml-2"
             >
               + Новая задача
             </button>
@@ -296,8 +296,8 @@ export default function TasksSection({ currentUserId, admins }) {
                 onClick={() => setFilter(f.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap ${
                   filter === f.id
-                    ? 'bg-teal-600 text-white'
-                    : 'bg-slate-100 text-gray-600'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-800 text-gray-400'
                 }`}
               >
                 {f.label} <span className="opacity-60">{f.count}</span>
@@ -308,11 +308,11 @@ export default function TasksSection({ currentUserId, admins }) {
       </div>
 
       {/* Список */}
-      <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl overflow-hidden">
+      <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden">
         {loading ? (
-          <div className="text-center py-12 text-gray-400 text-sm">Загрузка...</div>
+          <div className="text-center py-12 text-gray-600 text-sm">Загрузка...</div>
         ) : filteredTasks.length === 0 ? (
-          <div className="text-center py-12 text-gray-400 text-sm">
+          <div className="text-center py-12 text-gray-600 text-sm">
             {filter === 'all' ? 'Задач пока нет — создайте первую' : 'В этом разделе пусто'}
           </div>
         ) : (
@@ -323,12 +323,12 @@ export default function TasksSection({ currentUserId, admins }) {
                 <div
                   key={t.id}
                   onClick={() => openEditModal(t)}
-                  style={i > 0 ? { borderTop: '1px solid #f1f5f9' } : {}}
-                  className="flex items-start gap-3 px-4 py-3 active:bg-slate-100 cursor-pointer"
+                  style={i > 0 ? { borderTop: '1px solid #1a1a28' } : {}}
+                  className="flex items-start gap-3 px-4 py-3 active:bg-white/[0.04] cursor-pointer"
                 >
                   <div className="text-base flex-shrink-0 pt-0.5"><StatusDot task={t} /></div>
                   <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-medium truncate ${t.status === 'done' ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                    <div className={`text-sm font-medium truncate ${t.status === 'done' ? 'text-gray-500 line-through' : 'text-gray-200'}`}>
                       {t.title}
                     </div>
                     <div className="text-xs mt-1">
@@ -336,8 +336,8 @@ export default function TasksSection({ currentUserId, admins }) {
                         <span className="text-gray-500">выполнено {t.completed_at ? fmtDeadline(t.completed_at) : ''}</span>
                       ) : (
                         <>
-                          <span className="text-gray-600">{fmtDeadline(t.deadline)}</span>
-                          <span className="text-gray-400"> · {fmtRelative(t.deadline)}</span>
+                          <span className="text-gray-400">{fmtDeadline(t.deadline)}</span>
+                          <span className="text-gray-600"> · {fmtRelative(t.deadline)}</span>
                         </>
                       )}
                     </div>
@@ -359,7 +359,7 @@ export default function TasksSection({ currentUserId, admins }) {
             {/* Десктопная таблица (sm и выше) */}
             <table className="hidden sm:table w-full">
               <thead>
-                <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                   <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider w-12"></th>
                   <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Задача</th>
                   <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дедлайн</th>
@@ -372,22 +372,22 @@ export default function TasksSection({ currentUserId, admins }) {
                   <tr
                     key={t.id}
                     onClick={() => openEditModal(t)}
-                    style={{ borderTop: '1px solid #f1f5f9' }}
-                    className="hover:bg-slate-50 transition cursor-pointer"
+                    style={{ borderTop: '1px solid #1a1a28' }}
+                    className="hover:bg-white/[0.02] transition cursor-pointer"
                   >
                     <td className="px-4 py-3 text-lg"><StatusDot task={t} /></td>
-                    <td className="px-4 py-3 text-sm text-gray-900 max-w-md truncate">{t.title}</td>
+                    <td className="px-4 py-3 text-sm text-gray-200 max-w-md truncate">{t.title}</td>
                     <td className="px-4 py-3 text-sm">
                       {t.status === 'done' ? (
                         <span className="text-gray-500">выполнено {t.completed_at ? fmtDeadline(t.completed_at) : ''}</span>
                       ) : (
                         <>
-                          <span className="text-gray-700">{fmtDeadline(t.deadline)}</span>{' '}
+                          <span className="text-gray-300">{fmtDeadline(t.deadline)}</span>{' '}
                           <span className="text-gray-500 text-xs">({fmtRelative(t.deadline)})</span>
                         </>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{t.assignee_name || displayName({ email: t.assignee_email }) || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-300">{t.assignee_name || displayName({ email: t.assignee_email }) || '—'}</td>
                     <td className="px-4 py-3 text-right">
                       <input
                         type="checkbox"
@@ -408,9 +408,9 @@ export default function TasksSection({ currentUserId, admins }) {
 
       {/* Модалка */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center sm:items-center items-end justify-center p-0 sm:p-4" onClick={closeModal}>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center sm:items-center items-end justify-center p-0 sm:p-4" onClick={closeModal}>
           <div
-            style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }}
+            style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
             className="w-full max-w-md p-5 sm:p-6 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
             onClick={e => e.stopPropagation()}
           >
@@ -418,47 +418,47 @@ export default function TasksSection({ currentUserId, admins }) {
               <h3 className="text-lg font-semibold">
                 {editingId ? 'Редактировать задачу' : 'Новая задача'}
               </h3>
-              <button onClick={closeModal} className="text-gray-500 hover:text-gray-900 text-lg">✕</button>
+              <button onClick={closeModal} className="text-gray-500 hover:text-white text-lg">✕</button>
             </div>
 
             <form onSubmit={handleSubmit}>
               <div className="space-y-3">
                 <div>
-                  <label className="text-gray-600 text-xs mb-1.5 block">Заголовок</label>
+                  <label className="text-gray-400 text-xs mb-1.5 block">Заголовок</label>
                   <input
                     type="text" required maxLength={200}
                     value={form.title}
                     onChange={e => setForm({ ...form, title: e.target.value })}
                     placeholder="Что нужно сделать"
-                    className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
+                    className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-gray-600 text-xs mb-1.5 block">Описание (необязательно)</label>
+                  <label className="text-gray-400 text-xs mb-1.5 block">Описание (необязательно)</label>
                   <textarea
                     rows={4}
                     value={form.description}
                     onChange={e => setForm({ ...form, description: e.target.value })}
                     placeholder="Детали, ссылки, контекст"
-                    className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
+                    className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-gray-600 text-xs mb-1.5 block">Дедлайн</label>
+                  <label className="text-gray-400 text-xs mb-1.5 block">Дедлайн</label>
                   <input
                     type="datetime-local" required
                     value={form.deadline}
                     onChange={e => setForm({ ...form, deadline: e.target.value })}
-                    className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
+                    className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-gray-600 text-xs mb-1.5 block">Ответственный</label>
+                  <label className="text-gray-400 text-xs mb-1.5 block">Ответственный</label>
                   <select
                     required
                     value={form.assignee_id}
                     onChange={e => setForm({ ...form, assignee_id: e.target.value })}
-                    className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
+                    className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
                   >
                     {!form.assignee_id && <option value="">— выбрать —</option>}
                     {admins.map(a => (
@@ -472,8 +472,8 @@ export default function TasksSection({ currentUserId, admins }) {
 
               {/* История уведомлений (только в режиме редактирования) */}
               {editingId && notifications.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <p className="text-gray-600 text-xs mb-2">История уведомлений:</p>
+                <div className="mt-4 pt-4 border-t border-gray-800">
+                  <p className="text-gray-400 text-xs mb-2">История уведомлений:</p>
                   <ul className="space-y-1 text-xs text-gray-500">
                     {notifications.map((n, i) => (
                       <li key={i}>
@@ -484,42 +484,42 @@ export default function TasksSection({ currentUserId, admins }) {
                 </div>
               )}
 
-              {error && <p className="text-red-600 text-sm mt-3">{error}</p>}
+              {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
 
               <div className="flex gap-2 mt-4">
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition"
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition"
                 >
                   {submitting ? '...' : (editingId ? 'Сохранить' : 'Создать')}
                 </button>
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2.5 rounded-lg text-sm bg-slate-100 hover:bg-slate-200 transition"
+                  className="px-4 py-2.5 rounded-lg text-sm bg-gray-800 hover:bg-gray-700 transition"
                 >
                   Отмена
                 </button>
               </div>
 
               {editingId && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="mt-3 pt-3 border-t border-gray-800">
                   {deleteConfirm ? (
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-600 text-sm flex-1">Точно удалить?</span>
+                      <span className="text-gray-400 text-sm flex-1">Точно удалить?</span>
                       <button
                         type="button"
                         onClick={handleDelete}
                         disabled={submitting}
-                        className="bg-red-600 text-white hover:bg-red-500 disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                        className="bg-red-600 hover:bg-red-500 disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
                       >
                         Да, удалить
                       </button>
                       <button
                         type="button"
                         onClick={() => setDeleteConfirm(false)}
-                        className="px-3 py-1.5 rounded-lg text-xs bg-slate-100 hover:bg-slate-200 transition"
+                        className="px-3 py-1.5 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 transition"
                       >
                         Отмена
                       </button>
@@ -528,7 +528,7 @@ export default function TasksSection({ currentUserId, admins }) {
                     <button
                       type="button"
                       onClick={() => setDeleteConfirm(true)}
-                      className="text-gray-500 hover:text-red-600 text-sm transition"
+                      className="text-gray-500 hover:text-red-400 text-sm transition"
                     >
                       Удалить задачу
                     </button>

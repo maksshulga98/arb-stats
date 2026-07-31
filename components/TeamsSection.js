@@ -175,24 +175,24 @@ export default function TeamsSection({ allManagers }) {
   return (
     <>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-base font-semibold text-gray-900">Команды</h2>
+        <h2 className="text-base font-semibold text-gray-200">Команды</h2>
         <button
           onClick={openCreate}
-          className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg text-sm font-semibold transition"
+          className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold transition"
         >
           + Новая команда
         </button>
       </div>
 
-      <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }} className="rounded-2xl overflow-hidden">
+      <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden">
         {loading ? (
-          <div className="text-center py-12 text-gray-400 text-sm">Загрузка...</div>
+          <div className="text-center py-12 text-gray-600 text-sm">Загрузка...</div>
         ) : teams.length === 0 ? (
-          <div className="text-center py-12 text-gray-400 text-sm">Команд пока нет.</div>
+          <div className="text-center py-12 text-gray-600 text-sm">Команд пока нет.</div>
         ) : (
           <table className="w-full">
             <thead>
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+              <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                 <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Название</th>
                 <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Slug</th>
                 <th className="text-left px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Тип</th>
@@ -206,8 +206,8 @@ export default function TeamsSection({ allManagers }) {
                 const isDeleting = deleteConfirm === t.slug
                 const isEditing = editSlug === t.slug
                 return (
-                  <tr key={t.slug} style={{ borderTop: '1px solid #f1f5f9' }} className="hover:bg-slate-50 transition">
-                    <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                  <tr key={t.slug} style={{ borderTop: '1px solid #1a1a28' }} className="hover:bg-white/[0.02] transition">
+                    <td className="px-4 py-3 text-sm text-gray-200 font-medium">
                       {isEditing ? (
                         <div className="flex items-center gap-2">
                           <span className="text-gray-500">Команда</span>
@@ -216,7 +216,7 @@ export default function TeamsSection({ allManagers }) {
                             value={editName}
                             onChange={e => setEditName(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') handleSaveName(t.slug); if (e.key === 'Escape') { setEditSlug(null); setEditName('') } }}
-                            className="bg-white text-gray-900 px-2 py-1 rounded-md border border-gray-300 focus:outline-none focus:border-teal-500 text-sm w-48"
+                            className="bg-gray-900 text-white px-2 py-1 rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 text-sm w-48"
                           />
                         </div>
                       ) : (
@@ -224,9 +224,9 @@ export default function TeamsSection({ allManagers }) {
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 font-mono">{t.slug}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{t.type}</td>
+                    <td className="px-4 py-3 text-sm text-gray-400">{t.type}</td>
                     <td className="px-4 py-3 text-sm">
-                      <span className={cnt === 0 ? 'text-gray-400' : 'text-gray-700'}>{cnt}</span>
+                      <span className={cnt === 0 ? 'text-gray-600' : 'text-gray-300'}>{cnt}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
                       {isEditing ? (
@@ -234,21 +234,21 @@ export default function TeamsSection({ allManagers }) {
                           <button
                             onClick={() => handleSaveName(t.slug)}
                             disabled={savingEdit}
-                            className="bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs px-2 py-1 rounded-md font-semibold"
+                            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs px-2 py-1 rounded-md font-semibold"
                           >
                             {savingEdit ? '...' : 'Сохранить'}
                           </button>
                           <button
                             onClick={() => { setEditSlug(null); setEditName('') }}
                             disabled={savingEdit}
-                            className="bg-slate-100 hover:bg-slate-200 text-gray-700 text-xs px-2 py-1 rounded-md"
+                            className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-md"
                           >
                             Отмена
                           </button>
                         </div>
                       ) : isDeleting ? (
                         <div className="flex items-center gap-2 justify-end">
-                          <span className="text-gray-600 text-xs">Удалить?</span>
+                          <span className="text-gray-400 text-xs">Удалить?</span>
                           <button
                             onClick={() => handleDelete(t.slug)}
                             disabled={deleting}
@@ -259,7 +259,7 @@ export default function TeamsSection({ allManagers }) {
                           <button
                             onClick={() => setDeleteConfirm(null)}
                             disabled={deleting}
-                            className="bg-slate-100 hover:bg-slate-200 text-gray-700 text-xs px-2 py-1 rounded-md"
+                            className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-md"
                           >
                             Нет
                           </button>
@@ -269,7 +269,7 @@ export default function TeamsSection({ allManagers }) {
                           <button
                             onClick={() => { setEditSlug(t.slug); setEditName(t.name); setDeleteConfirm(null) }}
                             title="Переименовать команду"
-                            className="text-gray-400 hover:text-blue-600 transition text-xs"
+                            className="text-gray-600 hover:text-blue-400 transition text-xs"
                           >
                             ✏
                           </button>
@@ -277,7 +277,7 @@ export default function TeamsSection({ allManagers }) {
                             onClick={() => setDeleteConfirm(t.slug)}
                             disabled={cnt > 0}
                             title={cnt > 0 ? 'Сначала переведи всех в другую команду' : 'Удалить команду'}
-                            className="text-gray-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
+                            className="text-gray-600 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
                           >
                             🗑
                           </button>
@@ -294,49 +294,49 @@ export default function TeamsSection({ allManagers }) {
 
       {/* Модалка создания команды */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
           <div
-            style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }}
+            style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }}
             className="rounded-2xl w-full max-w-md p-5 sm:p-6 max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Новая команда</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-900 text-lg">✕</button>
+              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-white text-lg">✕</button>
             </div>
 
             <form onSubmit={handleCreate} className="space-y-3">
               <div>
-                <label className="text-gray-600 text-xs mb-1.5 block">Название команды</label>
+                <label className="text-gray-400 text-xs mb-1.5 block">Название команды</label>
                 <input
                   type="text" required maxLength={60}
                   value={form.name}
                   onChange={e => onNameChange(e.target.value)}
                   placeholder="Олега"
-                  className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
+                  className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
                 />
-                <p className="text-gray-400 text-xs mt-1">Будет показано как «Команда Олега».</p>
+                <p className="text-gray-600 text-xs mt-1">Будет показано как «Команда Олега».</p>
               </div>
 
               <div>
-                <label className="text-gray-600 text-xs mb-1.5 block">Slug (внутренний id)</label>
+                <label className="text-gray-400 text-xs mb-1.5 block">Slug (внутренний id)</label>
                 <input
                   type="text" required minLength={2} maxLength={30}
                   pattern="[a-z0-9_-]+"
                   value={form.slug}
                   onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase(), slugTouched: true }))}
                   placeholder="oleg"
-                  className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm font-mono"
+                  className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm font-mono"
                 />
-                <p className="text-gray-400 text-xs mt-1">Автогенерируется из названия. Менять обычно не нужно. a-z, 0-9, _, -.</p>
+                <p className="text-gray-600 text-xs mt-1">Автогенерируется из названия. Менять обычно не нужно. a-z, 0-9, _, -.</p>
               </div>
 
               <div>
-                <label className="text-gray-600 text-xs mb-1.5 block">Тип</label>
+                <label className="text-gray-400 text-xs mb-1.5 block">Тип</label>
                 <select
                   value={form.type}
                   onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                  className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
+                  className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
                 >
                   {TEAM_TYPE_OPTIONS.map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -345,11 +345,11 @@ export default function TeamsSection({ allManagers }) {
               </div>
 
               <div>
-                <label className="text-gray-600 text-xs mb-1.5 block">Тимлид (опционально)</label>
+                <label className="text-gray-400 text-xs mb-1.5 block">Тимлид (опционально)</label>
                 <select
                   value={form.teamlead_id}
                   onChange={e => setForm(f => ({ ...f, teamlead_id: e.target.value }))}
-                  className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 text-sm"
+                  className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm"
                 >
                   <option value="">— назначу позже —</option>
                   {onlyManagers.map(m => (
@@ -358,23 +358,23 @@ export default function TeamsSection({ allManagers }) {
                     </option>
                   ))}
                 </select>
-                <p className="text-gray-400 text-xs mt-1">Выбранный менеджер станет тимлидом этой команды (role: manager → teamlead).</p>
+                <p className="text-gray-600 text-xs mt-1">Выбранный менеджер станет тимлидом этой команды (role: manager → teamlead).</p>
               </div>
 
-              {error && <p className="text-red-600 text-sm">{error}</p>}
+              {error && <p className="text-red-400 text-sm">{error}</p>}
 
               <div className="flex gap-2 pt-2">
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition"
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition"
                 >
                   {submitting ? '...' : 'Создать'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2.5 rounded-lg text-sm bg-slate-100 hover:bg-slate-200 transition"
+                  className="px-4 py-2.5 rounded-lg text-sm bg-gray-800 hover:bg-gray-700 transition"
                 >
                   Отмена
                 </button>
