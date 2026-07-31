@@ -68,6 +68,13 @@ function getSimkaLast7Days(reports) {
     .reduce((sum, r) => sum + (r.ordered_simka || 0), 0)
 }
 
+// Доходимость до ЦД = ЦД ИП / заказали РКО * 100, до десятых.
+// Какая доля заказов РКО дотягивается до ЦД. orders=0 → "—".
+function reachStr(cdIp, orders) {
+  if (!orders || orders <= 0) return '—'
+  return (cdIp / orders * 100).toFixed(1) + '%'
+}
+
 // Конверсия = заказали РКО / написавшие * 100, до десятых. writers=0 → "—".
 function convStr(orders, writers) {
   if (!writers || writers <= 0) return '—'
@@ -277,6 +284,10 @@ export default function TeamleadPage() {
 
   // Sheets ЦД data
   const [sheetsData, setSheetsData] = useState({})
+  // ЦД за последние 7 дней (имя менеджера → { ip }) — для «Доходимости до ЦД»
+  // на карточках во вкладке «Аналитика» (там свой период, не как в Дневном отчёте)
+  const [cd7, setCd7] = useState({})
+  const [cd7Loading, setCd7Loading] = useState(false)
   const [sheetsLoading, setSheetsLoading] = useState(false)
 
   const router = useRouter()
@@ -312,6 +323,24 @@ export default function TeamleadPage() {
       }
     })()
   }, [])
+
+  // ЦД за последние 7 дней — для доходимости на карточках вкладки «Аналитика»
+  useEffect(() => {
+    if (activeTab !== 'analytics' || managers.length === 0) return
+    const allMembers = [profile, ...managers].filter(Boolean)
+    const namesWithSheets = allMembers.filter(m => m.sheet_id || MANAGER_SHEETS[m.name]).map(m => m.name)
+    if (namesWithSheets.length === 0) { setCd7({}); return }
+    const ymd = (offsetDays) => {
+      const d = new Date(); d.setDate(d.getDate() - offsetDays)
+      return d.toISOString().split('T')[0]
+    }
+    setCd7Loading(true)
+    fetch(`/api/sheets?names=${encodeURIComponent(namesWithSheets.join(','))}&dateFrom=${ymd(7)}&dateTo=${ymd(0)}`)
+      .then(r => r.json())
+      .then(data => setCd7(data || {}))
+      .catch(() => setCd7({}))
+      .finally(() => setCd7Loading(false))
+  }, [activeTab, managers, profile])
 
   // Fetch Google Sheets ЦД data when daily tab is active
   useEffect(() => {
@@ -1118,6 +1147,12 @@ export default function TeamleadPage() {
                                 <span className="text-cyan-400 text-xs font-medium">{convStr(value7, wrote7)}</span>
                               </div>
                               <div>
+                                <span className="text-gray-500 text-xs">Доходимость: </span>
+                                <span className="text-teal-300 text-xs font-medium">
+                                  {cd7Loading ? '...' : reachStr(cd7[manager.name]?.ip || 0, value7)}
+                                </span>
+                              </div>
+                              <div>
                                 <span className="text-gray-500 text-xs">Симка / 7 дн: </span>
                                 <span className="text-amber-400 text-xs font-medium">{simka7}</span>
                               </div>
@@ -1247,7 +1282,7 @@ export default function TeamleadPage() {
                     {rows.filter(r => r.report).length} из {rows.length} сдали отчёт
                   </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
                   <div>
                     <p className="text-gray-500 text-xs mb-1">Написавшие</p>
                     <p className="text-xl font-bold text-gray-200">{totals.people_wrote}</p>
@@ -1268,6 +1303,12 @@ export default function TeamleadPage() {
                     <p className="text-gray-500 text-xs mb-1">ЦД ИП</p>
                     <p className="text-xl font-bold text-emerald-400">
                       {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.ip || 0), 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">Доходимость до ЦД</p>
+                    <p className="text-xl font-bold text-teal-300">
+                      {sheetsLoading ? '...' : reachStr(Object.values(sheetsData).reduce((s, v) => s + (v?.ip || 0), 0), totals.ordered_ip)}
                     </p>
                   </div>
                   <div>
@@ -1294,7 +1335,7 @@ export default function TeamleadPage() {
                 </div>
 
                 <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
-                  <table className="w-full min-w-[640px]">
+                  <table className="w-full min-w-[740px]">
                     <thead>
                       <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Менеджер</th>
@@ -1303,6 +1344,7 @@ export default function TeamleadPage() {
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Конверсия</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали Симка</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дох. до ЦД</th>
                         <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД Симка</th>
                         {/* Скрыто 07.2026 (код сохранён): <th>ЦД дебетовые</th> */}
                       </tr>
@@ -1323,6 +1365,9 @@ export default function TeamleadPage() {
                             <td className="px-3 sm:px-5 py-3 text-sm">
                               <CdValue value={sd ? sd.ip : null} loading={sheetsLoading && sd === undefined} />
                             </td>
+                            <td className="px-3 sm:px-5 py-3 text-sm text-teal-300 font-medium">
+                              {sheetsLoading && sd === undefined ? '...' : reachStr(sd?.ip || 0, report?.ordered_ip)}
+                            </td>
                             <td className="px-3 sm:px-5 py-3 text-sm">
                               <CdValue value={sd ? sd.simka : null} loading={sheetsLoading && sd === undefined} color="text-amber-400" />
                             </td>
@@ -1339,6 +1384,12 @@ export default function TeamleadPage() {
                           <td className="px-3 sm:px-5 py-3 text-sm font-bold text-amber-400">{totals.ordered_simka}</td>
                           <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
                             {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0) + deletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.ip || 0), 0)}
+                          </td>
+                          <td className="px-3 sm:px-5 py-3 text-sm font-bold text-teal-300">
+                            {reachStr(
+                              rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0) + deletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.ip || 0), 0),
+                              totals.ordered_ip,
+                            )}
                           </td>
                           <td className="px-3 sm:px-5 py-3 text-sm font-bold text-amber-400">
                             {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.simka || 0), 0) + deletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.simka || 0), 0)}

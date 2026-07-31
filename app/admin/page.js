@@ -108,6 +108,14 @@ function getSimkaForPeriod(reports, daysStart, daysEnd) {
     .reduce((sum, r) => sum + (r.ordered_simka || 0), 0)
 }
 
+// Доходимость до ЦД = ЦД ИП / заказали РКО * 100, до десятых.
+// Показывает, какая доля заказов РКО реально дотягивается до ЦД.
+// Симка и дебетовые в расчёт не идут. Если заказов 0 — показываем "—".
+function reachStr(cdIp, orders) {
+  if (!orders || orders <= 0) return '—'
+  return (cdIp / orders * 100).toFixed(1) + '%'
+}
+
 // Конверсия = заказали РКО / написавшие * 100, до десятых (напр. "5.8%").
 // Если написавших 0 — делить нельзя, показываем "—".
 function convStr(orders, writers) {
@@ -921,7 +929,7 @@ export default function AdminPage() {
               <h2 className="text-base font-semibold text-gray-200 mb-4">Сводка по компании</h2>
 
               {/* Верхние счётчики */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 mb-5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 mb-5">
                 <div>
                   <p className="text-gray-500 text-xs mb-1">Команд</p>
                   <p className="text-2xl font-bold text-gray-100">{companySummary.teamCount}</p>
@@ -950,11 +958,17 @@ export default function AdminPage() {
                   <p className="text-gray-500 text-xs mb-1">Конверсия за 7 дней</p>
                   <p className="text-2xl font-bold text-cyan-400">{convStr(companySummary.totals.cur, companySummary.totals.wroteCur)}</p>
                 </div>
+                <div>
+                  <p className="text-gray-500 text-xs mb-1">Доходимость до ЦД</p>
+                  <p className="text-2xl font-bold text-teal-300">
+                    {summaryCdLoading ? '...' : reachStr(companySummary.totals.cdCur, companySummary.totals.cur)}
+                  </p>
+                </div>
               </div>
 
               {/* Разбивка по командам */}
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[620px]">
+                <table className="w-full min-w-[700px]">
                   <thead>
                     <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                       <th className="text-left py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Команда</th>
@@ -965,6 +979,7 @@ export default function AdminPage() {
                       <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД 7 дн</th>
                       <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД пред. 7 дн</th>
                       <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Конв. 7 дн</th>
+                      <th className="text-right py-2 text-gray-500 text-xs font-medium uppercase tracking-wider">Дох. до ЦД</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -982,6 +997,7 @@ export default function AdminPage() {
                           <td className="py-2 text-sm text-right font-medium text-emerald-400">{summaryCdLoading ? '...' : r.cdCur}</td>
                           <td className="py-2 text-sm text-right text-gray-400">{summaryCdLoading ? '...' : r.cdPrev}</td>
                           <td className="py-2 text-sm text-right font-medium text-cyan-400">{convStr(r.cur, r.wroteCur)}</td>
+                          <td className="py-2 text-sm text-right font-medium text-teal-300">{summaryCdLoading ? '...' : reachStr(r.cdCur, r.cur)}</td>
                         </tr>
                       )
                     })}
@@ -999,6 +1015,7 @@ export default function AdminPage() {
                       <td className="py-2 text-sm text-right font-bold text-emerald-400">{summaryCdLoading ? '...' : companySummary.totals.cdCur}</td>
                       <td className="py-2 text-sm text-right font-semibold text-gray-300">{summaryCdLoading ? '...' : companySummary.totals.cdPrev}</td>
                       <td className="py-2 text-sm text-right font-bold text-cyan-400">{convStr(companySummary.totals.cur, companySummary.totals.wroteCur)}</td>
+                      <td className="py-2 text-sm text-right font-bold text-teal-300">{summaryCdLoading ? '...' : reachStr(companySummary.totals.cdCur, companySummary.totals.cur)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1036,6 +1053,8 @@ export default function AdminPage() {
                         const value7  = getIPForPeriod(mRep, 0, 7)
                         const wrote7  = getWroteForPeriod(mRep, 0, 7)
                         const simka7  = getSimkaForPeriod(mRep, 0, 7)
+                        // ЦД ИП за те же 7 дней (из Google Sheets) — для доходимости
+                        const cdIp7   = summaryCdCur[manager.name]?.ip || 0
                         const zKey    = getZoneKey(value7, 'standard')
                         const z       = ZONE[zKey]
                         const alert14 = isRedFor14Days(mRep, manager.created_at)
@@ -1092,6 +1111,9 @@ export default function AdminPage() {
                                 </div>
                                 <p className="text-gray-500 text-xs mb-1">
                                   Конверсия: <span className="text-cyan-400 font-medium">{convStr(value7, wrote7)}</span>
+                                </p>
+                                <p className="text-gray-500 text-xs mb-1">
+                                  Доходимость: <span className="text-teal-300 font-medium">{summaryCdLoading ? '...' : reachStr(cdIp7, value7)}</span>
                                 </p>
                                 <p className="text-gray-500 text-xs mb-3">
                                   Симка / 7 дн: <span className="text-amber-400 font-medium">{simka7}</span>
@@ -1186,7 +1208,7 @@ export default function AdminPage() {
                     <h2 className="text-sm font-semibold text-gray-200">Сводка за период</h2>
                     <span className="text-gray-600 text-xs">{reportedCount} из {totalMembers} сдали отчёт</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Написавшие</p>
                       <p className="text-xl font-bold text-gray-200">{totalPeopleWrote}</p>
@@ -1207,6 +1229,12 @@ export default function AdminPage() {
                       <p className="text-gray-500 text-xs mb-1">ЦД ИП</p>
                       <p className="text-xl font-bold text-emerald-400">
                         {sheetsLoading ? '...' : Object.values(sheetsData).reduce((s, v) => s + (v?.ip || 0), 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs mb-1">Доходимость до ЦД</p>
+                      <p className="text-xl font-bold text-teal-300">
+                        {sheetsLoading ? '...' : reachStr(Object.values(sheetsData).reduce((s, v) => s + (v?.ip || 0), 0), totalOrdered)}
                       </p>
                     </div>
                     <div>
@@ -1287,7 +1315,7 @@ export default function AdminPage() {
                   </div>
 
                   <div style={{ backgroundColor: '#13131f', border: '1px solid #1f1f2e' }} className="rounded-2xl overflow-hidden overflow-x-auto">
-                    <table className="w-full min-w-[640px]">
+                    <table className="w-full min-w-[740px]">
                       <thead>
                         <tr style={{ borderBottom: '1px solid #1f1f2e' }}>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Менеджер</th>
@@ -1296,6 +1324,7 @@ export default function AdminPage() {
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Конверсия</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Заказали Симка</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
+                          <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Дох. до ЦД</th>
                           <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД Симка</th>
                           {/* Скрыто 07.2026 (код сохранён):
                           <th ...>ЦД дебетовые</th>
@@ -1305,7 +1334,7 @@ export default function AdminPage() {
                       <tbody>
                         {rows.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="text-center py-8 text-gray-600 text-sm">
+                            <td colSpan={8} className="text-center py-8 text-gray-600 text-sm">
                               Нет участников в команде
                             </td>
                           </tr>
@@ -1328,6 +1357,9 @@ export default function AdminPage() {
                                   <td className="px-3 sm:px-5 py-3 text-sm">
                                     <CdValue value={sd ? sd.ip : null} loading={sheetsLoading && sd === undefined} />
                                   </td>
+                                  <td className="px-3 sm:px-5 py-3 text-sm text-teal-300 font-medium">
+                                    {sheetsLoading && sd === undefined ? '...' : reachStr(sd?.ip || 0, report?.ordered_ip)}
+                                  </td>
                                   <td className="px-3 sm:px-5 py-3 text-sm">
                                     <CdValue value={sd ? sd.simka : null} loading={sheetsLoading && sd === undefined} color="text-amber-400" />
                                   </td>
@@ -1346,6 +1378,12 @@ export default function AdminPage() {
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-amber-400">{totals.ordered_simka}</td>
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-emerald-400">
                                   {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0) + teamDeletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.ip || 0), 0)}
+                                </td>
+                                <td className="px-3 sm:px-5 py-3 text-sm font-bold text-teal-300">
+                                  {reachStr(
+                                    rows.reduce((s, { member }) => s + (sheetsData[member.name]?.ip || 0), 0) + teamDeletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.ip || 0), 0),
+                                    totals.ordered_ip,
+                                  )}
                                 </td>
                                 <td className="px-3 sm:px-5 py-3 text-sm font-bold text-amber-400">
                                   {rows.reduce((s, { member }) => s + (sheetsData[member.name]?.simka || 0), 0) + teamDeletedMembers.reduce((s, m) => s + (sheetsData[m.name]?.simka || 0), 0)}
