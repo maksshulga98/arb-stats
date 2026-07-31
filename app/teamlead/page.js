@@ -94,12 +94,12 @@ function isRedFor14Days(reports, createdAt) {
   return getIPForPeriod(reports, 0, 7) < 10 && getIPForPeriod(reports, 7, 14) < 10
 }
 
-// Заливка карточки по цвету из анкеты «потенциал» (приглушённая, чтобы не
-// перекрывала текст; зона по результативности остаётся на границе и в бейдже).
+// Цвет-плашка из анкеты «потенциал» — заливает шапку карточки (строку с именем).
+// Тело карточки остаётся окрашенным по зоне результативности.
 const POTENTIAL_TINT = {
-  green:  'rgba(34,197,94,0.13)',
-  yellow: 'rgba(234,179,8,0.13)',
-  red:    'rgba(239,68,68,0.13)',
+  green:  'rgba(34,197,94,0.38)',
+  yellow: 'rgba(234,179,8,0.34)',
+  red:    'rgba(239,68,68,0.38)',
 }
 
 function getZoneKey(value, teamType) {
@@ -1076,11 +1076,14 @@ export default function TeamleadPage() {
                     return (
                       <div
                         key={manager.id}
-                        style={tint ? { backgroundColor: tint } : undefined}
                         className={`border rounded-2xl p-4 transition-all ${z.card} ${!isDeletePending ? 'cursor-pointer hover:scale-[1.02]' : ''}`}
                         onClick={() => !isDeletePending && setSelectedManager(manager)}
                       >
-                        <div className="flex justify-between items-start mb-3">
+                        {/* Шапка карточки заливается цветом из анкеты «потенциал» */}
+                        <div
+                          style={tint ? { backgroundColor: tint } : undefined}
+                          className={`flex justify-between items-start -mx-4 -mt-4 px-4 pt-4 pb-3 mb-3 rounded-t-2xl ${tint ? 'border-b border-white/10' : ''}`}
+                        >
                           <div className="flex items-center gap-1.5 min-w-0">
                             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${(manager.sheet_id || MANAGER_SHEETS[manager.name]) ? 'bg-green-500' : 'bg-gray-600'}`}
                               title={(manager.sheet_id || MANAGER_SHEETS[manager.name]) ? 'Таблица привязана' : 'Таблица не привязана'} />

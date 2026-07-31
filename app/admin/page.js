@@ -115,13 +115,14 @@ function convStr(orders, writers) {
   return (orders / writers * 100).toFixed(1) + '%'
 }
 
-// Заливка карточки по цвету-плашке из анкеты «потенциал» (ставит руководитель).
-// Намеренно приглушённая — чтобы не перекрывала текст и не спорила с зоной
-// по результативности (та остаётся на границе карточки и в бейдже).
+// Цвет-плашка из анкеты «потенциал» (ставит руководитель) — заливает шапку
+// карточки менеджера (строку с именем). Тело карточки остаётся по зоне
+// результативности. Насыщенность подобрана так, чтобы цвет читался, но белый
+// текст имени поверх не терялся.
 const POTENTIAL_TINT = {
-  green:  'rgba(34,197,94,0.13)',
-  yellow: 'rgba(234,179,8,0.13)',
-  red:    'rgba(239,68,68,0.13)',
+  green:  'rgba(34,197,94,0.38)',
+  yellow: 'rgba(234,179,8,0.34)',
+  red:    'rgba(239,68,68,0.38)',
 }
 
 function getZoneKey(value, teamType) {
@@ -1041,18 +1042,21 @@ export default function AdminPage() {
                         const isDeletePending = deleteConfirm === manager.id
                         // Тимлидов в админке не удаляем — только менеджеров
                         const canDelete = manager.role === 'manager'
-                        // Заливка по анкете «потенциал». Инлайн-стилем — чтобы
-                        // предсказуемо перекрыть фон зоны (границу зоны оставляем).
+                        // Цвет из анкеты «потенциал» — заливает ТОЛЬКО шапку карточки
+                        // (строку с именем). Всё остальное тело карточки остаётся
+                        // окрашенным по зоне результативности.
                         const tint = POTENTIAL_TINT[potentials[manager.id]?.color]
 
                         return (
                           <div
                             key={manager.id}
                             onClick={() => !isDeletePending && setSelectedManager(manager)}
-                            style={tint ? { backgroundColor: tint } : undefined}
                             className={`group border rounded-2xl p-4 text-left transition-all ${z.card} ${!isDeletePending ? 'hover:scale-[1.02] hover:shadow-lg cursor-pointer' : ''}`}
                           >
-                            <div className="flex justify-between items-start mb-3">
+                            <div
+                              style={tint ? { backgroundColor: tint } : undefined}
+                              className={`flex justify-between items-start -mx-4 -mt-4 px-4 pt-4 pb-3 mb-3 rounded-t-2xl ${tint ? 'border-b border-white/10' : ''}`}
+                            >
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${(manager.sheet_id || MANAGER_SHEETS[manager.name]) ? 'bg-green-500' : 'bg-gray-600'}`}
                                   title={(manager.sheet_id || MANAGER_SHEETS[manager.name]) ? 'Таблица привязана' : 'Таблица не привязана'} />
