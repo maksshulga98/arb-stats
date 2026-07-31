@@ -12,8 +12,9 @@ import AccountLinkSection from '../../components/AccountLinkSection'
 import BankLinkSection from '../../components/BankLinkSection'
 import ManagerPotentialModal from '../../components/ManagerPotentialModal'
 import TasksSection from '../../components/TasksSection'
-import WarningButton from '../../components/WarningButton'
-import WarningsList from '../../components/WarningsList'
+// Скрыто 07.2026 — предупреждения менеджеров не используются (код сохранён)
+// import WarningButton from '../../components/WarningButton'
+// import WarningsList from '../../components/WarningsList'
 import TeamsSection from '../../components/TeamsSection'
 import EditReportModal from '../../components/EditReportModal'
 
@@ -243,7 +244,7 @@ export default function AdminPage() {
   const [contactsLoading, setContactsLoading] = useState(false)
   const [deletedMembers, setDeletedMembers] = useState([])
   const [admins, setAdmins] = useState([])  // для раздела "Задачи"
-  const [warningCounts, setWarningCounts] = useState({})  // manager_id → N за текущий месяц
+  // Скрыто 07.2026 (код сохранён): const [warningCounts, setWarningCounts] = useState({})
   // Динамический список команд из БД. Маппится в API-структуру { id, name, type }
   // (id = slug). При наличии таблицы teams в БД заменяет STATIC_TEAMS_FALLBACK.
   const [TEAMS, setTEAMS] = useState(STATIC_TEAMS_FALLBACK)
@@ -423,14 +424,14 @@ export default function AdminPage() {
     setDeletedMembers(deletedRes.status === 'fulfilled' ? (deletedRes.value.data || []) : [])
     setAdmins(admsRes.status === 'fulfilled' ? (admsRes.value.data || []) : [])
 
-    // Счётчики предупреждений за текущий месяц
-    try {
-      const warnRes = await authFetch('/api/manager-warnings')
-      const warnData = await warnRes.json()
-      if (warnRes.ok) setWarningCounts(warnData.counts || {})
-    } catch (e) {
-      console.error('loadData: warnings counts failed:', e?.message || e)
-    }
+    // Скрыто 07.2026 — предупреждения менеджеров не используются (код сохранён)
+    // try {
+    //   const warnRes = await authFetch('/api/manager-warnings')
+    //   const warnData = await warnRes.json()
+    //   if (warnRes.ok) setWarningCounts(warnData.counts || {})
+    // } catch (e) {
+    //   console.error('loadData: warnings counts failed:', e?.message || e)
+    // }
 
     // Список команд из БД (таблица teams). Если ещё не настроена — оставляем fallback.
     try {
@@ -1064,13 +1065,9 @@ export default function AdminPage() {
                                 {alert14 && (
                                   <span title="14 дней в красной зоне" className="text-red-400 text-base leading-none">⚠</span>
                                 )}
-                                {canDelete && !isDeletePending && (
-                                  <WarningButton
-                                    managerId={manager.id}
-                                    monthCount={warningCounts[manager.id] || 0}
-                                    onIssued={(newCount) => setWarningCounts(prev => ({ ...prev, [manager.id]: newCount }))}
-                                  />
-                                )}
+                                {/* Скрыто 07.2026 — предупреждения не используются (код сохранён):
+                                <WarningButton managerId={manager.id} monthCount={warningCounts[manager.id] || 0}
+                                  onIssued={(newCount) => setWarningCounts(prev => ({ ...prev, [manager.id]: newCount }))} /> */}
                                 {canDelete && !isDeletePending && (
                                   <button
                                     onClick={e => { e.stopPropagation(); setDeleteConfirm(manager.id) }}
@@ -2312,7 +2309,7 @@ export default function AdminPage() {
               </table>
             </div>
 
-            {/* Секция предупреждений (только для role=manager) */}
+            {/* Скрыто 07.2026 — секция предупреждений не используется (код сохранён):
             {selectedManager.role === 'manager' && (
               <div style={{ borderTop: '1px solid #1f1f2e' }} className="px-6 py-4">
                 <h3 className="text-sm font-semibold text-gray-300 mb-2">Предупреждения</h3>
@@ -2322,7 +2319,7 @@ export default function AdminPage() {
                   onLoaded={(monthCount) => setWarningCounts(prev => ({ ...prev, [selectedManager.id]: monthCount }))}
                 />
               </div>
-            )}
+            )} */}
 
             {/* Создать команду и сделать этого менеджера тимлидом (только role=manager) */}
             {selectedManager.role === 'manager' && (
