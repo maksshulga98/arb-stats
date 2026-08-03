@@ -363,16 +363,17 @@ export default function AdminPage() {
       .finally(() => setSummaryCdLoading(false))
   }, [activeTab, managers, teamleads, deletedMembers])
 
-  // Fetch contact distribution stats when daily tab is active
-  useEffect(() => {
-    if (activeTab !== 'daily') return
-    setContactsLoading(true)
-    fetch(`/api/contacts/stats?dateFrom=${dateFrom}&dateTo=${dateTo}`)
-      .then(r => r.json())
-      .then(data => setContactStats(data || { total: 0, byManager: [], byManagerId: {} }))
-      .catch(() => setContactStats({ total: 0, byManager: [], byManagerId: {} }))
-      .finally(() => setContactsLoading(false))
-  }, [activeTab, dateFrom, dateTo])
+  // Скрыто 08.2026 — выдача номеров не используется, статистика «Выдано номеров»
+  // в отчёте уже скрыта, поэтому и запрос не шлём (код сохранён).
+  // useEffect(() => {
+  //   if (activeTab !== 'daily') return
+  //   setContactsLoading(true)
+  //   fetch(`/api/contacts/stats?dateFrom=${dateFrom}&dateTo=${dateTo}`)
+  //     .then(r => r.json())
+  //     .then(data => setContactStats(data || { total: 0, byManager: [], byManagerId: {} }))
+  //     .catch(() => setContactStats({ total: 0, byManager: [], byManagerId: {} }))
+  //     .finally(() => setContactsLoading(false))
+  // }, [activeTab, dateFrom, dateTo])
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') setSelectedManager(null) }

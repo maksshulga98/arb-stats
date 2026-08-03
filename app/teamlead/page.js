@@ -760,7 +760,9 @@ export default function TeamleadPage() {
   const modalIsNikita = TEAMS.find(t => t.id === selectedManager?.team)?.type === 'nikita'
   const modalIsKarina = TEAMS.find(t => t.id === selectedManager?.team)?.type === 'karina'
 
-  const hasContactsAccess = CONTACT_TEAMS.includes(profile?.team)
+  // Скрыто 08.2026 — выдача номеров давно не используется. Код вкладки и
+  // API оставлены: чтобы вернуть, достаточно убрать `false &&`.
+  const hasContactsAccess = false && CONTACT_TEAMS.includes(profile?.team)
 
   const TABS = [
     { id: 'analytics', label: 'Аналитика команды' },

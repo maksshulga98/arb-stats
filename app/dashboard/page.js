@@ -516,7 +516,9 @@ export default function DashboardPage() {
     profile ? [profile] : [],
     reports
   )
-  const hasContactsAccess = CONTACT_TEAMS.includes(profile?.team)
+  // Скрыто 08.2026 — выдача номеров давно не используется. Код вкладки и
+  // API оставлены: чтобы вернуть, достаточно убрать `false &&`.
+  const hasContactsAccess = false && CONTACT_TEAMS.includes(profile?.team)
     || (profile?.team === 'nikita' && profile?.name === 'София С')
 
   const TABS = [
