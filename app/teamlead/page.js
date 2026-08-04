@@ -27,6 +27,9 @@ const STATIC_TEAMS_FALLBACK = [
 // Команды с доступом к выдаче номеров (11.06.2026: команда Карины расформирована)
 const CONTACT_TEAMS = ['olya']
 
+// Команды на новом алгоритме: «Заявка в банк» вместо «Счёт ИП»
+const BANK_LINK_TEAMS = ['elizavety', 'nikita']
+
 function formatTimeLeft(ms) {
   if (ms <= 0) return null
   const hours = Math.floor(ms / (1000 * 60 * 60))
@@ -764,6 +767,8 @@ export default function TeamleadPage() {
   // API оставлены: чтобы вернуть, достаточно убрать `false &&`.
   const hasContactsAccess = false && CONTACT_TEAMS.includes(profile?.team)
 
+  const usesBankLink = BANK_LINK_TEAMS.includes(profile?.team)
+
   const TABS = [
     { id: 'analytics', label: 'Аналитика команды' },
     { id: 'daily',     label: 'Дневной отчёт' },
@@ -771,7 +776,9 @@ export default function TeamleadPage() {
     { id: 'telegram',  label: 'Аккаунты Телеграмм' },
     ...(hasContactsAccess ? [{ id: 'contacts', label: 'Выдача номеров' }] : []),
     // { id: 'ip-link', label: 'Ссылка ИП' },  // временно скрыто
-    { id: 'account-link', label: 'Счёт ИП' },
+    ...(usesBankLink
+      ? [{ id: 'bank-link', label: 'Заявка в банк' }]
+      : [{ id: 'account-link', label: 'Счёт ИП' }]),
     // { id: 'add-cd', label: 'Добавить ЦД' },  // временно скрыто (07.2026) — код рендера ниже сохранён
   ]
 
@@ -1777,6 +1784,8 @@ export default function TeamleadPage() {
         )}
 
         {/* ─── Счёт ИП (РКО, оффер 533) ─── */}
+        {activeTab === 'bank-link' && <BankLinkSection scope="team" />}
+
         {activeTab === 'account-link' && (
           <AccountLinkSection
             scope="team"
