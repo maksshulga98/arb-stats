@@ -60,8 +60,17 @@ export async function DELETE(request, { params }) {
       .update({ role: 'deleted' })
       .eq('id', id)
 
-    // Also revoke login by deleting the auth user
-    await supabaseAdmin.auth.admin.deleteUser(id)
+    // Доступ отзываем БАНОМ учётки, а не удалением.
+    //
+    // Раньше здесь был auth.admin.deleteUser(id) — и это уничтожало данные:
+    // profiles.id завязан на auth.users каскадом, поэтому удаление учётки
+    // сносило и строку профиля, а за ней (ON DELETE CASCADE) — все отчёты
+    // и заявки этого сотрудника. Мягкое удаление выше при этом обнулялось.
+    // Бан закрывает вход, но всю историю сохраняет.
+    const { error: banErr } = await supabaseAdmin.auth.admin.updateUserById(id, {
+      ban_duration: '876000h',   // ~100 лет
+    })
+    if (banErr) console.error('Не удалось забанить учётку (профиль всё равно помечен deleted):', banErr.message)
 
     // Clear TG account assignments for this manager in Google Sheets
     if (targetProfile.name) {
