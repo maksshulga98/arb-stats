@@ -36,9 +36,9 @@ for p in libasound2 libatk1.0-0 libatk-bridge2.0-0 libcups2 libgtk-3-0; do
     || echo "  ! пропускаю $p (нет в репозитории)"
 done
 
-log "2/7 Node.js 20"
-if ! command -v node >/dev/null || [ "$(node -v | cut -c2-3)" -lt 20 ]; then
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+log "2/7 Node.js 22"
+if ! command -v node >/dev/null || [ "$(node -v | cut -c2-3)" -lt 22 ]; then
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   $APT install -y nodejs
 fi
 node -v
