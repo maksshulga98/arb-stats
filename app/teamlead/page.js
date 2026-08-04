@@ -10,6 +10,7 @@ const CYR_MAP = { a:'а',b:'в',c:'с',e:'е',h:'н',k:'к',m:'м',o:'о',p:'р'
 const normName = s => (s||'').trim().replace(/\s+/g,' ').toLowerCase().replace(/[a-z]/g, c => CYR_MAP[c] || c)
 import { MANAGER_SHEETS } from '../../lib/sheets-config'
 import AccountLinkSection from '../../components/AccountLinkSection'
+import BankLinkSection from '../../components/BankLinkSection'
 // Скрыто 07.2026 — предупреждения менеджеров не используются (код сохранён)
 // import WarningButton from '../../components/WarningButton'
 // import WarningsList from '../../components/WarningsList'
