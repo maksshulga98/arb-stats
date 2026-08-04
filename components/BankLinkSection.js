@@ -29,10 +29,11 @@ const STATUS_LABEL = {
   error:      { text: 'Ошибка',     cls: 'text-red-400' },
 }
 
-const emptyForm = { bank: '', organizationName: '', inn: '', legalAddress: '', city: '', contactPerson: '', email: '', phone: '' }
+const emptyForm = { organizationName: '', inn: '', legalAddress: '', city: '', contactPerson: '', email: '', phone: '' }
 
 export default function BankLinkSection({ scope, showManagerColumn = false, managerNameById = {} }) {
-  const [banks, setBanks] = useState([])
+  // Сколько ссылок в пуле — только чтобы предупредить, если не настроено
+  const [linksCount, setLinksCount] = useState(null)
   const [history, setHistory] = useState([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
@@ -64,9 +65,9 @@ export default function BankLinkSection({ scope, showManagerColumn = false, mana
   useEffect(() => {
     (async () => {
       try {
-        const res = await authFetch('/api/bank-link?banks=1')
+        const res = await authFetch('/api/bank-link?links=1')
         const data = await res.json()
-        if (res.ok) setBanks(data.banks || [])
+        if (res.ok) setLinksCount(data.linksCount ?? 0)
       } catch { /* ignore */ }
     })()
   }, [])
@@ -102,7 +103,6 @@ export default function BankLinkSection({ scope, showManagerColumn = false, mana
 
   async function handleCreate(e) {
     e.preventDefault()
-    if (!form.bank) { setError('Выберите банк'); return }
     if (!validateINN(form.inn)) { setError('Некорректный ИНН (10 для ООО, 12 для ИП)'); return }
     setSubmitting(true); setError(null); setResult(null); setStatusText('Ставим задачу в очередь…')
     try {
@@ -134,7 +134,7 @@ export default function BankLinkSection({ scope, showManagerColumn = false, mana
     setTimeout(() => setCopiedId(null), 2000)
   }
 
-  const bankLabel = (id) => banks.find(b => b.id === id)?.label || id
+  // В колонке «Источник» показываем код ссылки, через которую ушла заявка
 
   return (
     <>
@@ -161,7 +161,7 @@ export default function BankLinkSection({ scope, showManagerColumn = false, mana
                 {showManagerColumn && (
                   <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Менеджер</th>
                 )}
-                <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Банк</th>
+                <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Источник</th>
                 <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Организация</th>
                 <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ИНН</th>
                 <th className="text-left px-3 sm:px-5 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Статус</th>
@@ -179,7 +179,7 @@ export default function BankLinkSection({ scope, showManagerColumn = false, mana
                     {showManagerColumn && (
                       <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{managerNameById[job.manager_id] || '—'}</td>
                     )}
-                    <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{bankLabel(job.bank)}</td>
+                    <td className="px-3 sm:px-5 py-3 text-sm text-gray-500 font-mono text-xs">{job.bank}</td>
                     <td className="px-3 sm:px-5 py-3 text-sm text-gray-300">{job.organization_name}</td>
                     <td className="px-3 sm:px-5 py-3 text-sm text-gray-400 font-mono">{job.inn}</td>
                     <td className="px-3 sm:px-5 py-3 text-sm">
@@ -239,16 +239,11 @@ export default function BankLinkSection({ scope, showManagerColumn = false, mana
             ) : (
               <form onSubmit={handleCreate}>
                 <div className="space-y-3">
-                  <div>
-                    <label className="text-gray-400 text-xs mb-1.5 block">Банк</label>
-                    <select required value={form.bank}
-                      onChange={e => setForm({ ...form, bank: e.target.value })}
-                      className="w-full bg-gray-900 text-white px-4 py-2.5 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 text-sm">
-                      <option value="">— выберите банк —</option>
-                      {banks.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
-                    </select>
-                    {banks.length === 0 && <p className="text-yellow-500/80 text-xs mt-1">Банки не настроены (нет ссылок оформления в env).</p>}
-                  </div>
+                  {/* Банк не выбирается — ссылка подставляется автоматически
+                      по кругу из пула, чтобы заявки шли равномерно. */}
+                  {linksCount === 0 && (
+                    <p className="text-yellow-500/80 text-xs">Ссылки оформления не настроены (BANK_LINK_URLS в env).</p>
+                  )}
                   <div>
                     <label className="text-gray-400 text-xs mb-1.5 block">Наименование организации</label>
                     <input type="text" required value={form.organizationName}

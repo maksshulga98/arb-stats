@@ -11,7 +11,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { getActiveBanks, getBankById } from '../../../lib/bank-links'
+import { getLinkPool, linkCode, pickNextLink } from '../../../lib/bank-links'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,18 +74,19 @@ export async function POST(request) {
 
     const { profile, supabaseAdmin } = auth
     const body = await request.json()
-    const { bank, organizationName, inn, legalAddress, city, contactPerson, email, phone } = body
+    const { organizationName, inn, legalAddress, city, contactPerson, email, phone } = body
 
-    if (!bank || !organizationName || !inn || !legalAddress || !city || !contactPerson || !email || !phone) {
+    if (!organizationName || !inn || !legalAddress || !city || !contactPerson || !email || !phone) {
       return NextResponse.json({ error: 'Все поля обязательны' }, { status: 400 })
     }
     if (!validateINN(inn)) {
       return NextResponse.json({ error: 'Некорректный ИНН (10 цифр для ООО, 12 для ИП, с верной контрольной суммой)' }, { status: 400 })
     }
 
-    const bankCfg = getBankById(bank)
-    if (!bankCfg) {
-      return NextResponse.json({ error: 'Неизвестный или не настроенный банк' }, { status: 400 })
+    // Ссылку выбираем сами по кругу — менеджер её не видит и не выбирает
+    const sourceUrl = await pickNextLink(supabaseAdmin)
+    if (!sourceUrl) {
+      return NextResponse.json({ error: 'Ссылки оформления не настроены (BANK_LINK_URLS)' }, { status: 500 })
     }
 
     const { data, error } = await supabaseAdmin
@@ -93,8 +94,8 @@ export async function POST(request) {
       .insert([{
         manager_id: profile.id,
         team: profile.team,
-        bank: bankCfg.id,
-        source_url: bankCfg.sourceUrl,
+        bank: linkCode(sourceUrl),
+        source_url: sourceUrl,
         organization_name: organizationName,
         inn, legal_address: legalAddress, city,
         contact_person: contactPerson, email, phone,
@@ -119,17 +120,16 @@ export async function POST(request) {
  * GET /api/bank-link
  *   ?jobId=UUID           — статус одной задачи (поллинг после отправки формы)
  *   ?scope=all|team|(свои)— история задач
- *   ?banks=1              — список доступных банков для формы
+ *   ?links=1              — сколько ссылок в пуле (фронт предупреждает, если 0)
  */
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
 
-    // Список банков не требует тяжёлой авторизации сверх обычной проверки токена
-    if (searchParams.get('banks')) {
+    if (searchParams.get('links')) {
       const auth = await authenticateUser(request)
       if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-      return NextResponse.json({ banks: getActiveBanks().map(b => ({ id: b.id, label: b.label })) })
+      return NextResponse.json({ linksCount: getLinkPool().length })
     }
 
     const auth = await authenticateUser(request)
