@@ -23,9 +23,15 @@ log "1/7 Системные пакеты"
 apt-get update -y
 apt-get install -y --no-install-recommends \
   curl ca-certificates git fuse xvfb x11-utils \
-  libgbm1 libasound2 libnss3 libatk-bridge2.0-0 libatk1.0-0 libcups2 \
-  libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
-  libpango-1.0-0 libcairo2 libgtk-3-0 fonts-liberation
+  libgbm1 libnss3 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 \
+  libxfixes3 libxrandr2 libpango-1.0-0 libcairo2 fonts-liberation
+# В Ubuntu 24.04 часть библиотек переименована с суффиксом t64 —
+# ставим то имя, которое доступно в текущем релизе.
+for p in libasound2 libatk1.0-0 libatk-bridge2.0-0 libcups2 libgtk-3-0; do
+  apt-get install -y --no-install-recommends "$p" 2>/dev/null \
+    || apt-get install -y --no-install-recommends "${p}t64" 2>/dev/null \
+    || echo "  ! пропускаю $p (нет в репозитории)"
+done
 
 log "2/7 Node.js 20"
 if ! command -v node >/dev/null || [ "$(node -v | cut -c2-3)" -lt 20 ]; then
