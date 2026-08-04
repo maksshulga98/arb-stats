@@ -24,6 +24,8 @@ const {
   DOLPHIN_PROXY_LOGIN,
   DOLPHIN_PROXY_PASSWORD,
   PROXY_ROTATION_URL,          // опц.: GET по этому URL меняет мобильный IP
+  // Провайдер разрешает менять IP не чаще, чем раз в N мс (у proxys.world — 2 мин).
+  ROTATE_MIN_INTERVAL_MS = '120000',
   RUNNER_ID = 'runner-local',
   POLL_INTERVAL_MS = '4000',
   HEADLESS = '1',
@@ -50,15 +52,41 @@ const proxy = {
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 
+// Когда последний раз реально сменили IP (в пределах жизни процесса)
+let lastRotateAt = 0
+
+/**
+ * Смена мобильного IP перед заявкой.
+ *
+ * ВАЖНО: ротация — необязательный шаг. Провайдер разрешает менять IP не чаще
+ * раза в 2 минуты, а менеджеры могут оформить две заявки подряд за минуту.
+ * Поэтому любая неудача (рано, ошибка сети, ответ провайдера с отказом)
+ * НЕ отменяет заявку — несколько заявок с одного IP допустимы.
+ */
 async function rotateProxyIfConfigured() {
   if (!PROXY_ROTATION_URL) return
+
+  const minGap = Number(ROTATE_MIN_INTERVAL_MS) || 120000
+  const since = Date.now() - lastRotateAt
+  if (lastRotateAt && since < minGap) {
+    console.log(`  · пропускаю смену IP: прошло ${Math.round(since / 1000)}с из ${Math.round(minGap / 1000)}с — заявка идёт на текущем IP`)
+    return
+  }
+
   try {
-    await fetch(PROXY_ROTATION_URL)
-    // мобильному прокси нужно время «переключить» IP
-    await sleep(3000)
-    console.log('  · IP прокси ротирован')
+    const res = await fetch(PROXY_ROTATION_URL, { signal: AbortSignal.timeout(20000) })
+    const text = (await res.text().catch(() => '')).slice(0, 200)
+    // Провайдер отвечает 200 и при отказе («слишком часто»), поэтому смотрим тело
+    const ok = res.ok && !/false|error|often|wait|limit/i.test(text)
+    if (ok) {
+      lastRotateAt = Date.now()
+      await sleep(3000)   // мобильному прокси нужно время переключить IP
+      console.log('  · IP прокси сменён')
+    } else {
+      console.log(`  · IP сменить не вышло (${res.status}: ${text || 'без тела'}) — продолжаю на текущем`)
+    }
   } catch (e) {
-    console.warn('  · не удалось ротировать IP:', e.message)
+    console.log(`  · IP сменить не вышло (${e.message}) — продолжаю на текущем`)
   }
 }
 
@@ -74,7 +102,7 @@ async function processJob(job) {
   console.log(`\n▶ Задача ${job.id} — ${job.bank} — ${job.organization_name}`)
   let profileId = null
   try {
-    await rotateProxyIfConfigured()
+    await rotateProxyIfConfigured().catch(() => {})   // ротация необязательна
 
     profileId = await createProfile({ name: `bank-${job.bank}-${job.id.slice(0, 8)}`, proxy })
     console.log('  · профиль создан:', profileId)
