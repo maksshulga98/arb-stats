@@ -593,6 +593,14 @@ export default function AdminPage() {
     return m
   }, [managers])
 
+  // Имена всех, кто может создавать заявки: менеджеры, тимлиды, админы и
+  // уволенные. Если строить только по managers, заявки тимлидов и админов
+  // отображались бы без автора («—»).
+  const peopleNameById = useMemo(() => Object.fromEntries(
+    [...managers, ...teamleads, ...admins, ...deletedMembers]
+      .filter(Boolean).map(p => [p.id, p.name])
+  ), [managers, teamleads, admins, deletedMembers])
+
   // Сводка по всей компании для панели вверху "Аналитика команды".
   // По каждой команде: кол-во людей (менеджеры + тимлид) и РКО за текущие
   // 7 дней / предыдущие 7 дней. Плюс общие итоги по всем командам.
@@ -1867,7 +1875,7 @@ export default function AdminPage() {
           <AccountLinkSection
             scope="all"
             showManagerColumn
-            managerNameById={Object.fromEntries(managers.map(m => [m.id, m.name]))}
+            managerNameById={peopleNameById}
           />
         )}
 
@@ -1876,7 +1884,7 @@ export default function AdminPage() {
           <BankLinkSection
             scope="all"
             showManagerColumn
-            managerNameById={Object.fromEntries(managers.map(m => [m.id, m.name]))}
+            managerNameById={peopleNameById}
           />
         )}
 

@@ -1790,7 +1790,7 @@ export default function TeamleadPage() {
           <AccountLinkSection
             scope="team"
             showManagerColumn
-            managerNameById={Object.fromEntries(managers.map(m => [m.id, m.name]))}
+            managerNameById={Object.fromEntries([...managers, ...deletedMembers, profile].filter(Boolean).map(p => [p.id, p.name]))}
           />
         )}
 
