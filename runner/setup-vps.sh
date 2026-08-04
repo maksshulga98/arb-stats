@@ -20,23 +20,26 @@ log() { echo -e "\n\033[1;36m==> $*\033[0m"; }
 [ "$(id -u)" -eq 0 ] || { echo "Запускать от root"; exit 1; }
 
 log "1/7 Системные пакеты"
-apt-get update -y
-apt-get install -y --no-install-recommends \
+# На свежем сервере apt может быть занят автообновлениями — ждём до 10 минут
+# вместо падения с "Could not get lock".
+APT="apt-get -o DPkg::Lock::Timeout=600"
+$APT update -y
+$APT install -y --no-install-recommends \
   curl ca-certificates git fuse xvfb x11-utils \
   libgbm1 libnss3 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 \
   libxfixes3 libxrandr2 libpango-1.0-0 libcairo2 fonts-liberation
 # В Ubuntu 24.04 часть библиотек переименована с суффиксом t64 —
 # ставим то имя, которое доступно в текущем релизе.
 for p in libasound2 libatk1.0-0 libatk-bridge2.0-0 libcups2 libgtk-3-0; do
-  apt-get install -y --no-install-recommends "$p" 2>/dev/null \
-    || apt-get install -y --no-install-recommends "${p}t64" 2>/dev/null \
+  $APT install -y --no-install-recommends "$p" 2>/dev/null \
+    || $APT install -y --no-install-recommends "${p}t64" 2>/dev/null \
     || echo "  ! пропускаю $p (нет в репозитории)"
 done
 
 log "2/7 Node.js 20"
 if ! command -v node >/dev/null || [ "$(node -v | cut -c2-3)" -lt 20 ]; then
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-  apt-get install -y nodejs
+  $APT install -y nodejs
 fi
 node -v
 
@@ -47,7 +50,7 @@ log "4/7 Dolphin Anty"
 if [ -n "$DOLPHIN_DEB_URL" ]; then
   tmp=$(mktemp /tmp/dolphin-XXXX.deb)
   curl -fL "$DOLPHIN_DEB_URL" -o "$tmp"
-  apt-get install -y "$tmp"
+  $APT install -y "$tmp"
   rm -f "$tmp"
 else
   echo "  ! Ссылка на .deb не передана — пропускаю установку Dolphin."
