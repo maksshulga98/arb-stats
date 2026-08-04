@@ -71,11 +71,23 @@ async function typeInto(handle, text) {
   await handle.type(String(text), { delay: 35 })
 }
 
-// Дождаться выпадающих подсказок и выбрать пункт, максимально совпадающий с wanted
-async function pickOption(page, wanted) {
-  await page.waitForSelector('[role="option"]', { timeout: 15000 })
-  await sleep(350)                                // дать списку дорисоваться
+/**
+ * Попытаться выбрать пункт из выпадающих подсказок.
+ *
+ * Возвращает true/false и НЕ бросает ошибку: у только что зарегистрированных ИП
+ * записи в справочнике ещё нет (форма пишет «Не найдено»), а заявку в банк по
+ * ним подают сразу — это штатный случай, а не сбой. Тогда значения просто
+ * остаются вписанными вручную.
+ */
+async function tryPickOption(page, wanted, timeoutMs = 7000) {
+  try {
+    await page.waitForSelector('[role="option"]', { timeout: timeoutMs })
+  } catch {
+    return false                                   // подсказок нет — не страшно
+  }
+  await sleep(350)                                 // дать списку дорисоваться
   const options = await page.$$('[role="option"]')
+  if (!options.length) return false
   const wTokens = norm(wanted).split(' ').filter(Boolean)
   let best = options[0], bestScore = -1
   for (const opt of options) {
@@ -85,6 +97,7 @@ async function pickOption(page, wanted) {
   }
   await best.click()
   await sleep(300)
+  return true
 }
 
 async function clickSubmit(page) {
@@ -188,23 +201,36 @@ export async function runApplication(browserWSEndpoint, job) {
 
     const I = FORM_PROFILE.idx
 
-    // 1. Организация — вводим ИНН, выбираем единственную подсказку по ИНН.
-    //    Это автозаполняет название, ИНН и город.
+    // 1. Организация. Сначала пробуем найти по ИНН: если ИП/ООО уже в реестре,
+    //    выбор подсказки сам подставит название, ИНН и город.
+    //    Но заявку часто подают сразу после открытия ИП — тогда его в реестре
+    //    ещё нет («Не найдено»), и мы просто вписываем название и ИНН руками.
     let inputs = await getInputs(page)
     await typeInto(inputs[I.org], job.inn)
-    await pickOption(page, job.inn)
+    const orgPicked = await tryPickOption(page, job.inn)
+    if (!orgPicked) {
+      inputs = await getInputs(page)
+      await typeInto(inputs[I.org], job.organization_name)
+      await page.keyboard.press('Escape').catch(() => {})   // убрать «Не найдено»
+      await sleep(200)
+      inputs = await getInputs(page)
+      await typeInto(inputs[I.inn], job.inn)
+    }
 
-    // 2. Юридический адрес — вводим адрес клиента, выбираем совпадающий дом.
+    // 2. Юридический адрес — если подсказки есть, берём совпадающий дом,
+    //    если нет (новый адрес) — оставляем введённый текст.
     inputs = await getInputs(page)
     await typeInto(inputs[I.address], job.legal_address)
-    await pickOption(page, job.legal_address)
+    await tryPickOption(page, job.legal_address)
+    await page.keyboard.press('Escape').catch(() => {})
 
-    // 3. Город — обычно уже автозаполнен. Если пуст — вписываем.
+    // 3. Город — подставился вместе с организацией; иначе вписываем сами.
     inputs = await getInputs(page)
     const cityVal = await (await inputs[I.city].getProperty('value')).jsonValue()
     if (!cityVal) {
       await typeInto(inputs[I.city], job.city)
-      await pickOption(page, job.city).catch(() => {})
+      await tryPickOption(page, job.city, 5000)
+      await page.keyboard.press('Escape').catch(() => {})
       inputs = await getInputs(page)
     }
 
@@ -229,6 +255,14 @@ export async function runApplication(browserWSEndpoint, job) {
       }
     })
     await sleep(400)
+
+    // Проверяем, что всё действительно заполнено. Иначе менеджер увидит внятную
+    // причину, а не технический таймаут селектора.
+    const empty = await page.evaluate((labels) => {
+      const fields = [...document.querySelectorAll('form input, form textarea')]
+      return labels.map((l, i) => (fields[i] && !String(fields[i].value).trim()) ? l : null).filter(Boolean)
+    }, FORM_PROFILE.labels)
+    if (empty.length) throw new Error('Не заполнились поля формы: ' + empty.join(', '))
 
     // 7. Отправка
     await clickSubmit(page)
