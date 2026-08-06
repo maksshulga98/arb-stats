@@ -18,8 +18,9 @@ import { runApplication } from './automation.js'
 const {
   NEXT_PUBLIC_SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
+  DOLPHIN_PROXIES,             // пул прокси (по одному в строке), см. parseProxies
   DOLPHIN_PROXY_TYPE = 'http',
-  DOLPHIN_PROXY_HOST,
+  DOLPHIN_PROXY_HOST,          // одиночный прокси — запасной вариант, если пула нет
   DOLPHIN_PROXY_PORT,
   DOLPHIN_PROXY_LOGIN,
   DOLPHIN_PROXY_PASSWORD,
@@ -31,26 +32,62 @@ const {
   HEADLESS = '1',
 } = process.env
 
+/**
+ * Разбор списка прокси. Поддерживаются привычные форматы (по одному в строке
+ * или через запятую), тип по умолчанию http:
+ *   host:port:login:password
+ *   login:password@host:port
+ *   http://login:password@host:port     (или socks5://…)
+ */
+function parseProxies(raw) {
+  if (!raw) return []
+  return raw
+    .split(/[\n,;]+/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(line => {
+      let type = DOLPHIN_PROXY_TYPE
+      const scheme = line.match(/^(https?|socks5):\/\//i)
+      if (scheme) { type = scheme[1].toLowerCase().replace('https', 'http'); line = line.replace(/^\w+:\/\//, '') }
+
+      if (line.includes('@')) {                       // login:pass@host:port
+        const [cred, addr] = line.split('@')
+        const [login, password] = cred.split(':')
+        const [host, port] = addr.split(':')
+        return { type, host, port, login, password }
+      }
+      const p = line.split(':')                       // host:port:login:pass
+      if (p.length >= 4) return { type, host: p[0], port: p[1], login: p[2], password: p.slice(3).join(':') }
+      if (p.length === 2) return { type, host: p[0], port: p[1], login: '', password: '' }
+      return null
+    })
+    .filter(p => p && p.host && p.port)
+}
+
+// Пул прокси: заявки распределяются по нему по кругу (1-я → 1-й прокси,
+// 2-я → 2-й и т.д.), чтобы нагрузка и IP-адреса не концентрировались на одном.
+const PROXY_POOL = DOLPHIN_PROXIES
+  ? parseProxies(DOLPHIN_PROXIES)
+  : (DOLPHIN_PROXY_HOST ? [{
+      type: DOLPHIN_PROXY_TYPE, host: DOLPHIN_PROXY_HOST, port: DOLPHIN_PROXY_PORT,
+      login: DOLPHIN_PROXY_LOGIN, password: DOLPHIN_PROXY_PASSWORD,
+    }] : [])
+
 if (!NEXT_PUBLIC_SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error('Нет NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY в .env')
   process.exit(1)
 }
-if (!DOLPHIN_PROXY_HOST || !DOLPHIN_PROXY_PORT) {
-  console.error('Нет данных прокси (DOLPHIN_PROXY_HOST/PORT) в .env')
+if (PROXY_POOL.length === 0) {
+  console.error('Не задан ни один прокси: заполните DOLPHIN_PROXIES (список) или DOLPHIN_PROXY_HOST/PORT')
   process.exit(1)
 }
 
 const supabase = createClient(NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-const proxy = {
-  type: DOLPHIN_PROXY_TYPE,
-  host: DOLPHIN_PROXY_HOST,
-  port: DOLPHIN_PROXY_PORT,
-  login: DOLPHIN_PROXY_LOGIN,
-  password: DOLPHIN_PROXY_PASSWORD,
-}
-
 const sleep = (ms) => new Promise(r => setTimeout(r, ms))
+
+// Сколько прокси из пула пробовать на одну заявку, если предыдущий не отвечает
+const MAX_PROXY_TRIES = 3
 
 // Когда последний раз реально сменили IP (в пределах жизни процесса)
 let lastRotateAt = 0
@@ -98,12 +135,22 @@ async function finishJob(id, patch) {
   if (error) console.error('  · не смог записать результат задачи:', error.message)
 }
 
-async function processJob(job) {
-  console.log(`\n▶ Задача ${job.id} — ${job.bank} — ${job.organization_name}`)
+// Порядковый номер заявки — по нему выбираем прокси из пула по кругу.
+// Считаем в базе, а не в памяти: тогда очередь не сбивается при перезапуске
+// сервиса и работает одинаково, даже если раннеров несколько.
+async function proxyStartIndex() {
+  const { count, error } = await supabase
+    .from('bank_link_jobs').select('*', { count: 'exact', head: true })
+  if (error) return 0
+  return (count || 0) % PROXY_POOL.length
+}
+
+const isProxyIssue = (msg) => /E_PROXY_CHECK_ERROR|initConnectionError|proxy|ERR_PROXY|tunnel|timed out/i.test(msg)
+
+/** Одна попытка оформления на конкретном прокси. Возвращает ссылку. */
+async function attemptWithProxy(job, proxy) {
   let profileId = null
   try {
-    await rotateProxyIfConfigured().catch(() => {})   // ротация необязательна
-
     profileId = await createProfile({ name: `bank-${job.bank}-${job.id.slice(0, 8)}`, proxy })
     console.log('  · профиль создан:', profileId)
 
@@ -111,19 +158,50 @@ async function processJob(job) {
     console.log('  · профиль запущен, подключаю Puppeteer')
 
     const link = await runApplication(browserWSEndpoint, job)
-    console.log('  ✓ ссылка получена:', link)
-
-    await finishJob(job.id, { status: 'success', result_link: link, error_message: null })
-  } catch (e) {
-    console.error('  ✗ ошибка:', e.message)
-    await finishJob(job.id, { status: 'error', error_message: e.message })
+    return link
   } finally {
     if (profileId) {
-      await stopProfile(profileId)
+      await stopProfile(profileId).catch(() => {})
       try { await deleteProfile(profileId); console.log('  · профиль удалён') }
       catch (e) { console.warn('  · не удалил профиль:', e.message) }
     }
   }
+}
+
+async function processJob(job) {
+  console.log(`\n▶ Задача ${job.id} — ${job.bank} — ${job.organization_name}`)
+
+  // Ротация IP нужна только когда прокси один. Когда их пул — каждая заявка
+  // и так уходит со своего адреса.
+  if (PROXY_POOL.length === 1) await rotateProxyIfConfigured().catch(() => {})
+
+  const start = await proxyStartIndex()
+  const tries = Math.min(MAX_PROXY_TRIES, PROXY_POOL.length)
+  let lastError = null
+
+  for (let i = 0; i < tries; i++) {
+    const proxy = PROXY_POOL[(start + i) % PROXY_POOL.length]
+    const label = `${proxy.host}:${proxy.port}`
+    console.log(`  · прокси ${(start + i) % PROXY_POOL.length + 1}/${PROXY_POOL.length} — ${label}`)
+    try {
+      const link = await attemptWithProxy(job, proxy)
+      console.log('  ✓ ссылка получена:', link)
+      await finishJob(job.id, { status: 'success', result_link: link, error_message: null })
+      return
+    } catch (e) {
+      lastError = e
+      console.error(`  ✗ ошибка на ${label}:`, e.message)
+      // Не отвечает прокси — пробуем следующий из пула. Любая другая ошибка
+      // (например, форма изменилась) с другим прокси не исправится — выходим.
+      if (!isProxyIssue(e.message) || i === tries - 1) break
+      console.log('  ↻ пробую следующий прокси из пула')
+    }
+  }
+
+  const human = isProxyIssue(lastError?.message || '')
+    ? `Не удалось подключиться через прокси (проверено ${tries} шт.) — попробуйте позже или сообщите администратору.`
+    : (lastError?.message || 'Неизвестная ошибка')
+  await finishJob(job.id, { status: 'error', error_message: human })
 }
 
 async function loop() {
