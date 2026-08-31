@@ -12,7 +12,7 @@
 
 import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
-import { createProfile, deleteProfile, startProfile, stopProfile } from './dolphin.js'
+import { createProfile, findPoolProfiles, setProfileProxy, startProfile, stopProfile } from './dolphin.js'
 import { runApplication } from './automation.js'
 
 const {
@@ -27,6 +27,8 @@ const {
   PROXY_ROTATION_URL,          // опц.: GET по этому URL меняет мобильный IP
   // Провайдер разрешает менять IP не чаще, чем раз в N мс (у proxys.world — 2 мин).
   ROTATE_MIN_INTERVAL_MS = '120000',
+  // Сколько постоянных профилей держим в пуле (см. ensureProfilePool)
+  POOL_SIZE = '6',
   RUNNER_ID = 'runner-local',
   POLL_INTERVAL_MS = '4000',
   HEADLESS = '1',
@@ -150,24 +152,41 @@ async function proxyStartIndex() {
 
 const isProxyIssue = (msg) => /E_PROXY_CHECK_ERROR|initConnectionError|proxy|ERR_PROXY|tunnel|timed out/i.test(msg)
 
-/** Одна попытка оформления на конкретном прокси. Возвращает ссылку. */
-async function attemptWithProxy(job, proxy) {
-  let profileId = null
-  try {
-    profileId = await createProfile({ name: `bank-${job.bank}-${job.id.slice(0, 8)}`, proxy })
-    console.log('  · профиль создан:', profileId)
+// ── Пул постоянных профилей ───────────────────────────────────────────────
+// Раньше на каждую заявку создавался новый профиль и удалялся после. У Dolphin
+// лимит считает именно СОЗДАНИЯ за месяц, поэтому при 150-200 заявках мы в него
+// упирались (E_MONTH_LIMIT), и заявки переставали проходить. Теперь держим
+// несколько постоянных профилей и перед заявкой просто подменяем им прокси:
+// создание происходит один раз за всё время.
+const POOL_PREFIX = 'bank-pool-'
+let profilePool = []
 
-    const { browserWSEndpoint } = await startProfile(profileId, { headless: HEADLESS === '1' })
-    console.log('  · профиль запущен, подключаю Puppeteer')
+async function ensureProfilePool() {
+  const want = Math.max(1, Number(POOL_SIZE) || 6)
+  profilePool = await findPoolProfiles(POOL_PREFIX)
+  console.log(`Пул профилей: найдено ${profilePool.length}, нужно ${want}`)
+
+  for (let i = profilePool.length; i < want; i++) {
+    const name = `${POOL_PREFIX}${String(i + 1).padStart(2, '0')}`
+    const id = await createProfile({ name, proxy: PROXY_POOL[i % PROXY_POOL.length] })
+    profilePool.push({ id, name })
+    console.log(`  + создан постоянный профиль ${name} (${id})`)
+  }
+  if (profilePool.length > want) profilePool = profilePool.slice(0, want)
+}
+
+/** Одна попытка оформления: берём профиль из пула и подменяем ему прокси. */
+async function attemptWithProxy(job, proxy, profile) {
+  try {
+    await setProfileProxy(profile.id, proxy)
+    const { browserWSEndpoint } = await startProfile(profile.id, { headless: HEADLESS === '1' })
+    console.log(`  · профиль ${profile.name} запущен, подключаю Puppeteer`)
 
     const link = await runApplication(browserWSEndpoint, job)
     return link
   } finally {
-    if (profileId) {
-      await stopProfile(profileId).catch(() => {})
-      try { await deleteProfile(profileId); console.log('  · профиль удалён') }
-      catch (e) { console.warn('  · не удалил профиль:', e.message) }
-    }
+    // Профиль НЕ удаляем — он многоразовый. Только останавливаем.
+    await stopProfile(profile.id).catch(() => {})
   }
 }
 
@@ -180,6 +199,8 @@ async function processJob(job) {
 
   const start = await proxyStartIndex()
   const tries = Math.min(MAX_PROXY_TRIES, PROXY_POOL.length)
+  // профиль из пула — по кругу, чтобы нагрузка размазывалась по ним равномерно
+  const profile = profilePool[start % profilePool.length]
   let lastError = null
 
   for (let i = 0; i < tries; i++) {
@@ -187,7 +208,7 @@ async function processJob(job) {
     const label = `${proxy.host}:${proxy.port}`
     console.log(`  · прокси ${(start + i) % PROXY_POOL.length + 1}/${PROXY_POOL.length} — ${label}`)
     try {
-      const link = await attemptWithProxy(job, proxy)
+      const link = await attemptWithProxy(job, proxy, profile)
       console.log('  ✓ ссылка получена:', link)
       await finishJob(job.id, { status: 'success', result_link: link, error_message: null })
       return
@@ -209,6 +230,7 @@ async function processJob(job) {
 
 async function loop() {
   console.log(`Раннер "${RUNNER_ID}" запущен. Опрос очереди каждые ${POLL_INTERVAL_MS}мс.`)
+  await ensureProfilePool()
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {

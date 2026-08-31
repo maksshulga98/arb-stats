@@ -189,6 +189,18 @@ export async function runApplication(browserWSEndpoint, job) {
     const page = pages[0] || await browser.newPage()
     page.setDefaultTimeout(45000)
 
+    // Профили в пуле многоразовые, поэтому перед каждой заявкой чистим куки и
+    // хранилища: иначе партнёрка может подхватить click_id прошлой заявки и
+    // приписать ссылку не туда.
+    try {
+      const cdp = await page.createCDPSession()
+      await cdp.send('Network.clearBrowserCookies')
+      await cdp.send('Network.clearBrowserCache')
+      await cdp.detach().catch(() => {})
+    } catch (e) {
+      console.warn('  · не удалось очистить куки:', e.message)
+    }
+
     await page.goto(job.source_url, { waitUntil: 'networkidle2' })
     await page.waitForSelector('form input', { timeout: 30000 })
     await verifyForm(page)

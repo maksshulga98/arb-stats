@@ -138,6 +138,41 @@ export async function createProfile({ name, proxy, platform = 'windows', browser
   return id
 }
 
+/**
+ * Найти профили пула по префиксу имени.
+ *
+ * Пул нужен, чтобы НЕ создавать профиль на каждую заявку: у Dolphin есть
+ * месячный лимит именно на создание профилей, и при 150-200 заявках в месяц
+ * мы в него упирались. Постоянные профили создаются один раз, а дальше им
+ * просто подменяется прокси.
+ */
+export async function findPoolProfiles(prefix) {
+  const found = []
+  for (let page = 1; page <= 10; page++) {
+    const res = await remote(`/browser_profiles?limit=50&page=${page}`)
+    const rows = res?.data || []
+    for (const r of rows) if (String(r.name || '').startsWith(prefix)) found.push({ id: r.id, name: r.name })
+    if (rows.length < 50) break
+  }
+  return found.sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }))
+}
+
+/** Подменить прокси у существующего профиля (вместо создания нового). */
+export async function setProfileProxy(id, proxy) {
+  return remote(`/browser_profiles/${id}`, {
+    method: 'PATCH',
+    body: {
+      proxy: {
+        type: proxy.type || 'http',
+        host: proxy.host,
+        port: Number(proxy.port),
+        login: proxy.login || '',
+        password: proxy.password || '',
+      },
+    },
+  })
+}
+
 /** Удалить профиль (чистим после каждой заявки). */
 export async function deleteProfile(id) {
   const qs = new URLSearchParams()
