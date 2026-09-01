@@ -1419,9 +1419,15 @@ export default function AdminPage() {
           const RATES = {
             MANAGER_IP: 1000,
             MANAGER_DEBIT: 300,
+            MANAGER_SIMKA: 500,
             TL_BONUS_IP: isJuly2026OrLater ? 300 : 150,
             TL_BONUS_DEBIT: 50,
+            TL_BONUS_SIMKA: 150,
           }
+          // Симка появилась в столбце D таблиц только с июля 2026 — до этого там
+          // были дебетовые ВТБ. Поэтому за прошлые месяцы столбец по-прежнему
+          // считаем дебетовыми, иначе старые расчёты «переоценились» бы.
+          const isSimkaEra = isJuly2026OrLater
           const lastDay = new Date(salaryYear, salaryMonth + 1, 0).getDate()
           const dateFrom = `${salaryYear}-${String(salaryMonth + 1).padStart(2, '0')}-${salaryHalf === 1 ? '01' : '16'}`
           const dateTo   = `${salaryYear}-${String(salaryMonth + 1).padStart(2, '0')}-${salaryHalf === 1 ? '15' : String(lastDay).padStart(2, '0')}`
@@ -1454,14 +1460,23 @@ export default function AdminPage() {
             const memberRows = allMembers.map(member => {
               const sd = salarySheetsData[member.name] || {}
               const ip = sd.ip || 0
-              const debit = sd.debit || 0
-              const ownSalary = ip * RATES.MANAGER_IP + debit * RATES.MANAGER_DEBIT
+              // до июля 2026 столбец D — дебетовые ВТБ, с июля — Симка Билайн
+              const simka = isSimkaEra ? (sd.simka || 0) : 0
+              const debit = (sd.debit || 0) + (isSimkaEra ? 0 : (sd.simka || 0))
+              const ownSalary = ip * RATES.MANAGER_IP
+                + debit * RATES.MANAGER_DEBIT
+                + simka * RATES.MANAGER_SIMKA
 
               let teamBonus = 0
               if (member.role === 'teamlead') {
                 teamBonus = teamMgrs.reduce((sum, mgr) => {
                   const msd = salarySheetsData[mgr.name] || {}
-                  return sum + (msd.ip || 0) * RATES.TL_BONUS_IP + (msd.debit || 0) * RATES.TL_BONUS_DEBIT
+                  const mSimka = isSimkaEra ? (msd.simka || 0) : 0
+                  const mDebit = (msd.debit || 0) + (isSimkaEra ? 0 : (msd.simka || 0))
+                  return sum
+                    + (msd.ip || 0) * RATES.TL_BONUS_IP
+                    + mDebit * RATES.TL_BONUS_DEBIT
+                    + mSimka * RATES.TL_BONUS_SIMKA
                 }, 0)
               }
 
@@ -1469,7 +1484,7 @@ export default function AdminPage() {
                 id: member.id,
                 name: member.name || member.email,
                 role: member.role,
-                ip, debit,
+                ip, debit, simka,
                 ownSalary,
                 teamBonus,
                 total: ownSalary + teamBonus,
@@ -1481,13 +1496,15 @@ export default function AdminPage() {
             const subtotal = memberRows.reduce((s, r) => s + r.total, 0)
             const subtotalIp = memberRows.reduce((s, r) => s + r.ip, 0)
             const subtotalDebit = memberRows.reduce((s, r) => s + r.debit, 0)
+            const subtotalSimka = memberRows.reduce((s, r) => s + r.simka, 0)
 
-            return { team, memberRows, subtotal, subtotalIp, subtotalDebit }
+            return { team, memberRows, subtotal, subtotalIp, subtotalDebit, subtotalSimka }
           })
 
           const grandTotal = salaryTeams.reduce((s, t) => s + t.subtotal, 0)
           const grandIp = salaryTeams.reduce((s, t) => s + t.subtotalIp, 0)
           const grandDebit = salaryTeams.reduce((s, t) => s + t.subtotalDebit, 0)
+          const grandSimka = salaryTeams.reduce((s, t) => s + t.subtotalSimka, 0)
 
           const savePaymentInfo = async (profileId, value) => {
             setPaymentSaving(prev => ({ ...prev, [profileId]: true }))
@@ -1550,6 +1567,7 @@ export default function AdminPage() {
                   <p className="text-gray-600 text-xs mt-3">
                     Период: {dateFrom} — {dateTo}
                     {' · '}Бонус ТЛ за ЦД ИП: {RATES.TL_BONUS_IP} ₽/шт
+                    {isSimkaEra && <>{' · '}Симка: {RATES.MANAGER_SIMKA} ₽/шт (бонус ТЛ {RATES.TL_BONUS_SIMKA} ₽/шт)</>}
                   </p>
                 )}
               </div>
@@ -1566,7 +1584,11 @@ export default function AdminPage() {
                       <p className="text-gray-500 text-xs mb-1">Всего ЦД Карт</p>
                       <p className="text-xl font-bold text-purple-400">{grandDebit}</p>
                     </div>
-                    <div className="col-span-2">
+                    <div>
+                      <p className="text-gray-500 text-xs mb-1">Всего ЦД Симка</p>
+                      <p className="text-xl font-bold text-amber-400">{grandSimka}</p>
+                    </div>
+                    <div>
                       <p className="text-gray-500 text-xs mb-1">Итого к выплате</p>
                       <p className="text-2xl font-bold text-white">{fmt(grandTotal)}</p>
                     </div>
@@ -1575,10 +1597,10 @@ export default function AdminPage() {
               )}
 
               {/* Per-team tables */}
-              {salaryCalculated && salaryTeams.map(({ team, memberRows, subtotal, subtotalIp, subtotalDebit }) => {
+              {salaryCalculated && salaryTeams.map(({ team, memberRows, subtotal, subtotalIp, subtotalDebit, subtotalSimka }) => {
                 if (memberRows.length === 0) return null
                 // Skip teams with no ЦД data at all
-                const hasData = memberRows.some(r => r.ip > 0 || r.debit > 0 || r.paymentInfo)
+                const hasData = memberRows.some(r => r.ip > 0 || r.debit > 0 || r.simka > 0 || r.paymentInfo)
                 return (
                   <section key={team.id}>
                     <div className="flex items-center gap-3 mb-3">
@@ -1593,8 +1615,10 @@ export default function AdminPage() {
                             <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Имя</th>
                             <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД ИП</th>
                             <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД Карта</th>
+                            <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЦД Симка</th>
                             <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЗП за ИП</th>
                             <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЗП за карты</th>
+                            <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">ЗП за симки</th>
                             <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Бонус команды</th>
                             <th className="text-right px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Итого</th>
                             <th className="text-left px-3 sm:px-4 py-3 text-gray-500 text-xs font-medium uppercase tracking-wider">Реквизиты</th>
@@ -1610,8 +1634,10 @@ export default function AdminPage() {
                               </td>
                               <td className="px-3 sm:px-4 py-3 text-sm text-right text-emerald-400 font-medium">{row.ip}</td>
                               <td className="px-3 sm:px-4 py-3 text-sm text-right text-purple-400 font-medium">{row.debit}</td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-amber-400 font-medium">{row.simka}</td>
                               <td className="px-3 sm:px-4 py-3 text-sm text-right text-gray-300">{fmt(row.ip * RATES.MANAGER_IP)}</td>
                               <td className="px-3 sm:px-4 py-3 text-sm text-right text-gray-300">{fmt(row.debit * RATES.MANAGER_DEBIT)}</td>
+                              <td className="px-3 sm:px-4 py-3 text-sm text-right text-gray-300">{fmt(row.simka * RATES.MANAGER_SIMKA)}</td>
                               <td className="px-3 sm:px-4 py-3 text-sm text-right">
                                 {row.role === 'teamlead' ? (
                                   <span className="text-yellow-400 font-medium">{fmt(row.teamBonus)}</span>
@@ -1649,7 +1675,8 @@ export default function AdminPage() {
                             <td className="px-3 sm:px-4 py-3 text-sm font-semibold text-gray-200">Итого</td>
                             <td className="px-3 sm:px-4 py-3 text-sm text-right font-semibold text-emerald-400">{subtotalIp}</td>
                             <td className="px-3 sm:px-4 py-3 text-sm text-right font-semibold text-purple-400">{subtotalDebit}</td>
-                            <td colSpan="3" />
+                            <td className="px-3 sm:px-4 py-3 text-sm text-right font-semibold text-amber-400">{subtotalSimka}</td>
+                            <td colSpan="4" />
                             <td className="px-3 sm:px-4 py-3 text-sm text-right font-bold text-white">{fmt(subtotal)}</td>
                             <td />
                           </tr>
