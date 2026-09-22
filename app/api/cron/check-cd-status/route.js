@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSheetsClient } from '../../../../lib/google-sheets-api'
 import { loginToRkoPartner, fetchAllRkoOrders, mapRkoState } from '../../../../lib/rko-partner'
 import { getActiveAccounts } from '../../../../lib/rko-accounts'
+import { rejectUnlessCron } from '../../../../lib/cron-auth'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -93,13 +94,9 @@ async function processSheet(sheets, sheetTitle, sheetId, orderByFio) {
 // GET /api/cron/check-cd-status — ежедневный крон, опрашивает rko-partner и обновляет статусы
 export async function GET(request) {
   try {
-    // Защита от случайных вызовов: Vercel cron шлёт заголовок x-vercel-cron или Authorization с CRON_SECRET
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
-    const isVercelCron = request.headers.get('x-vercel-cron') !== null
-    if (!isVercelCron && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // Только планировщик на VPS с CRON_SECRET (см. lib/cron-auth.js)
+    const denied = rejectUnlessCron(request)
+    if (denied) return denied
 
     // 1) Идём по ВСЕМ активным кабинетам (заявки могут быть в любом из них —
     //    зависит от того, в какой кабинет ушла заявка через round-robin).

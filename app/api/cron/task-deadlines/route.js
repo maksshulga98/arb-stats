@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { broadcastTelegramMessage, escapeHtml } from '../../../../lib/telegram'
+import { rejectUnlessCron } from '../../../../lib/cron-auth'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -71,13 +72,9 @@ function buildMessage(threshold, task) {
 
 export async function GET(request) {
   try {
-    // Auth — как в check-cd-status
-    const authHeader = request.headers.get('authorization')
-    const isVercelCron = request.headers.get('x-vercel-cron') !== null
-    const cronSecret = process.env.CRON_SECRET
-    if (!isVercelCron && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // Только планировщик на VPS с CRON_SECRET (см. lib/cron-auth.js)
+    const denied = rejectUnlessCron(request)
+    if (denied) return denied
 
     const token = process.env.TELEGRAM_BOT_TOKEN
     if (!token) {
