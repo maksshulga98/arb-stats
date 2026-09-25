@@ -16,6 +16,7 @@ import BankLinkSection from '../../components/BankLinkSection'
 // import WarningsList from '../../components/WarningsList'
 import EditReportModal from '../../components/EditReportModal'
 import ManagerPotentialModal from '../../components/ManagerPotentialModal'
+import { usesBankLink } from '../../lib/bank-link-access'
 
 // ── Team config ──────────────────────────────────────────────────────────────
 // Fallback пока /api/teams грузится. После загрузки заменяется на актуальный
@@ -29,7 +30,6 @@ const STATIC_TEAMS_FALLBACK = [
 const CONTACT_TEAMS = ['olya']
 
 // Команды на новом алгоритме: «Заявка в банк» вместо «Счёт ИП»
-const BANK_LINK_TEAMS = ['elizavety', 'nikita']
 
 function formatTimeLeft(ms) {
   if (ms <= 0) return null
@@ -768,7 +768,7 @@ export default function TeamleadPage() {
   // API оставлены: чтобы вернуть, достаточно убрать `false &&`.
   const hasContactsAccess = false && CONTACT_TEAMS.includes(profile?.team)
 
-  const usesBankLink = BANK_LINK_TEAMS.includes(profile?.team)
+  const bankLink = usesBankLink(profile)
 
   const TABS = [
     { id: 'analytics', label: 'Аналитика команды' },
@@ -777,7 +777,7 @@ export default function TeamleadPage() {
     { id: 'telegram',  label: 'Аккаунты Телеграмм' },
     ...(hasContactsAccess ? [{ id: 'contacts', label: 'Выдача номеров' }] : []),
     // { id: 'ip-link', label: 'Ссылка ИП' },  // временно скрыто
-    ...(usesBankLink
+    ...(bankLink
       ? [{ id: 'bank-link', label: 'Заявка в банк' }]
       : [{ id: 'account-link', label: 'Счёт ИП' }]),
     // { id: 'add-cd', label: 'Добавить ЦД' },  // временно скрыто (07.2026) — код рендера ниже сохранён

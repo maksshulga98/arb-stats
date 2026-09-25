@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { getMissingReportAlerts } from '../../lib/notifications'
 import { insertReport } from '../../lib/reports'
 import BankLinkSection from '../../components/BankLinkSection'
+import { usesBankLink } from '../../lib/bank-link-access'
 
 // Fallback map (slug → { name, type }) пока /api/teams грузится. После загрузки
 // заменяется на актуальный список из БД (таблица teams).
@@ -18,7 +19,6 @@ const CONTACT_TEAMS = ['olya']
 
 // Команды на новом алгоритме: видят «Заявка в банк» вместо «Счёт ИП».
 // Заявки уходят на ротируемые ссылки Пампаду, ссылку добывает раннер.
-const BANK_LINK_TEAMS = ['elizavety', 'nikita']
 
 function getLast7Days(reports, field = 'ordered_ip') {
   const cutoff = new Date()
@@ -526,15 +526,15 @@ export default function DashboardPage() {
   const hasContactsAccess = false && CONTACT_TEAMS.includes(profile?.team)
     || (profile?.team === 'nikita' && profile?.name === 'София С')
 
-  // Команды, переведённые на новый алгоритм: вместо «Счёт ИП» — «Заявка в банк»
-  // (заявки уходят на ротируемые ссылки Пампаду через раннер).
-  const usesBankLink = BANK_LINK_TEAMS.includes(profile?.team)
+  // Новый алгоритм вместо «Счёт ИП» — список команд и отдельных людей
+  // в lib/bank-link-access.js
+  const bankLink = usesBankLink(profile)
 
   const TABS = [
     { id: 'report', label: 'Отчёт' },
     ...(hasContactsAccess ? [{ id: 'contacts', label: 'Выдача номеров' }] : []),
     // { id: 'ip-link', label: 'Ссылка ИП' },  // временно скрыто — заменён на "Счёт ИП"
-    ...(usesBankLink
+    ...(bankLink
       ? [{ id: 'bank-link', label: 'Заявка в банк' }]
       : [{ id: 'account-link', label: 'Счёт ИП' }]),
     // { id: 'add-cd', label: 'Добавить ЦД' },  // временно скрыто (07.2026) — код рендера ниже сохранён
